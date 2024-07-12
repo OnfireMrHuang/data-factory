@@ -25,6 +25,10 @@ spring:
         max-size: 256
         # 队列容量，默认是Integer.MAX VALUE
         queue-capacity: 256
+    scheduling:
+      thread-name-prefix: scheduling-
+      pool:
+        size: 2
   servlet:
     multipart:
       # 单个文件大小
