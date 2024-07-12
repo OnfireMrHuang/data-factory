@@ -1,0 +1,52 @@
+# Web
+server:
+  port: 1680
+
+# Spring
+spring:
+  application:
+    name: data-foundation
+    version: v1
+    svc-address: http://${SERVICE_NAME:data-foundation}.${NAMESPACE:default}:${SERVICE_PORT:1680}
+  cache:
+    type: caffeine
+    caffeine:
+      # maximumSize：最大支持1024个任务，expireAfterAccess：最后一次写入或访问后经过固定时间过期，当前为1天
+      spec: initialCapacity=50,maximumSize=1024,expireAfterAccess=1d
+  main:
+    allow-bean-definition-overriding: true
+  # 线程配置
+  task:
+    execution:
+      thread-name-prefix: ${spring.application.name}-
+      pool:
+        core-size: 64
+        # 最大线程数，当队列满了之后会使用该配置创建新的线程
+        max-size: 256
+        # 队列容量，默认是Integer.MAX VALUE
+        queue-capacity: 256
+  servlet:
+    multipart:
+      # 单个文件大小
+      max-file-size: 1GB
+      # 一次请求的总大小
+      max-request-size: 2GB
+  # merge from tenant begin
+  jackson:
+    mapper:
+      ACCEPT_CASE_INSENSITIVE_PROPERTIES: true
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: Asia/Shanghai
+  messages:
+    basename: "messages,config.i18n.messages"
+    fallback-to-system-locale: false
+
+# 日志定义
+logging:
+  group:
+    tomcat: "org.apache.catalina,org.apache.coyote,org.apache.tomcat"
+  level:
+    root: info
+    tomcat: debug
+
