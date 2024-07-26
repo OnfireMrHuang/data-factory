@@ -52,5 +52,5 @@ logging:
     tomcat: "org.apache.catalina,org.apache.coyote,org.apache.tomcat"
   level:
     root: info
-    tomcat: debug
+    tomcat: warn
 
