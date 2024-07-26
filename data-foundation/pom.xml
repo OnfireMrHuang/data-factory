@@ -4,16 +4,19 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <!--该项目继承自starter-parent，利用最基础的配置-->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.5.15</version>
+        <version>2.2.10.RELEASE</version>
     </parent>
 
     <groupId>individual.data_foundation</groupId>
     <artifactId>data-foundation</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+
+    <!--添加依赖的模块-->
     <modules>
         <module>launcher</module>
         <module>common</module>
@@ -22,10 +25,13 @@
         <module>web</module>
     </modules>
 
+    <!--覆写starter-parent中的变量-->
     <properties>
         <maven.compiler.source>13</maven.compiler.source>
         <maven.compiler.target>13</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>13</java.version>
+        <start-class>individual.data_foundation.launcher.Main</start-class>
     </properties>
 
 </project>
