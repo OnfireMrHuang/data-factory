@@ -18,11 +18,18 @@
 
     <!--添加依赖的模块-->
     <modules>
+        <!--应用运行入口，对应starter-->
         <module>launcher</module>
+        <!--公共模块: 对应贫血模型、异常定义、工具类方法-->
         <module>common</module>
+        <!--数据访问层-->
         <module>dao</module>
+        <!--业务逻辑服务层-->
         <module>service</module>
+        <!--访问控制入口: 基础路由，基础校验、鉴权、转发等-->
         <module>web</module>
+        <!--通用逻辑处理层: 封装第三方服务调用、下沉service通用能力、与dao层交互-->
+        <module>manager</module>
     </modules>
 
     <!--覆写starter-parent中的变量-->
