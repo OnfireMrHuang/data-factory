@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/monitor/environment")
-public class Environment {
+public class EnvironmentController {
 
     @GetMapping("/info")
     public Response<EnvironmentInfo> GetEnvironmentInfo() {
