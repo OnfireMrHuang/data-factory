@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class EnvironmentController {
 
     @GetMapping("/info")
-    public Response<EnvironmentInfo> GetEnvironmentInfo() {
+    public Response<EnvironmentInfo> getEnvironmentInfo() {
         EnvironmentInfo environmentInfo = EnvironmentInfo.builder().javaVersion("jdk-13").build();
         return Response.success(environmentInfo);
     }
