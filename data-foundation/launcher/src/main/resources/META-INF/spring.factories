@@ -1,0 +1,2 @@
+org.springframework.boot.env.EnvironmentPostProcessor=\
+individual.data_foundation.launcher.environment.INIPropertySourceEnvironmentPostProcessor

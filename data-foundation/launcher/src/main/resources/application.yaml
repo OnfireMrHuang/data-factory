@@ -8,6 +8,16 @@ spring:
     name: data-foundation
     version: v1
     svc-address: http://${SERVICE_NAME:data-foundation}.${NAMESPACE:default}:${SERVICE_PORT:1680}
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?characterEncoding=utf8&useSSL=false
+    username: ${mysql.username}
+    password: ${mysql.password}
+  jpa:
+    show-sql: true
+    hibernate:
+      dialect: org.hibernate.dialect.MySQL8InnoDBDialect
+    ddl-auto: update
   cache:
     type: caffeine
     caffeine:
