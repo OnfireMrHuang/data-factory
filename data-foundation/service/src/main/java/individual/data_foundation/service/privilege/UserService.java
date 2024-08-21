@@ -2,6 +2,7 @@ package individual.data_foundation.service.privilege;
 
 import individual.data_foundation.common.models.privilege.User;
 import individual.data_foundation.dao.privilege.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 
@@ -10,6 +11,7 @@ public class UserService {
     private final UserRepository userRepository;
 
     // 使用构造函数注入
+    @Autowired
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
