@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @Slf4j
-@SpringBootApplication(scanBasePackages = {"individual.data_foundation"})
+@SpringBootApplication(scanBasePackages = "individual.data_foundation")
 @EnableJpaRepositories(basePackages = "individual.data_foundation.dao")
 public class Main {
 

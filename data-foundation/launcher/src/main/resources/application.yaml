@@ -69,6 +69,6 @@ logging:
     tomcat: "org.apache.catalina,org.apache.coyote,org.apache.tomcat"
   level:
     root: INFO
-    org.springframework: INFO  # Spring框架的日志级别
+    org.springframework: DEBUG  # Spring框架的日志级别
     org.springframework.web: INFO  # Spring Web模块的日志级别
 

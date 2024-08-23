@@ -12,8 +12,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
-@Entity
 @Data
+@Entity
 public class Identity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
