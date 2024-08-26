@@ -1,31 +1,32 @@
 package individual.data_foundation.dao.privilege;
 
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureDataJpa;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.jdbc.Sql;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.assertj.core.api.WithAssertions;
 
-import static org.assertj.core.api.Assertions.*;
-
-@DisplayName("Jpa Repository")
-@ExtendWith(SpringExtension.class)
-@DataJpaTest
+@DataJpaTest(properties = {
+        "spring.datasource.url: jdbc:mysql://localhost:3306/df_config?characterEncoding=utf8&useSSL=false",
+        "spring.datasource.username: root",
+        "spring.datasource.password: Huang@123",
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.hibernate.dialect=org.hibernate.dialect.MySQL8InnoDBDialect"
+})
+@AutoConfigureDataJpa
 @EntityScan(basePackages = "individual.data_foundation.common.models") // 指定实体类所在的包
-public class UserRepositoryTest {
+public class UserRepositoryTest  implements WithAssertions {
     @Autowired
-    UserRepository userRepository;
+    private UserRepository userRepository;
 
-    @DisplayName("Find all using page")
     @Test
     @Sql("/v1-0-0/mysql.data.sql")
-    void findAllUsingPage() {
+    public void findAllUsingPage() {
         var users = userRepository.findAll(
                         PageRequest.of(1, 2, Sort.by(Sort.Order.desc("createdTime"))))
                 .getContent();
