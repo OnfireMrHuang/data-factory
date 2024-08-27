@@ -38,7 +38,7 @@
         <maven.compiler.target>13</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>13</java.version>
-        <start-class>individual.data_foundation.launcher.Main</start-class>
+        <start-class>individual.data_foundation.Main</start-class>
     </properties>
 
     <!--给所有模块添加公共依赖项-->

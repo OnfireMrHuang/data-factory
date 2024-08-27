@@ -1,4 +1,4 @@
-package individual.data_foundation.launcher;
+package individual.data_foundation;
 
 import lombok.extern.slf4j.Slf4j;
 

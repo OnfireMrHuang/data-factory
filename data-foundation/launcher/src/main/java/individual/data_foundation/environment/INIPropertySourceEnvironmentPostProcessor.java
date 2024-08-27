@@ -1,4 +1,4 @@
-package individual.data_foundation.launcher.environment;
+package individual.data_foundation.environment;
 
 import org.apache.commons.configuration2.INIConfiguration;
 import org.apache.commons.configuration2.ex.ConfigurationException;
