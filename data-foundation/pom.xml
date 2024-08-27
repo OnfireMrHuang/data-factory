@@ -4,32 +4,35 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!--该项目继承自starter-parent，利用最基础的配置-->
+    <!--该项目直接沿用spring的starter-parent-->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>2.2.10.RELEASE</version>
     </parent>
 
-    <groupId>individual.data_foundation</groupId>
+    <groupId>io.github.hww.data.foundation</groupId>
     <artifactId>data-foundation</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+    <description>数据基础设施项目</description>
 
     <!--添加依赖的模块-->
     <modules>
-        <!--应用运行入口，对应starter-->
-        <module>launcher</module>
-        <!--公共模块: 对应贫血模型、异常定义、工具类方法-->
-        <module>common</module>
-        <!--数据访问层-->
-        <module>dao</module>
-        <!--业务逻辑服务层-->
-        <module>service</module>
+        <!--应用运行入口-->
+        <module>data-foundation-launcher</module>
+        <!--公共模块: 实体、模型等贫血模型定义，工具类方法实现-->
+        <module>data-foundation-common</module>
+        <!--数据访问层: mysql、redis、spark等访问-->
+        <module>data-foundation-dao</module>
+        <!--业务逻辑服务层: 主服务逻辑-->
+        <module>data-foundation-service</module>
         <!--访问控制入口: 基础路由，基础校验、鉴权、转发等-->
-        <module>web</module>
+        <module>data-foundation-web</module>
         <!--通用逻辑处理层: 封装第三方服务调用、下沉service通用能力、与dao层交互-->
-        <module>manager</module>
+        <module>data-foundation-manager</module>
+        <!--对外以jar包的形式提供接口-->
+        <module>data-foundation-api</module>
     </modules>
 
     <!--覆写starter-parent中的变量-->
@@ -38,32 +41,7 @@
         <maven.compiler.target>13</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>13</java.version>
-        <start-class>individual.data_foundation.Main</start-class>
+        <start-class>io.github.hww.data.foundation.Main</start-class>
     </properties>
-
-    <!--给所有模块添加公共依赖项-->
-    <dependencies>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.30</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-test-autoconfigure</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
 
 </project>

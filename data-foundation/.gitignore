@@ -39,3 +39,4 @@ build/
 
 launcher/src/main/resources/config.ini
 .idea
+/data-foundation-launcher/src/main/resources/config.ini
