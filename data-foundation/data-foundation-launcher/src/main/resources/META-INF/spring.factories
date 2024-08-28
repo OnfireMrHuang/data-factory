@@ -1,2 +1,2 @@
 org.springframework.boot.env.EnvironmentPostProcessor=\
-individual.data_foundation.environment.INIPropertySourceEnvironmentPostProcessor
+io.github.hww.data.foundation.environment.INIPropertySourceEnvironmentPostProcessor
