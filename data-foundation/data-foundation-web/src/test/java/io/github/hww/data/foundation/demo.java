@@ -1,22 +1,21 @@
-package io.github.hww.data.foundation.dao.privilege;
+package io.github.hww.data.foundation;
 
 import io.github.hww.data.foundation.common.entities.privilege.User;
-import io.github.hww.data.foundation.dao.privilege.impl.UserRepositoryImpl;
-import org.junit.Test;
+import io.github.hww.data.foundation.web.controller.privilege.UserController;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.testng.annotations.Test;
 
-import java.util.List;
 
 @SpringBootTest
-public class UserTest {
+public class demo {
 
     @Autowired
-    private UserRepositoryImpl userRepository;
+    private UserController userController;
 
     @Test
-    public void testAllUser() {
-        List<User> users = userRepository.findAll();
+    public void test() {
+        Iterable<User> users = userController.getAllUsers();
         for (User user : users) {
             System.out.println(user.toString());
         }

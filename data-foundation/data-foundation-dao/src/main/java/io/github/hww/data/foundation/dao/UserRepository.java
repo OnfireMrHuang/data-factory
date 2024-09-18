@@ -1,4 +1,4 @@
-package io.github.hww.data.foundation.dao.privilege;
+package io.github.hww.data.foundation.dao;
 
 
 import io.github.hww.data.foundation.common.entities.privilege.User;

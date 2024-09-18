@@ -1,13 +1,14 @@
-package io.github.hww.data.foundation.dao.privilege.impl;
+package io.github.hww.data.foundation.dao.impl;
 
 import io.github.hww.data.foundation.common.entities.privilege.User;
-import io.github.hww.data.foundation.dao.privilege.database.mapper.UserMapper;
+import io.github.hww.data.foundation.dao.UserRepository;
+import io.github.hww.data.foundation.dao.mapper.UserMapper;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public class UserRepositoryImpl implements io.github.hww.data.foundation.dao.privilege.UserRepository {
+public class UserRepositoryImpl implements UserRepository {
 
     private final UserMapper userMapper;
 

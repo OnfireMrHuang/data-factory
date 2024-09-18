@@ -1,4 +1,4 @@
-package io.github.hww.data.foundation.dao.privilege.database.mapper;
+package io.github.hww.data.foundation.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import io.github.hww.data.foundation.common.entities.privilege.User;
