@@ -13,7 +13,7 @@ import static org.jooq.impl.DSL.*;
 import static org.jooq.impl.SQLDataType.DATE;
 import static org.jooq.impl.SQLDataType.INTEGER;
 
-public class JOOQTest {
+public class JOOQBuildTest {
     @Test
     public void testJOOQMysql() {
         // 创建 DSLContext
