@@ -9,10 +9,10 @@ spring:
     version: v1
     svc-address: http://${SERVICE_NAME:data-foundation}.${NAMESPACE:default}:${SERVICE_PORT:1680}
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/df_config?characterEncoding=utf8&useSSL=false
     username: root
-    password: Huang@123
+    password: Huang%40123
+    driver-class-name: com.mysql.cj.jdbc.Driver
   cache:
     type: caffeine
     caffeine:
@@ -66,4 +66,6 @@ logging:
     root: INFO
     org.springframework: DEBUG  # Spring框架的日志级别
     org.springframework.web: INFO  # Spring Web模块的日志级别
+    org.springframework.boot.autoconfigure.jdbc: DEBUG
+    com.zaxxer.hikari: DEBUG
 
