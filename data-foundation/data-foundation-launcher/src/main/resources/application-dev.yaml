@@ -11,7 +11,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/df_config?characterEncoding=utf8&useSSL=false
     username: root
-    password: Huang@123
+    password: xxxxxx
     driver-class-name: com.mysql.cj.jdbc.Driver
   cache:
     type: caffeine

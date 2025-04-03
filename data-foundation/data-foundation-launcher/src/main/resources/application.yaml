@@ -8,11 +8,6 @@ spring:
     name: data-foundation
     version: v1
     svc-address: http://${SERVICE_NAME:data-foundation}.${NAMESPACE:default}:${SERVICE_PORT:1680}
-  datasource:
-    url: jdbc:mysql://localhost:3306/df_config?characterEncoding=utf8&useSSL=false
-    username: root
-    password: Huang@123
-    driver-class-name: com.mysql.cj.jdbc.Driver
   cache:
     type: caffeine
     caffeine:
