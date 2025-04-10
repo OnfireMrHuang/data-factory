@@ -1,4 +1,4 @@
-package io.github.hww.data.foundation.common.component.datax.utilities;
+package io.github.hww.data.foundation.common.components.datax.utilities;
 
 import cn.hutool.core.io.FileUtil;
 import com.alibaba.datax.common.exception.DataXException;

@@ -20,6 +20,7 @@
         <maven.compiler.source>13</maven.compiler.source>
         <maven.compiler.target>13</maven.compiler.target>
         <datax.version>1.0.0.1</datax.version>
+        <debezium.version>2.6.2.Final</debezium.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -98,6 +99,37 @@
             <groupId>com.alibaba.datax</groupId>
             <artifactId>datax-common</artifactId>
             <version>${datax.version}</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>io.debezium</groupId>
+            <artifactId>debezium-core</artifactId>
+            <version>${debezium.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.debezium</groupId>
+            <artifactId>debezium-embedded</artifactId>
+            <version>${debezium.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.debezium</groupId>
+            <artifactId>debezium-storage-jdbc</artifactId>
+            <version>${debezium.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.debezium</groupId>
+            <artifactId>debezium-connector-mysql</artifactId>
+            <version>${debezium.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.debezium</groupId>
+            <artifactId>debezium-ddl-parser</artifactId>
+            <version>${debezium.version}</version>
         </dependency>
 
 

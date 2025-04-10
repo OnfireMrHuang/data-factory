@@ -1,6 +1,6 @@
-package io.github.hww.data.foundation.common.component.datax;
+package io.github.hww.data.foundation.common.components.datax;
 
-import io.github.hww.data.foundation.common.component.datax.utilities.ConfigParser;
+import io.github.hww.data.foundation.common.components.datax.utilities.ConfigParser;
 import lombok.extern.slf4j.Slf4j;
 import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.datax.core.Engine;
