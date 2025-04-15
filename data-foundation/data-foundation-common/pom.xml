@@ -21,6 +21,7 @@
         <maven.compiler.target>13</maven.compiler.target>
         <datax.version>1.0.0.1</datax.version>
         <debezium.version>2.6.2.Final</debezium.version>
+        <minio.version>8.5.2</minio.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -130,6 +131,12 @@
             <groupId>io.debezium</groupId>
             <artifactId>debezium-ddl-parser</artifactId>
             <version>${debezium.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>${minio.version}</version>
         </dependency>
 
 
