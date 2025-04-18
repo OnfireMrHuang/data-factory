@@ -2,10 +2,10 @@ package io.github.hww.data.foundation.common.config.properties;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Configuration;
 
 @Data
-@Component
+@Configuration
 @ConfigurationProperties(prefix = "kafka")
 public class KafkaProperties {
     private String host;

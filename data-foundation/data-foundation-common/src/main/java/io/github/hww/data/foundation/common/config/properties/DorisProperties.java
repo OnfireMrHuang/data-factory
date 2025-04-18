@@ -6,8 +6,6 @@ import org.springframework.context.annotation.Configuration;
 
 @Data
 @Configuration
-@ConfigurationProperties(prefix = "spark")
-public class SparkProperties {
-    private String host;
-    private String port;
+@ConfigurationProperties(prefix = "doris")
+public class DorisProperties {
 }

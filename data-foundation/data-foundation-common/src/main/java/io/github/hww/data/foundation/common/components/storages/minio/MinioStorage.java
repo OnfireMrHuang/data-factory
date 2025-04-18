@@ -2,7 +2,7 @@ package io.github.hww.data.foundation.common.components.storages.minio;
 
 import cn.hutool.core.util.URLUtil;
 import com.google.common.collect.Lists;
-import io.github.hww.data.foundation.common.config.properties.MinoProperties;
+import io.github.hww.data.foundation.common.config.properties.MinioProperties;
 import io.github.hww.data.foundation.common.models.components.StorageException;
 import io.minio.*;
 import io.minio.credentials.StaticProvider;
@@ -13,7 +13,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -27,14 +26,13 @@ import java.util.Map;
 @Component
 public class MinioStorage {
 
-    @Resource
-    MinoProperties minioConfig;
-
+    private final MinioProperties minioConfig;
     private final StaticProvider sp;
 
     private MinioClient minioClient;
 
-    public MinioStorage() {
+    public MinioStorage(MinioProperties minioConfig) {
+        this.minioConfig = minioConfig;
         sp = new StaticProvider(minioConfig.getAccessKey(), minioConfig.getAccessSecret(), null);
         try {
             minioClient = MinioClient.builder()
