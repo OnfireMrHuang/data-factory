@@ -1,5 +1,5 @@
 # data-agent
 
-The main program lanuage is Java or Python
+To build up a agent for data analysis, The main program lanuage is Python, base on LLM. 
 
 
