@@ -284,6 +284,9 @@ echo "export CLASSPATH=.:\$JAVA_HOME/lib/dt.jar:\$JAVA_HOME/lib/tools.jar" >> /e
 # 加载生效
 source /etc/profile
 
+# 下载mysql-8的Jdbc驱动
+wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-8.0.29.zip
+
 
 # 下载haoop相关的软件
 
@@ -297,10 +300,10 @@ wget http://archive.apache.org/dist/hive/hive-3.1.3/apache-hive-3.1.3-bin.tar.gz
 
 ### 2、spark
 # Spark下载地址：http://spark.apache.org/downloads.html
-wget https://dlcdn.apache.org/spark/spark-3.3.2/spark-3.3.2-bin-hadoop3.tgz --no-check-certificate
+wget https://dlcdn.apache.org/spark/spark-3.4.4/spark-3.4.4-bin-hadoop3.tgz --no-check-certificate
 
 ### 3、flink
-wget https://dlcdn.apache.org/flink/flink-1.17.0/flink-1.17.0-bin-scala_2.12.tgz --no-check-certificate
+wget https://dlcdn.apache.org/flink/flink-1.17.2/flink-1.17.2-bin-scala_2.12.tgz --no-check-certificate
 
 
 # 构建镜像
