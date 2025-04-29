@@ -17,11 +17,11 @@ hdfs:
 
     resources:
       requests:
-        memory: "512Mi"
-        cpu: "500m"
+        memory: "1024Mi"
+        cpu: "1000m"
       limits:
-        memory: "512Mi"
-        cpu: "500m"
+        memory: "1024Mi"
+        cpu: "1000m"
 
   dataNode:
     # Will be used as dfs.datanode.hostname
@@ -37,8 +37,8 @@ hdfs:
 
     resources:
       requests:
-        memory: "512Mi"
-        cpu: "500m"
+        memory: "1024Mi"
+        cpu: "1000m"
       limits:
         memory: "2048Mi"
         cpu: "1000m"
@@ -46,17 +46,17 @@ hdfs:
   webhdfs:
     enabled: true
 
-  # jounralNode: 只用一个nameNode， 没有脑裂场景，不需要
-  #   replicas: 3
-  #   pdbMinAvailable: 1
+  jounralNode: 
+    replicas: 1
+    pdbMinAvailable: 1
 
-  #   resources:
-  #     requests:
-  #       memory: "1024Mi"
-  #       cpu: "1000m"
-  #     limits:
-  #       memory: "2048Mi"
-  #       cpu: "1000m"
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
   
   mrHistoryserver:
     pdbMinAvailable: 1

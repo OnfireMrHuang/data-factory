@@ -69,7 +69,8 @@ COPY config/hadoop-config/* ${HADOOP_HOME}/etc/hadoop/
 # hive  config
 COPY hive-config/* ${HIVE_HOME}/conf/
 
-COPY mysql-connector-java-5.1.49/mysql-connector-java-5.1.49-bin.jar ${HIVE_HOME}/lib/
+# mysql 8的驱动
+COPY mysql-connector-j-8.0.29.jar ${HIVE_HOME}/lib/
 
 RUN sudo mkdir -p /home/hadoop/ && sudo chown -R hadoop:hadoop /home/hadoop/
 

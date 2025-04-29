@@ -256,24 +256,59 @@ WARNING: There are "resources" sections in the chart not set. Using "resourcesPr
 ## 安装Hadoop
 
 
-参考文档:  https://www.cnblogs.com/liugp/p/17539121.html
+参考文档:  
+
+1. https://www.cnblogs.com/liugp/p/17279520.html
+2. https://www.cnblogs.com/liugp/p/17539121.html
 
 
 ### 构建镜像
 
-- 同级目录文件树如下:
+所需要的Dockerfile和Chart文件都在同级目录下.
+
+因为环境的差异，我的Doker和Chart有部分调整，所以需要调整
+
 ```shell
-.
-├── dockerfile # 镜像文件
-│   ├── Dockerfile
-│   └── bootstrap.sh
-├── hadoop-on-kubernetes # helm chart文件
-│   ├── hadoop-configmap.yaml
-│   ├── hive-configmap.yaml
-│   └── values.yaml
+
+### 安装JDK
+
+# jdk包在我下面提供的资源包里，当然你也可以去官网下载。
+wget https://github.com/frekele/oracle-java/releases/download/8u212-b10/jdk-8u212-linux-x64.tar.gz
+tar -xf jdk-8u212-linux-x64.tar.gz
+
+# /etc/profile文件中追加如下内容：
+echo "export JAVA_HOME=`pwd`/jdk1.8.0_212" >> /etc/profile
+echo "export PATH=\$JAVA_HOME/bin:\$PATH" >> /etc/profile
+echo "export CLASSPATH=.:\$JAVA_HOME/lib/dt.jar:\$JAVA_HOME/lib/tools.jar" >> /etc/profile
+
+# 加载生效
+source /etc/profile
+
+
+# 下载haoop相关的软件
+
+### 1、Hadoop
+# 下载地址：https://dlcdn.apache.org/hadoop/common/
+wget https://dlcdn.apache.org/hadoop/common/hadoop-3.3.5/hadoop-3.3.5.tar.gz --no-check-certificate
+
+### 2、hive
+# 下载地址：http://archive.apache.org/dist/hive
+wget http://archive.apache.org/dist/hive/hive-3.1.3/apache-hive-3.1.3-bin.tar.gz
+
+### 2、spark
+# Spark下载地址：http://spark.apache.org/downloads.html
+wget https://dlcdn.apache.org/spark/spark-3.3.2/spark-3.3.2-bin-hadoop3.tgz --no-check-certificate
+
+### 3、flink
+wget https://dlcdn.apache.org/flink/flink-1.17.0/flink-1.17.0-bin-scala_2.12.tgz --no-check-certificate
+
+
+# 构建镜像
+docker build -t hadoop:v1 . --no-cache
+docker tag hadoop:v1 registry.cn-hangzhou.aliyuncs.com/bigdata_cloudnative/hadoop:v1
+
 ```
 
-如果有编辑部分需要重新打镜像，否则直接使用(这部分我没有编辑，所以直接沿用作者的镜像), chart文件同理
 
 ###  节点机创建挂载目录(路径有所不同)
 
@@ -299,6 +334,45 @@ helm install hadoop ./ -n hadoop --create-namespace
 
 # 卸载
 # helm uninstall hadoop -n hadoop
+
+```
+
+输出如下:
+
+```shell
+NAME: hadoop
+LAST DEPLOYED: Tue Apr 29 16:02:48 2025
+NAMESPACE: hadoop
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+1. You can check the status of HDFS by running this command:
+   kubectl exec -n hadoop -it hadoop-hadoop-hdfs-nn-0 -- /opt/hadoop/bin/hdfs dfsadmin -report
+
+2. You can list the yarn nodes by running this command:
+   kubectl exec -n hadoop -it hadoop-hadoop-yarn-rm-0 -- /opt/hadoop/bin/yarn node -list
+
+3. Create a port-forward to the yarn resource manager UI:
+   kubectl port-forward -n hadoop hadoop-hadoop-yarn-rm-0 8088:8088
+
+   Then open the ui in your browser:
+
+   open http://localhost:8088
+
+4. You can run included hadoop tests like this:
+   kubectl exec -n hadoop -it hadoop-hadoop-yarn-nm-0 -- /opt/hadoop/bin/hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-client-jobclient-3.3.5-tests.jar TestDFSIO -write -nrFiles 5 -fileSize 128MB -resFile /tmp/TestDFSIOwrite.txt
+
+5. You can list the mapreduce jobs like this:
+   kubectl exec -n hadoop -it hadoop-hadoop-yarn-rm-0 -- /opt/hadoop/bin/mapred job -list
+
+6. This chart can also be used with the zeppelin chart
+    helm install --namespace hadoop --set hadoop.useConfigMap=true,hadoop.configMapName=hadoop-hadoop stable/zeppelin
+
+7. You can scale the number of yarn nodes like this:
+   helm upgrade hadoop --set yarn.nodeManager.replicas=4 stable/hadoop
+
+   Make sure to update the values.yaml if you want to make this permanent.
 ```
 
 
