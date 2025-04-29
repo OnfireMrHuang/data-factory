@@ -17,25 +17,28 @@ hdfs:
 
     resources:
       requests:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "512Mi"
+        cpu: "500m"
       limits:
-        memory: "2048Mi"
-        cpu: "1000m"
+        memory: "512Mi"
+        cpu: "500m"
 
   dataNode:
+    # Will be used as dfs.datanode.hostname
+    # You still need to set up services + ingress for every DN
+    # Datanodes will expect to
     externalHostname: data-factory.com
     externalDataPortRangeStart: 9866
     externalHTTPPortRangeStart: 9864
 
-    replicas: 1
+    replicas: 3
 
     pdbMinAvailable: 1
 
     resources:
       requests:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "512Mi"
+        cpu: "500m"
       limits:
         memory: "2048Mi"
         cpu: "1000m"
@@ -43,29 +46,29 @@ hdfs:
   webhdfs:
     enabled: true
 
-  jounralNode:
-    replicas: 3
-    pdbMinAvailable: 1
+  # jounralNode: 只用一个nameNode， 没有脑裂场景，不需要
+  #   replicas: 3
+  #   pdbMinAvailable: 1
 
-    resources:
-      requests:
-        memory: "1024Mi"
-        cpu: "1000m"
-      limits:
-        memory: "2048Mi"
-        cpu: "1000m"
-
+  #   resources:
+  #     requests:
+  #       memory: "1024Mi"
+  #       cpu: "1000m"
+  #     limits:
+  #       memory: "2048Mi"
+  #       cpu: "1000m"
+  
   mrHistoryserver:
     pdbMinAvailable: 1
     replicas: 1
 
     resources:
       requests:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "256Mi"
+        cpu: "200m"
       limits:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "256Mi"
+        cpu: "200m"
 
 yarn:
   resourceManager:
@@ -74,11 +77,11 @@ yarn:
 
     resources:
       requests:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "256Mi"
+        cpu: "200m"
       limits:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "256Mi"
+        cpu: "200m"
 
   nodeManager:
     pdbMinAvailable: 1
@@ -93,22 +96,22 @@ yarn:
     # This should be tuned to fit your workload.
     resources:
       requests:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "256Mi"
+        cpu: "200m"
       limits:
-        memory: "2048Mi"
-        cpu: "1000m"
+        memory: "256Mi"
+        cpu: "200m"
   proxyServer:
     pdbMinAvailable: 1
     replicas: 1
 
     resources:
       requests:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "256Mi"
+        cpu: "200m"
       limits:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "256Mi"
+        cpu: "200m"
 
 hive:
   metastore:
@@ -117,11 +120,11 @@ hive:
 
     resources:
       requests:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "512Mi"
+        cpu: "500m"
       limits:
-        memory: "2048Mi"
-        cpu: "1000m"
+        memory: "512Mi"
+        cpu: "500m"
 
   hiveserver2:
     replicas: 1
@@ -129,11 +132,11 @@ hive:
 
     resources:
       requests:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "512Mi"
+        cpu: "500m"
       limits:
-        memory: "1024Mi"
-        cpu: "1000m"
+        memory: "512Mi"
+        cpu: "500m"
 
 persistence:
   nameNode:
@@ -149,7 +152,7 @@ persistence:
     volumes:
     - name: nn1
       mountPath: /opt/apache/hadoop/data/hdfs/namenode
-      hostPath: /opt/bigdata/servers/hadoop/nn/data/data1
+      hostPath: /var/bigdata/servers/hadoop/nn/data/data1
 
   dataNode:
     enabled: true
@@ -160,13 +163,13 @@ persistence:
     volumes:
     - name: dfs1
       mountPath: /opt/apache/hdfs/datanode1
-      hostPath: /opt/bigdata/servers/hadoop/dn/data/data1
+      hostPath: /var/bigdata/servers/hadoop/dn/data/data1
     - name: dfs2
       mountPath: /opt/apache/hdfs/datanode2
-      hostPath: /opt/bigdata/servers/hadoop/dn/data/data2
+      hostPath: /var/bigdata/servers/hadoop/dn/data/data2
     - name: dfs3
       mountPath: /opt/apache/hdfs/datanode3
-      hostPath: /opt/bigdata/servers/hadoop/dn/data/data3
+      hostPath: /var/bigdata/servers/hadoop/dn/data/data3
 
 service:
   nameNode:
@@ -218,5 +221,6 @@ service:
       nodePort: 30000
 
 securityContext:
-  runAsUser: 10000
+  runAsUser: 10000 
   privileged: true
+

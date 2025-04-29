@@ -255,38 +255,39 @@ WARNING: There are "resources" sections in the chart not set. Using "resourcesPr
 
 ## 安装Hadoop
 
+
+参考文档:  https://www.cnblogs.com/liugp/p/17539121.html
+
+
 ### 构建镜像
 
-
-引用： https://www.cnblogs.com/liugp/p/17539121.html
-
+- 同级目录文件树如下:
 ```shell
-
-docker build -t registry.cn-hangzhou.aliyuncs.com/bigdata_cloudnative/hadoop_hive:v1 . --no-cache
-
-# 为了方便小伙伴下载即可使用，我这里将镜像文件推送到阿里云的镜像仓库
-docker push registry.cn-hangzhou.aliyuncs.com/bigdata_cloudnative/hadoop_hive:v1
-
-### 参数解释
-# -t：指定镜像名称
-# . ：当前目录Dockerfile
-# -f：指定Dockerfile路径
-#  --no-cache：不缓存
-
+.
+├── dockerfile # 镜像文件
+│   ├── Dockerfile
+│   └── bootstrap.sh
+├── hadoop-on-kubernetes # helm chart文件
+│   ├── hadoop-configmap.yaml
+│   ├── hive-configmap.yaml
+│   └── values.yaml
 ```
 
+如果有编辑部分需要重新打镜像，否则直接使用(这部分我没有编辑，所以直接沿用作者的镜像), chart文件同理
+
+###  节点机创建挂载目录(路径有所不同)
 
 ```shell
 # 如果使用pv，pvc挂载方式，就不需要在宿主机上创建目录了，非高可用可不用创建jn
-mkdir -p /opt/bigdata/servers/hadoop/{nn,jn,dn}/data/data{1..3}
-chmod 777 -R /opt/bigdata/servers/hadoop/
+sudo mkdir -p /var/bigdata/servers/hadoop/{nn,jn,dn}/data/data{1..3}
+sudo chmod 777 -R /var/bigdata/servers/hadoop/
 ```
 
-### 安装
+### 正式安装
 
 ```shell
 
-# 将文件scp传输到开发机
+# 将chart文件通过scp传输到开发机(并修改存储卷、密码等信息)
 
 cd hadoop-on-kubernetes
 
@@ -294,15 +295,12 @@ cd hadoop-on-kubernetes
 helm install hadoop ./ -n hadoop --create-namespace
 
 # 更新
-helm upgrade hadoop ./ -n hadoop
+# helm upgrade hadoop ./ -n hadoop
 
 # 卸载
-helm uninstall hadoop -n hadoop
+# helm uninstall hadoop -n hadoop
 ```
 
 
-## 参考资料
-
-https://www.cnblogs.com/liugp/p/17539121.html
 
 
