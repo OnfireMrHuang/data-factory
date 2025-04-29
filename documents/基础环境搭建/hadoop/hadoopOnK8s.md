@@ -5,6 +5,17 @@
 - k8s 版本: v1.23.8
 - mysql版本: 9.3.3
 - hadoop 版本: 3.3.5
+- minikube主机的文件系统:
+    | Filesystem      | Size | Used | Avail | Use% | Mounted on     |  
+  |-----------------|------|------|-------|------|----------------|  
+  | overlay         | 457G | 48G  | 386G  | 12%  | /              |  
+  | tmpfs           | 64M  | 0    | 64M   | 0%   | /dev           |  
+  | tmpfs           | 7.8G | 0    | 7.8G  | 0%   | /sys/fs/cgroup |  
+  | shm             | 64M  | 0    | 64M   | 0%   | /dev/shm       |  
+  | /dev/sda3       | 457G | 48G  | 386G  | 12%  | /var           |  
+  | tmpfs           | 7.8G | 42M  | 7.7G  | 1%   | /run           |  
+  | tmpfs           | 7.8G | 8.0K | 7.8G  | 1%   | /tmp           |  
+  | tmpfs           | 5.0M | 0    | 5.0M  | 0%   | /run/lock      |  
 
 
 ## 安装Mysql(为Hive metastore服务)
@@ -40,7 +51,7 @@ primary:
     local:
     - name: mysql-0
       host: "minikube"
-      path: "/opt/bigdata/servers/mysql/data/data0"
+      path: "/var/bigdata/servers/mysql/data/data0"
   containerSecurityContext:
     readOnlyRootFilesystem: false # 为了方便调试，设置为false
 
@@ -55,10 +66,10 @@ secondary:
     local:
     - name: mysql-1
       host: "minikube"
-      path: "/opt/bigdata/servers/mysql/data/data1"
+      path: "/var/bigdata/servers/mysql/data/data1"
     - name: mysql-2
       host: "minikube"
-      path: "/opt/bigdata/servers/mysql/data/data2"
+      path: "/var/bigdata/servers/mysql/data/data2"
   containerSecurityContext:
     readOnlyRootFilesystem: false # 为了方便调试，设置为false
 
@@ -74,6 +85,14 @@ metrics:
   enabled: true # 开启metrics 
   containerSecurityContext:
     readOnlyRootFilesystem: false # 为了方便调试，设置为false
+
+# 设置密码
+auth:
+  rootPassword: "xxxxxx", 
+  username: "your_username",
+  password: "xxxxxx"
+  replicationPassword: "xxxxxx"
+  defaultAuthenticationPlugin: "caching_sha2_password"
 ```
 
 添加mysql/templates/pv.yaml
@@ -150,15 +169,18 @@ provisioner: kubernetes.io/no-provisioner
 
 ```shell
 
-# 创建持久化目录
-mkdir -p /opt/bigdata/servers/mysql/data/data0
-mkdir -p /opt/bigdata/servers/mysql/data/data1
-mkdir -p /opt/bigdata/servers/mysql/data/data2
-chmod 777 /opt/bigdata/servers/mysql/data/*
 
-
+# 默认挂载文件格式是9p可能有问题，先直接minikube上执行
 # 将主机的目录挂载到minikue节点上(minikube cluster的资源都挂载到这个目录下, minikube是在主机上创建的虚拟机,所以需要挂载)
-nohup minikube mount /opt/bigdata:/opt/bigdata > /tmp/minikube_mount.log 2>&1 &
+# nohup minikube mount /opt/bigdata:/opt/bigdata > /tmp/minikube_mount.log 2>&1 &
+
+
+# 创建持久化目录
+sudo mkdir -p /var/bigdata/servers/mysql/data/data0
+sudo mkdir -p /var/bigdata/servers/mysql/data/data1
+sudo mkdir -p /var/bigdata/servers/mysql/data/data2
+sudo chown -R 1001:1001 /var/bigdata/servers/mysql
+sudo chmod 777 /var/bigdata/servers/mysql
 
 # 提前准备好镜像
 docker pull docker.io/bitnami/mysql:8.0.36-debian-12-r10
@@ -176,8 +198,8 @@ helm install mysql ./mysql -n mysql --create-namespace
 安装完成后，输出如下:
 
 ```shell
-NAME: mysql
-LAST DEPLOYED: Mon Apr 28 16:47:58 2025
+AME: mysql
+LAST DEPLOYED: Tue Apr 29 14:16:03 2025
 NAMESPACE: mysql
 STATUS: deployed
 REVISION: 1
