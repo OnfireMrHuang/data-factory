@@ -69,10 +69,11 @@ RUN mkdir -p /opt/apache/hadoop/data/{hdfs,yarn} /opt/apache/hadoop/data/hdfs/na
 
 COPY bootstrap.sh /opt/apache/
 
+# hadoop config
 COPY config/hadoop-config/* ${HADOOP_HOME}/etc/hadoop/
 
 # hive  config
-COPY hive-config/* ${HIVE_HOME}/conf/
+COPY config/hive-config/* ${HIVE_HOME}/conf/
 
 # mysql 8的驱动
 COPY mysql-connector-java-8.0.29/mysql-connector-j-8.0.29.jar ${HIVE_HOME}/lib/
