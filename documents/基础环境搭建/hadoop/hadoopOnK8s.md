@@ -306,6 +306,10 @@ wget https://dlcdn.apache.org/spark/spark-3.4.4/spark-3.4.4-bin-hadoop3.tgz --no
 wget https://dlcdn.apache.org/flink/flink-1.17.2/flink-1.17.2-bin-scala_2.12.tgz --no-check-certificate
 
 
+# 修改config中的内容
+vim config/hive-config/hive-site.xml
+# 将其中的用户名和密码替换掉
+
 # 构建镜像
 docker build -t hadoop:v1 . --no-cache
 docker tag hadoop:v1 registry.cn-hangzhou.aliyuncs.com/bigdata_cloudnative/hadoop:v1
@@ -326,6 +330,8 @@ sudo chmod 777 -R /var/bigdata/servers/hadoop/
 ```shell
 
 # 将chart文件通过scp传输到开发机(并修改存储卷、密码等信息)
+cd chart
+# !!!主要修改chart/values.yaml、chart/templates/hive/hive-configmap.yaml
 
 cd hadoop-on-kubernetes
 
