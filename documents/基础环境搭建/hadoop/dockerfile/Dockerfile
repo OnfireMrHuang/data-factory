@@ -83,5 +83,6 @@ RUN sudo mkdir -p /home/hadoop/ && sudo chown -R hadoop:hadoop /home/hadoop/
 #RUN yum -y install which
 ENV ll "ls -l"
 
+RUN chmod +x /opt/apache/bootstrap.sh
 RUN chown -R hadoop:hadoop /opt/apache
 WORKDIR /opt/apache
