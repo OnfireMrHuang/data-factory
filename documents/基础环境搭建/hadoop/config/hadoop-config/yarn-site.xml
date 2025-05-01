@@ -18,7 +18,7 @@
 	<!-- 设置YARN集群主角色运行集群位置 -->
 	<property>
 		<name>yarn.resourcemanager.hostname</name>
-		<value>hadoop-yarn-rm</value>
+		<value>0.0.0.0</value>
 	</property>
 	
 	<!-- 在RM Application视图中添加按钮以终止应用程序。 -->

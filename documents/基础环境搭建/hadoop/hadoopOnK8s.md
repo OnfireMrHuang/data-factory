@@ -307,6 +307,7 @@ wget https://dlcdn.apache.org/flink/flink-1.17.2/flink-1.17.2-bin-scala_2.12.tgz
 
 
 # 修改config中的内容
+# hadoop配置值修改参考: https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-common/yarn-default.xml
 vim config/hive-config/hive-site.xml
 # 将其中的用户名和密码替换掉
 
