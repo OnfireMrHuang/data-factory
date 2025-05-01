@@ -386,5 +386,19 @@ NOTES:
 ```
 
 
+## 运维问题
 
+1. 执行bootstrap.sh {选项}时tail -f常报错
+  直接修改yaml文件，修改容器启动命令
+
+
+2. hadoop配置问题
+  修改hadoop-hadoop config-map, 配置绑定端口等配置
+
+
+3. 资源不足导致pod被term杀掉
+  调高CPU和内存资源
+
+
+  
 
