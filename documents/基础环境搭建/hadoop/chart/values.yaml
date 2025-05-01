@@ -64,11 +64,11 @@ hdfs:
 
     resources:
       requests:
-        memory: "256Mi"
-        cpu: "200m"
+        memory: "512Mi"
+        cpu: "500m"
       limits:
-        memory: "256Mi"
-        cpu: "200m"
+        memory: "512Mi"
+        cpu: "500m"
 
 yarn:
   resourceManager:
@@ -96,11 +96,11 @@ yarn:
     # This should be tuned to fit your workload.
     resources:
       requests:
-        memory: "256Mi"
-        cpu: "200m"
+        memory: "512Mi"
+        cpu: "500m"
       limits:
-        memory: "256Mi"
-        cpu: "200m"
+        memory: "512Mi"
+        cpu: "500m"
   proxyServer:
     pdbMinAvailable: 1
     replicas: 1
