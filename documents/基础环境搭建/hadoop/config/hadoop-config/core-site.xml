@@ -44,7 +44,7 @@
 	<!--配置HDFS网页登录使用的静态用户为root-->		
 	<property>
 		<name>hadoop.http.staticuser.user</name>
-		<value>root</value>
+		<value>hadoop</value>
 	</property>	
   	<property>
     	<name>dfs.permissions.enabled</name>
