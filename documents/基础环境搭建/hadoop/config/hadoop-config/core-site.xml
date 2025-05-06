@@ -45,7 +45,11 @@
 	<property>
 		<name>hadoop.http.staticuser.user</name>
 		<value>root</value>
-	</property>		
+	</property>	
+  	<property>
+    	<name>dfs.permissions.enabled</name>
+    	<value>false</value>
+  	</property>	
 	
 	<!--配置root(超级用户)允许通过代理访问的主机节点-->		
 	<property>
