@@ -162,13 +162,13 @@ persistence:
     size: 1Gi
     volumes:
     - name: dfs1
-      mountPath: /opt/apache/hdfs/datanode1
+      mountPath: /opt/apache/hadoop/data/hdfs/datanode/data1
       hostPath: /var/bigdata/servers/hadoop/dn/data/data1
     - name: dfs2
-      mountPath: /opt/apache/hdfs/datanode2
+      mountPath: /opt/apache/hadoop/data/hdfs/datanode/data2
       hostPath: /var/bigdata/servers/hadoop/dn/data/data2
     - name: dfs3
-      mountPath: /opt/apache/hdfs/datanode3
+      mountPath: /opt/apache/hadoop/data/hdfs/datanode/data3
       hostPath: /var/bigdata/servers/hadoop/dn/data/data3
 
 service:
