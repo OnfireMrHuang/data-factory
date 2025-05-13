@@ -77,11 +77,11 @@ yarn:
 
     resources:
       requests:
-        memory: "256Mi"
-        cpu: "200m"
+        memory: "512Mi"
+        cpu: "500m"
       limits:
-        memory: "256Mi"
-        cpu: "200m"
+        memory: "512Mi"
+        cpu: "500m"
 
   nodeManager:
     pdbMinAvailable: 1
@@ -96,11 +96,11 @@ yarn:
     # This should be tuned to fit your workload.
     resources:
       requests:
-        memory: "512Mi"
-        cpu: "500m"
+        memory: "1024Mi"
+        cpu: "1000m"
       limits:
-        memory: "512Mi"
-        cpu: "500m"
+        memory: "1024Mi"
+        cpu: "1000m"
   proxyServer:
     pdbMinAvailable: 1
     replicas: 1
@@ -120,11 +120,11 @@ hive:
 
     resources:
       requests:
-        memory: "512Mi"
-        cpu: "500m"
+        memory: "1024Mi"
+        cpu: "1000m"
       limits:
-        memory: "512Mi"
-        cpu: "500m"
+        memory: "1024Mi"
+        cpu: "1000m"
 
   hiveserver2:
     replicas: 1
@@ -132,11 +132,11 @@ hive:
 
     resources:
       requests:
-        memory: "512Mi"
-        cpu: "500m"
+        memory: "1024Mi"
+        cpu: "1000m"
       limits:
-        memory: "512Mi"
-        cpu: "500m"
+        memory: "1024Mi"
+        cpu: "1000m"
 
 persistence:
   nameNode:

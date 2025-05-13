@@ -386,19 +386,26 @@ NOTES:
 ```
 
 
-## 运维问题
 
-1. 执行bootstrap.sh {选项}时tail -f常报错
-  直接修改yaml文件，修改容器启动命令
+### 测试
 
+```shell
 
-2. hadoop配置问题
-  修改hadoop-hadoop config-map, 配置绑定端口等配置
+kubectl exec -it hadoop-hadoop-hive-hiveserver2-0 -n hadoop -- bash
 
+beeline -u jdbc:hive2://localhost:10000  -n hadoop
 
-3. 资源不足导致pod被term杀掉
-  调高CPU和内存资源
+# 建表
+CREATE TABLE mytable (
+  id INT,
+  name STRING,
+  age INT,
+  address STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n';
 
-
-  
-
+# 添加数据
+INSERT INTO mytable VALUES (1, 'Alice', 25, 'F'), (2, 'Bob', 30, 'M'), (3, 'Charlie', 35, 'M');
+```
