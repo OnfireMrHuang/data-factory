@@ -6,6 +6,7 @@
 - 运行环境: 
 - k8s 版本: v1.23.8
 - spark 版本: v3.1.1
+- spark-operator 版本: https://github.com/kubeflow/spark-operator/releases, v2.1.1
 
 
 ## 镜像准备
@@ -44,6 +45,11 @@ kubectl create namespace spark-operator
 
 # 安装
 helm install spark-operator spark-operator/spark-operator --namespace spark-operator --set sparkJobNamespace=default --set image.repository=ghcr.io/googlecloudplatform/spark-operator --set image.tag=v1beta2-1.3.8-3.1.1 
+
+
+# 卸载
+kubectl delete namespace spark-operator --force --grace-period=0
+helm uninstall spark-operator --namespace spark-operator
 
 ```
 

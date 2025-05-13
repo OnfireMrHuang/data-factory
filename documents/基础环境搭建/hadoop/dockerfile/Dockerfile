@@ -50,19 +50,19 @@ ENV HIVE_HOME=/opt/apache/hive
 ENV PATH=$HIVE_HOME/bin:$PATH
 RUN ln -s /opt/apache/apache-hive-${HIVE_VERSION}-bin ${HIVE_HOME}
 
-# 配置spark
-ENV SPARK_VERSION 3.4.4
-ADD spark-${SPARK_VERSION}-bin-hadoop3.tgz /opt/apache/
-ENV SPARK_HOME=/opt/apache/spark
-ENV PATH=$SPARK_HOME/bin:$PATH
-RUN ln -s /opt/apache/spark-${SPARK_VERSION}-bin-hadoop3 ${SPARK_HOME}
+# 配置spark(可选)
+# ENV SPARK_VERSION 3.4.4
+# ADD spark-${SPARK_VERSION}-bin-hadoop3.tgz /opt/apache/
+# ENV SPARK_HOME=/opt/apache/spark
+# ENV PATH=$SPARK_HOME/bin:$PATH
+# RUN ln -s /opt/apache/spark-${SPARK_VERSION}-bin-hadoop3 ${SPARK_HOME}
 
-# 配置 flink
-ENV FLINK_VERSION 1.17.2
-ADD flink-${FLINK_VERSION}-bin-scala_2.12.tgz /opt/apache/
-ENV FLINK_HOME=/opt/apache/flink
-ENV PATH=$FLINK_HOME/bin:$PATH
-RUN ln -s /opt/apache/flink-${FLINK_VERSION} ${FLINK_HOME}
+# 配置 flink（可选）
+# ENV FLINK_VERSION 1.17.2
+# ADD flink-${FLINK_VERSION}-bin-scala_2.12.tgz /opt/apache/
+# ENV FLINK_HOME=/opt/apache/flink
+# ENV PATH=$FLINK_HOME/bin:$PATH
+# RUN ln -s /opt/apache/flink-${FLINK_VERSION} ${FLINK_HOME}
 
 # 创建namenode、datanode存储目录
 RUN mkdir -p /opt/apache/hadoop/data/{hdfs,yarn} /opt/apache/hadoop/data/hdfs/namenode /opt/apache/hadoop/data/hdfs/datanode/data{1..3} /opt/apache/hadoop/data/yarn/{local-dirs,log-dirs,apps}
