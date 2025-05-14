@@ -88,7 +88,7 @@ helm uninstall spark-operator --namespace spark-operator
 
 ```
 
-## 运行示例Job
+## 测试运行示例Job
 
 ```shell
 
@@ -106,6 +106,69 @@ kubectl get sparkapp spark-pi
 
 ```
 
+## 运行spark-shell(调试常用)
+
+
+```yaml
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: spark-shell
+  namespace: default
+spec:
+  type: Scala
+  mode: cluster
+  image: spark:3.5.3
+  imagePullPolicy: IfNotPresent
+  mainClass: org.apache.spark.repl.Main
+  sparkVersion: 3.5.3
+  restartPolicy:
+    type: Never
+  sparkConf:
+    "spark.hadoop.hive.metastore.uris": "thrift://hadoop-hadoop-hive-metastore.hadoop.svc.cluster.local:9083"
+    "spark.sql.catalogImplementation": "hive"
+    "spark.sql.warehouse.dir": "hdfs://hadoop-hadoop-hdfs-nn.hadoop.svc.cluster.local:9000/user/hive/warehouse"
+    "spark.hadoop.fs.defaultFS": "hdfs://hadoop-hadoop-hdfs-nn.hadoop.svc.cluster.local:9000"
+  volumes:
+    - name: hadoop-hadoop
+      configMap:
+        name: hadoop-hadoop
+    - name: hadoop-hadoop-hive
+      configMap:
+        name: hadoop-hadoop-hive
+  driver:
+    labels:
+      version: 3.5.3
+    cores: 1
+    memory: 512m
+    serviceAccount: spark-operator-spark
+    volumeMounts:
+      - name: hadoop-hadoop-hive
+        mountPath: /opt/spark/conf/hive-site.xml
+        subPath: hive-site.xml
+      - name: hadoop-hadoop
+        mountPath: /opt/spark/conf/core-site.xml
+        subPath: core-site.xml
+      - name: hadoop-hadoop
+        mountPath: /opt/spark/conf/hdfs-site.xml
+        subPath: hdfs-site.xml
+  executor:
+    labels:
+      version: 3.5.3
+    instances: 1
+    cores: 1
+    memory: 512m
+    volumeMounts:
+      - name: hadoop-hadoop-hive
+        mountPath: /opt/spark/conf/hive-site.xml
+        subPath: hive-site.xml
+      - name: hadoop-hadoop
+        mountPath: /opt/spark/conf/core-site.xml
+        subPath: core-site.xml
+      - name: hadoop-hadoop
+        mountPath: /opt/spark/conf/hdfs-site.xml
+        subPath: hdfs-site.xml
+```
 
 
 ## 问题解决
