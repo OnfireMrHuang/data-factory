@@ -101,12 +101,9 @@ todo... spark的部署还存在一些问题，先搁置，后续再补充...
         name: sparkoperator
         ......
         rules:
-        - apiGroups:
-        - "*"
-        resources:
-        - "*"
-        verbs:
-        - "*"
+        - apiGroups: ["*"]    
+        resources: ["*"]    
+        verbs: ["*"]
     ```
 
 4. 如果安装过程中提示scheduledsparkapplications.sparkoperator.k8s.io未找到, 解决如下
