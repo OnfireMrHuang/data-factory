@@ -110,33 +110,57 @@ kubectl get sparkapp spark-pi
 
 ```shell
 
-# 进入minikube集群节点进行调试
-minikube ssh
-
 # 直接以bash的形式运行spark-shell，并进入终端
 kubectl run spark-debug --image=spark:3.5.3 --restart=Never -it --rm -- /bin/bash
 
+# hdfs调试
+hdfs dfsadmin -fs hdfs://localhost:9000 -report | grep "Name:"
 
 # 退出
 exit
 
 # 运行shell
-/opt/spark/bin/spark-shell --master=local[*]  --conf=spark.hadoop.fs.defaultFS=hdfs://hadoop-hadoop-hdfs-nn.hadoop:9000  --conf=spark.hadoop.hive.metastore.uris=thrift://hadoop-hadoop-hive-metastore.hadoop:9083
+/opt/spark/bin/spark-shell --master=local[*]  --conf=spark.hadoop.fs.defaultFS=hdfs://hadoop-hadoop-hdfs-nn.hadoop:9000  --conf=spark.hadoop.hive.metastore.uris=thrift://hadoop-hadoop-hive-metastore.hadoop:9083 --conf=spark.hadoop.fs.hdfs.impl.disable.cache=true
 
+# ctrl + c 退出
 
-# hdfs调试
-hdfs dfsadmin -fs hdfs://localhost:9000 -report | grep "Name:"
+```
 
+验证代码
+
+```java
 
 # 启用Hive支持
 import org.apache.spark.sql.SparkSession
 
-# 查询现有表
+// 查询现有表
 val df = spark.sql("SELECT * FROM mytable")
 df.show()
 
-# 或者使用DataFrame API
+// 或者使用DataFrame API
 spark.table("mytable").show()
+
+// 创建hive表
+spark.sql("""
+  CREATE TABLE IF NOT EXISTS test_table (
+    id INT,
+    name STRING,
+    age INT,
+    create_time TIMESTAMP
+  ) 
+  STORED AS PARQUET
+""")
+
+// 2. 插入数据
+spark.sql("""
+  INSERT INTO test_table VALUES 
+  (1, 'Alice', 25, current_timestamp()),
+  (2, 'Bob', 30, current_timestamp()),
+  (3, 'Charlie', 35, current_timestamp())
+""")
+
+// 3. 查询数据
+spark.sql("SELECT * FROM test_table").show()
 
 ```
 
