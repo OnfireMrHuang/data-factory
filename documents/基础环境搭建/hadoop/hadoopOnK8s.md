@@ -395,7 +395,7 @@ core-site.xml
 <configuration>
   <property>
       <name>fs.defaultFS</name>
-      <value>hdfs://hadoop-hadoop-hdfs-nn.hadoop:9000/</value>
+        <value>hdfs://hadoop-hadoop-hdfs-nn-0.hadoop-hadoop-hdfs-nn.hadoop.svc.cluster.local:9000</value>
       <description>NameNode URI</description>
   </property>
   <property>
@@ -427,6 +427,7 @@ core-site.xml
 ```
 
 hdfs-site.xml
+
 ```xml
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
@@ -443,11 +444,11 @@ hdfs-site.xml
     <name>dfs.client.use.datanode.hostname</name>
     <value>true</value>
   </property>
-  
-  <property>
-    <name>dfs.datanode.hostname</name>
-    <value>hadoop-hadoop-hdfs-dn-0.hadoop-hadoop-hdfs-dn</value>
-  </property>
+
+  # <property>
+  #   <name>dfs.datanode.hostname</name>
+  #   <value>hadoop-hadoop-hdfs-dn-0.hadoop-hadoop-hdfs-dn.hadoop.svc.cluster.local</value>
+  # </property>
 
   <property>
     <name>dfs.namenode.datanode.registration.ip-hostname-check</name>
