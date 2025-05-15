@@ -108,19 +108,35 @@ kubectl get sparkapp spark-pi
 
 ## 运行spark-shell(调试常用)
 
-资源文件参考spark-shell-hive:3.5.3
-
 ```shell
 
-# 构建spark-shell-hive镜像
-docker build -t spark-shell-hive:3.5.3 .
+# 进入minikube集群节点进行调试
+minikube ssh
 
-# 应用spark-shell-config.yaml文件
-kubectl apply -f spark-shell-config.yaml
+# 直接以bash的形式运行spark-shell，并进入终端
+kubectl run spark-debug --image=spark:3.5.3 --restart=Never -it --rm -- /bin/bash
 
 
-# 应用spark-shell-pod.yaml文件
-kubectl apply -f spark-shell-pod.yaml
+# 退出
+exit
+
+# 运行shell
+/opt/spark/bin/spark-shell --master=local[*]  --conf=spark.hadoop.fs.defaultFS=hdfs://hadoop-hadoop-hdfs-nn.hadoop:9000  --conf=spark.hadoop.hive.metastore.uris=thrift://hadoop-hadoop-hive-metastore.hadoop:9083
+
+
+# hdfs调试
+hdfs dfsadmin -fs hdfs://localhost:9000 -report | grep "Name:"
+
+
+# 启用Hive支持
+import org.apache.spark.sql.SparkSession
+
+# 查询现有表
+val df = spark.sql("SELECT * FROM mytable")
+df.show()
+
+# 或者使用DataFrame API
+spark.table("mytable").show()
 
 ```
 
