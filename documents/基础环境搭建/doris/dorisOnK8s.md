@@ -118,6 +118,39 @@ mysql -h nodeIP -P nodePort -uroot
 
 ```
 
+## 其他
+
+加密密码准备, 直接在https://go.dev/play/上执行下面代码得出
+
+```go
+package main
+
+import (
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
+	"strings"
+)
+
+func main() {
+	//original password
+	plan := "root@123"
+	//the first stage encryption.
+	h := sha1.New()
+	h.Write([]byte(plan))
+	eb := h.Sum(nil)
+
+	//the two stage encryption.
+	h.Reset()
+	h.Write(eb)
+	teb := h.Sum(nil)
+	dst := hex.EncodeToString(teb)
+	tes := strings.ToUpper(fmt.Sprintf("%s", dst))
+	//output the 2 stage encrypted password.
+	fmt.Println("*" + tes)
+}
+```
+
 
 
 
