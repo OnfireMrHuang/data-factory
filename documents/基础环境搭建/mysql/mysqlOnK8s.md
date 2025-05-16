@@ -1,8 +1,11 @@
+## 说明
 
-## 安装Mysql
+应用元数据以及hive metastore存储使用.
 
 参考文档: https://mp.weixin.qq.com/s?__biz=MzI3MDM5NjgwNg==&mid=2247486479&idx=1&sn=b9ed32a6cb8b495cf0e7d980f8a1ac99&chksm=ead0f0e6dda779f05ce249ba1cdcd299992a8cc2bd43ff767117342efb43466ae87a8ae32ec1#rd
 
+
+## 安装Mysql
 
 ```shell
 # 添加bitnami源
