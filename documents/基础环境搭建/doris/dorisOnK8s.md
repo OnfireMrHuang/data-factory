@@ -72,11 +72,12 @@ doris-operator-67985c6744-72q6v   1/1     Running   0          10m
 1、镜像准备
 
 ```shell
+
+minikube ssh
+
 docker pull apache/doris:be-2.1.8
-minikube image load apache/doris:be-2.1.8
 
 docker pull apache/doris:fe-2.1.8
-minikube image load apache/doris:fe-2.1.8
 ```
 
 2、应用部署
@@ -92,6 +93,11 @@ kubectl -n doris apply -f fe-conf.yaml
 
 # 创建be配置
 kubectl -n doris apply -f be-conf.yaml
+
+# 创建存储类
+kubectl -n doris apply -f doris-storage.yaml
+kubectl -n doris apply -f fe-persistent.yaml
+kubectl -n doris apply -f be-persistent.yaml
 
 # 正式部署
 kubectl -n doris apply -f doriscluster.yaml

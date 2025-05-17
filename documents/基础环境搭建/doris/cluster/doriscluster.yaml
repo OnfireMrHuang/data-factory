@@ -27,13 +27,13 @@ spec:
       name: meta
       persistentVolumeClaimSpec:
         # when use specific storageclass, the storageClassName should reConfig, example as annotation.
-        storageClassName: ${your_storageclass}
+        storageClassName: doris-fe-storage
         accessModes:
           - ReadWriteOnce
         resources:
           # notice: if the storage size less 5G, fe will not start normal.
           requests:
-            storage: ${storageSize}
+            storage: 20G
     service:
       type: NodePort
       servicePorts:
@@ -57,12 +57,12 @@ spec:
     - mountPath: /opt/apache-doris/be/storage
       name: be-storage
       persistentVolumeClaimSpec:
-        storageClassName: ${your_storageclass}
+        storageClassName: doris-be-storage
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
-            storage: ${storageSize}
+            storage: 80G
     service:
       type: NodePort
       servicePorts:
