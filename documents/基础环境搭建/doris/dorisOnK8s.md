@@ -118,11 +118,20 @@ kubectl -n doris get dcr
 # 获取service
 kubectl get service -n doris
 
-# NodePort方式, 9030端口会被映射到主机，外部可以直接访问节点的映射端口
-kubectl get nodes -n doris -owide
+# 进入mysql client容器
+kubectl run mysql-client --rm --tty -i --restart='Never' --image  docker.io/bitnami/mysql:8.0.36-debian-12-r10 --namespace mysql --command -- bash
 
-# 访问
-mysql -h nodeIP -P nodePort -uroot
+# 无密码访问
+mysql -hdoriscluster-fe-service.doris -P9030 -uroot 
+
+# 设置密码
+SET PASSWORD FOR 'admin' = PASSWORD('your_password');
+
+# 创建用户
+CREATE USER 'test' IDENTIFIED BY 'test_passwd';
+
+# 授权
+GRANT ALL ON example_db TO doris_user;
 
 ```
 
