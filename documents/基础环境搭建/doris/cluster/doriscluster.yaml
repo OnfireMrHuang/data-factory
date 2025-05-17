@@ -3,9 +3,9 @@ kind: DorisCluster
 metadata:
   labels:
     app.kubernetes.io/name: doriscluster
-    app.kubernetes.io/instance: doriscluster-sample
+    app.kubernetes.io/instance: doriscluster
     app.kubernetes.io/part-of: doris-operator
-  name: doriscluster-sample
+  name: doriscluster
 spec:
   adminUser:
     name: root

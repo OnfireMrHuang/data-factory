@@ -94,7 +94,7 @@ kubectl -n doris apply -f fe-conf.yaml
 # 创建be配置
 kubectl -n doris apply -f be-conf.yaml
 
-# 创建存储类
+# 创建存储类(stateful会自动创建pvc，所以不用定义)
 kubectl -n doris apply -f doris-storage.yaml
 kubectl -n doris apply -f fe-persistent.yaml
 kubectl -n doris apply -f be-persistent.yaml

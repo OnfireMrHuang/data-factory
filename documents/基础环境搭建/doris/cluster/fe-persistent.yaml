@@ -19,17 +19,3 @@ spec:
           operator: In
           values:
           - minikube
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: fe-pvc
-  namespace: doris
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
-  storageClassName: doris-fe-storage
-  volumeName: fe-local-pv
