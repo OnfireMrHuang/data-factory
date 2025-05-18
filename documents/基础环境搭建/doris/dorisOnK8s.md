@@ -94,6 +94,12 @@ kubectl -n doris apply -f fe-conf.yaml
 # 创建be配置
 kubectl -n doris apply -f be-conf.yaml
 
+# 宿主机上创建目录
+sudo mkdir -p /var/bigdata/servers/doris/data/fe
+sudo mkdir -p /var/bigdata/servers/doris/data/be
+sudo chmod -R 777 /var/bigdata/servers/doris/data/fe
+sudo chmod -R 777 /var/bigdata/servers/doris/data/be
+
 # 创建存储类(stateful会自动创建pvc，所以不用定义)
 kubectl -n doris apply -f doris-storage.yaml
 kubectl -n doris apply -f fe-persistent.yaml
