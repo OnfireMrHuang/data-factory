@@ -147,7 +147,29 @@ kubectl get pod,svc -n kafka
 kubectl run kafka-client --restart='Never' --image docker.io/bitnami/kafka:3.9.0-debian-12-r12 --namespace kafka --command -- sleep infinity
 kubectl cp --namespace kafka /home/huangww01/workspace/kafka-depoly/client.properties kafka-client:/tmp/client.properties
 
-# 打开两个窗口（一个作为生产者：producer，一个作为消费者：consumer），但是两个窗口都得先登录客户端,在producer端输入，consumer会实时打印
+
+# 创建topic
+kubectl exec --tty -i kafka-client --namespace kafka -- bash
+
+# 创建topic
+kafka-topics.sh --create --topic test --bootstrap-server kafka-broker-0.kafka-broker-headless.kafka.svc.cluster.local:9092 --command-config /tmp/client.properties --partitions 1 --replication-factor 1 
+
+# 查看topic
+kafka-topics.sh --describe --topic test --bootstrap-server kafka-broker-0.kafka-broker-headless.kafka.svc.cluster.local:9092 --command-config /tmp/client.properties 
+
+# 查看topic列表
+kafka-topics.sh --list  --bootstrap-server kafka-broker-0.kafka-broker-headless.kafka.svc.cluster.local:9092 --command-config /tmp/client.properties 
+
+# 删除topic
+kafka-topics.sh --delete --topic test --bootstrap-server kafka-broker-0.kafka-broker-headless.kafka.svc.cluster.local:9092 --command-config /tmp/client.properties 
+
+# 消费者
+kafka-console-consumer.sh \
+            --consumer.config /tmp/client.properties \
+            --bootstrap-server kafka.kafka.svc.cluster.local:9092 \
+            --topic test \
+            --from-beginning
+
 # 生产者
 kubectl exec --tty -i kafka-client --namespace kafka -- bash
 
@@ -155,60 +177,5 @@ kafka-console-producer.sh \
             --producer.config /tmp/client.properties \
             --bootstrap-server kafka.kafka.svc.cluster.local:9092 \
             --topic test
-
-# 消费者
-kubectl exec --tty -i kafka-client --namespace kafka -- bash
-
-kafka-console-consumer.sh \
-            --consumer.config /tmp/client.properties \
-            --bootstrap-server kafka.kafka.svc.cluster.local:9092 \
-            --topic test \
-            --from-beginning
-
-# 创建topic
-kafka-topics.sh --create --topic mytest --zookeeper zookeeper.zookeeper.svc.cluster.local:2181 --partitions 1 --replication-factor 1
-
-# 查看topic
-kafka-topics.sh --describe --bootstrap-server kafka:9092  --topic mytest
-
-# 先查看topic列表
-kafka-topics.sh --list --zookeeper zookeeper.zookeeper.svc.cluster.local:2181
-
-# 删除topic
-kafka-topics.sh --delete --topic mytest --zookeeper zookeeper.zookeeper.svc.cluster.local:2181
-
-# 再查看,发现topic还在(其实上面没删除，只是标记了（只会删除zookeeper中的元数据，消息文件须手动删除）)
-kafka-topics.sh --list --zookeeper zookeeper.zookeeper.svc.cluster.local:2181
-
-# 修改Topic信息
-# 先创建一个topic
-kafka-topics.sh --create --topic test001 --zookeeper zookeeper.zookeeper.svc.cluster.local:2181 --partitions 1 --replication-factor 1
-
-# 修改，设置数据过期时间（-1表示不过期）
-kafka-topics.sh --zookeeper zookeeper.zookeeper.svc.cluster.local:2181 -topic test001 --alter --config retention.ms=259200000
-
-# 修改多字段
-kafka-topics.sh --zookeeper zookeeper.zookeeper.svc.cluster.local:2181 -topic test001 --alter --config max.message.bytes=128000 retention.ms=259200000
-kafka-topics.sh --describe --zookeeper zookeeper.zookeeper.svc.cluster.local:2181  --topic test001
-
-# 增加topic分区数
-kafka-topics.sh --zookeeper zookeeper.zookeeper.svc.cluster.local:2181 --alter --topic test --partitions 10
-kafka-topics.sh --describe --zookeeper zookeeper.zookeeper.svc.cluster.local:2181  --topic test
-
-# 列出所有主题中的所有用户组
-kafka-consumer-groups.sh --bootstrap-server kafka-0.kafka-headless.kafka.svc.cluster.local:9092 --list
-
-# 查询消费者组详情（数据积压情况）
-# 生产者
-kafka-console-producer.sh \
---broker-list kafka-0.kafka-headless.kafka.svc.cluster.local:9092
---topic test
-
-# 消费者带group.id
-kafka-console-consumer.sh --bootstrap-server kafka-0.kafka-headless.kafka.svc.cluster.local:9092 --topic test --consumer-property group.id=mygroup
-
-# 查看消费组情况
-kafka-consumer-groups.sh --bootstrap-server kafka-0.kafka-headless.kafka.svc.cluster.local:9092 --describe --group mygroup
-
 ```
 
