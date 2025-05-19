@@ -15,7 +15,7 @@ metadata:
   name: zookeeper-local-pv
 spec:
   capacity:
-    storage: 5Gi
+    storage: 8Gi
   accessModes:
   - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain

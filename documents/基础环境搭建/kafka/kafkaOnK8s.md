@@ -9,7 +9,7 @@ https://mp.weixin.qq.com/s?__biz=MzI3MDM5NjgwNg==&mid=2247486178&idx=1&sn=a04a17
 
 ## 安装部署
 
-1、创建命名空间
+### 1、创建命名空间
 
 ```shell
 # 创建zookeeper和kafka的命名空间
@@ -17,7 +17,7 @@ kubectl create namespace zookeeper
 kubectl create namespace kafka
 ```
 
-2、创建持久化存储
+### 2、创建持久化存储
 
 
 ```shell
@@ -35,20 +35,45 @@ kubectl apply -n zookeeper -f zookeeper-local-storage.yaml
 kubectl apply -n kafka -f kafka-local-storage.yaml
 ```
 
-3、安装部署zookeeper集群
+### 3、安装部署zookeeper集群
 
 ```shell
+
+# 设置代理
+export HTTP_PROXY=http://10.11.71.41:7890
+export HTTPS_PROXY=http://10.11.71.41:7890
+export NO_PROXY=localhost,127.0.0.1,.svc,.cluster.local
 
 # 如果没有bitnami仓库，先添加
 helm repo add bitnami https://charts.bitnami.com/bitnami
 
+# 在有网络的机器上执行
+helm pull oci://registry-1.docker.io/bitnamicharts/zookeeper --version 13.8.2
+tar xvf zookeeper-13.8.2.tgz
 
-# 安装zookeeper集群，注意：zookeeper集群的节点数必须是奇数，否则会出现脑裂问题
-helm install zookeeper bitnami/zookeeper \
---namespace zookeeper \
---set replicaCount=1 --set auth.enabled=false \
---set allowAnonymousLogin=true \
---set persistence.storageClass=zookeeper-local-storage 
+# 3.9.3-debian-12-r15替换为3.9.3-debian-12-r8
+sed -i 's/3.9.3-debian-12-r15/3.9.3-debian-12-r8/g' zookeeper/values.yaml
+
+# 提前拉取镜像
+minikube ssh
+
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/zookeeper:3.9.3-debian-12-r8
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/zookeeper:3.9.3-debian-12-r8  docker.io/bitnami/zookeeper:3.9.3-debian-12-r8
+
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/os-shell:12-debian-12-r43
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/os-shell:12-debian-12-r43  docker.io/bitnami/os-shell:12-debian-12-r43
+
+# 创建命名空间
+kubectl create namespace zookeeper
+
+# 离线安装
+helm install zookeeper ./zookeeper \
+  --namespace zookeeper \
+  --set replicaCount=1 \
+  --set auth.enabled=false \
+  --set allowAnonymousLogin=true \
+  --set persistence.storageClass=zookeeper-local-storage
+
 
 # 查看pod
 kubectl get pod,pv,svc -n zookeeper -o wide
@@ -57,7 +82,6 @@ kubectl get pod,pv,svc -n zookeeper -o wide
 export POD_NAME=$(kubectl get pods --namespace zookeeper -l "app.kubernetes.io/name=zookeeper,app.kubernetes.io/instance=zookeeper,app.kubernetes.io/component=zookeeper" -o jsonpath="{.items[0].metadata.name}")
 
 kubectl exec -it $POD_NAME -n zookeeper -- zkCli.sh
-
 
 # 外部测试连接
 # 先删掉本地端口对应的进程，要不然就得换连接端口了
@@ -68,47 +92,84 @@ netstat -tnlp|grep 127.0.0.1:2181|awk '{print int($NF)}'|xargs kill -9
 zkCli.sh 127.0.0.1:21
 ```
 
-4、安装部署kafka集群
+### 4、安装部署kafka集群
 
 ```shell
 
 # 查看zoopeeper的集群状态
 helm status zookeeper -n zookeeper
 
-# 安装kafka
-helm install kafka bitnami/kafka \
---namespace kafka \
---set zookeeper.enabled=false \
---set replicaCount=1 \
---set externalZookeeper.servers=zookeeper.zookeeper.svc.cluster.local \
---set persistence.storageClass=kafka-local-storage 
+
+# 在有网络的机器上执行
+helm pull oci://registry-1.docker.io/bitnamicharts/kafka --version 31.5.0
+tar xvf kafka-31.5.0.tgz
+
+# 替换镜像
+sed -i 's/12-debian-12-r39/12-debian-12-r43/g' kafka/values.yaml
+sed -i 's/1.1.0-debian-12-r7/1.1.0-debian-12-r9/g' kafka/values.yaml
+sed -i 's/1.32.2-debian-12-r3/1.32.2-debian-12-r4/g' kafka/values.yaml
+
+# 提前拉取镜像
+minikube ssh
+
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/jmx-exporter:1.0.1-debian-12-r9
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/jmx-exporter:1.0.1-debian-12-r9  docker.io/bitnami/jmx-exporter:1.0.1-debian-12-r9
+
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/kafka:3.9.0-debian-12-r12
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/kafka:3.9.0-debian-12-r12  docker.io/bitnami/kafka:3.9.0-debian-12-r12
+
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/kubectl:1.32.3-debian-12-r4
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bitnami/kubectl:1.32.3-debian-12-r4  docker.io/bitnami/kubectl:1.32.3-debian-12-r4
+
+
+# 创建命名空间
+kubectl create namespace kafka
+
+# 离线安装
+helm install kafka ./kafka \
+  --namespace kafka \
+  --set replicaCount=1 \
+  --set zookeeper.enabled=false \
+  --set externalZookeeper.servers=zookeeper.zookeeper.svc.cluster.local \
+  --set persistence.enabled=true \
+  --set global.storageClass=kafka-local-storage \
+  --set controller.replicaCount=0 \
+  --set kraft.enabled=false \
+  --set "broker.replicaCount=1" \
+  --set "broker.id=1" 
+
 
 # 查看pod
 kubectl get pod,svc -n kafka
 
 # 简单实用验证
 # 先创建一个client
-kubectl run kafka-client --restart='Always' --image docker.io/bitnami/kafka:2.8.1-debian-10-r57 --namespace kafka --command -- sleep infinity
+kubectl run kafka-client --restart='Never' --image docker.io/bitnami/kafka:3.9.0-debian-12-r12 --namespace kafka --command -- sleep infinity
+kubectl cp --namespace kafka /home/huangww01/workspace/kafka-depoly/client.properties kafka-client:/tmp/client.properties
 
 # 打开两个窗口（一个作为生产者：producer，一个作为消费者：consumer），但是两个窗口都得先登录客户端,在producer端输入，consumer会实时打印
 # 生产者
 kubectl exec --tty -i kafka-client --namespace kafka -- bash
+
 kafka-console-producer.sh \
---broker-list kafka-0.kafka-headless.kafka.svc.cluster.local:9092
---topic test
+            --producer.config /tmp/client.properties \
+            --bootstrap-server kafka.kafka.svc.cluster.local:9092 \
+            --topic test
 
 # 消费者
 kubectl exec --tty -i kafka-client --namespace kafka -- bash
+
 kafka-console-consumer.sh \
---bootstrap-server kafka.kafka.svc.cluster.local:9092 \
---topic test \
---from-beginning
+            --consumer.config /tmp/client.properties \
+            --bootstrap-server kafka.kafka.svc.cluster.local:9092 \
+            --topic test \
+            --from-beginning
 
 # 创建topic
 kafka-topics.sh --create --topic mytest --zookeeper zookeeper.zookeeper.svc.cluster.local:2181 --partitions 1 --replication-factor 1
 
 # 查看topic
-kafka-topics.sh --describe --zookeeper zookeeper.zookeeper.svc.cluster.local:2181  --topic mytest
+kafka-topics.sh --describe --bootstrap-server kafka:9092  --topic mytest
 
 # 先查看topic列表
 kafka-topics.sh --list --zookeeper zookeeper.zookeeper.svc.cluster.local:2181
