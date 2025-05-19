@@ -1,0 +1,32 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: redis-local-storage
+  namespace: redis
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: Delete        #回收策略：Retain（保留）、 Recycle（回收）或者Delete（删除）
+volumeBindingMode: Immediate    #volumeBindingMode存储卷绑定策略
+allowVolumeExpansion: true    #pvc是否允许扩容
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-local-pv
+spec:
+  capacity:
+    storage: 8Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: redis-local-storage
+  local:
+    path: /var/bigdata/servers/redis/data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - minikube
