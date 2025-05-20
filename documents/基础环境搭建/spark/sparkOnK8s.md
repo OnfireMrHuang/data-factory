@@ -92,6 +92,8 @@ helm uninstall spark-operator --namespace spark-operator
 
 ## 测试运行示例Job
 
+Spark版本: 3.5.3
+
 ```shell
 
 # 准备镜像
