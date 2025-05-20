@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--该项目直接沿用spring的starter-parent-->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.2.10.RELEASE</version>
+    </parent>
+
+    <groupId>io.github.hww.data.engine</groupId>
+    <artifactId>data-engine</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <description>数据基础设施项目</description>
+
+    <!--添加依赖的模块-->
+    <modules>
+        <!--应用运行入口-->
+        <module>data-engine-launcher</module>
+        <!--公共模块: 配置、模型、工具类、组件类等等-->
+        <module>data-engine-common</module>
+        <!--数据访问层: mysql、redis、spark等访问-->
+        <module>data-engine-dao</module>
+        <!--业务逻辑服务层: 主服务逻辑-->
+        <module>data-engine-service</module>
+        <!--访问控制入口: 基础路由，基础校验、鉴权、转发等-->
+        <module>data-engine-web</module>
+        <!--任务管理: 监听任务、定时任务-->
+        <module>data-engine-task</module>
+        <!--对外以jar包的形式提供接口-->
+        <module>data-engine-api</module>
+    </modules>
+
+    <!--覆写starter-parent中的变量-->
+    <properties>
+        <maven.compiler.source>13</maven.compiler.source>
+        <maven.compiler.target>13</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>13</java.version>
+        <start-class>io.github.hww.data.engine.Main</start-class>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+            <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>spring-snapshots</id>
+            <name>Spring Snapshots</name>
+            <url>https://repo.spring.io/snapshot</url>
+            <releases>
+            <enabled>false</enabled>
+            </releases>
+        </repository>
+        <repository>
+            <name>Central Portal Snapshots</name>
+            <id>central-portal-snapshots</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+            <releases>
+            <enabled>false</enabled>
+            </releases>
+            <snapshots>
+            <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+</project>
