@@ -34,7 +34,7 @@ rectangle "数据源" as datasource {
     file -[hidden]d-> website
     website -[hidden]d-> mysql
 }
-rectangle "采集+算子\n\ns自定义程序实现服务或任务" as customSource {
+rectangle "采集+算子\n\n自定义程序实现服务或任务" as customSource {
     top to bottom direction
 
     rectangle "<$python>" as python
@@ -54,7 +54,7 @@ rectangle "数据仓库" as datawarehouse {
     sparkRect -[hidden]d-> hiveRect
     hiveRect -[hidden]d-> hdfs
 }
-rectangle "算子+同步\n\ns自定义程序实现服务或任务" as customSink {
+rectangle "算子+同步\n\n自定义程序实现服务或任务" as customSink {
     top to bottom direction
 
     rectangle "<$python>" as python1

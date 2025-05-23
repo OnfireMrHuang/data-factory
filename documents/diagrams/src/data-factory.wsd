@@ -54,7 +54,7 @@ frame "基础设施层" as infra_layer {
                 [Kafka] <<($kafka)>> as kafka
                 [MySQL] <<($mysql)>> as mysql
                 [Redis] <<($redis)>> as redis
-                [HDFS] <<($hdfs)>> as hdfs
+                [Hadoop] <<($hadoop)>> as hadoop
 
                 [Milvus] <<($milvus)>> as milvus
                 [Doris] <<($doris)>> as doris
