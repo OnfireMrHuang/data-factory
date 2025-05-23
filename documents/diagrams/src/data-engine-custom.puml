@@ -1,0 +1,95 @@
+@startuml
+!include <archimate/Archimate>
+!include <cloudinsight/python>
+!include <logos/java>
+!include <logos/scala>
+!include <logos/kafka>
+!include <cloudinsight/hdfs>
+!include <cloudinsight/mysql>
+!include <cloudinsight/file>
+!include <awslib/AWSCommon>
+!include <office/Concepts/application_web>
+!include <tupadr3/font-awesome-6/warehouse>
+!include ../lib/debezium.puml
+!include ../lib/flink.puml
+!include ../lib/hive.puml
+!include ../lib/spark.puml
+!include ../lib/doris.puml
+!include ../lib/dataX.puml
+
+title "定制化ETL\n\n处理任意数据, 自定义编程处理"
+
+!theme cerulean-outline
+
+left to right direction
+
+rectangle "数据源" as datasource {
+
+    top to bottom direction
+
+    folder "<$file>" as file
+    cloud "website" as website
+    database "<$mysql>\nmysql" as mysql
+
+    file -[hidden]d-> website
+    website -[hidden]d-> mysql
+}
+rectangle "采集+算子\n\ns自定义程序实现服务或任务" as customSource {
+    top to bottom direction
+
+    rectangle "<$python>" as python
+    rectangle "<$java>" as java
+    rectangle "<$scala>" as scala
+
+    python -[hidden]d-> java
+    java -[hidden]d-> scala
+}
+rectangle "数据仓库" as datawarehouse {
+    top to bottom direction
+
+    rectangle "<$spark>\nSpark" as sparkRect
+    database "<$hive>\nHive" as hiveRect
+    folder "<$hdfs>\nHdfs"  as hdfs
+
+    sparkRect -[hidden]d-> hiveRect
+    hiveRect -[hidden]d-> hdfs
+}
+rectangle "算子+同步\n\ns自定义程序实现服务或任务" as customSink {
+    top to bottom direction
+
+    rectangle "<$python>" as python1
+    rectangle "<$java>" as java1
+    rectangle "<$scala>" as scala1
+
+    python1 -[hidden]d-> java1
+    java1 -[hidden]d-> scala1
+}
+rectangle "数据集市" as datamarket {
+    top to bottom direction
+    database "<$doris>\n结构化数据存储" as structStorage
+    database "半结构化数据存储" as semiStructStorage {
+        component "mongoDB" as mongoDB
+        component "redis" as redis
+        component "elasticsearch" as elasticsearch
+        mongoDB -[hidden]r-> redis
+        redis -[hidden]r-> elasticsearch
+    }
+    folder "非结构化数据存储"  as unstructStorage {
+        component "minio" as minio
+        component "s3" as s3
+        component "obs" as obs
+        component "oss" as oss
+        minio -[hidden]r-> s3
+        s3 -[hidden]r-> obs
+        obs -[hidden]r-> oss
+    }
+    structStorage -[hidden]d-> semiStructStorage
+    semiStructStorage -[hidden]d-> unstructStorage
+}
+
+datasource --> customSource: 数据收集+预处理
+customSource --> datawarehouse: 数据存储+清洗处理
+datawarehouse --> customSink: 数据抽取+数据处理
+customSink --> datamarket: 数据同步
+
+@enduml

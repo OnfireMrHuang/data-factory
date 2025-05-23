@@ -1,3 +1,73 @@
 @startuml
 
+!include <office/Concepts/application_web>
+!include <cloudogu/tools/k8s>
+!include <logos/kafka>
+!include <logos/mysql>
+!include <logos/java>
+!include <logos/rust>
+!include <logos/redis>
+!include <cloudinsight/python>
+!include ../lib/flink.puml
+!include ../lib/spark.puml
+!include ../lib/doris.puml
+!include ../lib/hadoop.puml
+!include ../lib/milvus.puml
+
+title "数据工厂-整体架构图"
+!theme cerulean-outline
+
+top to bottom direction
+
+' 应用层
+frame "应用层(外部应用)" as application_layer {
+    together {
+        rectangle "<$application_web>\n分析应用" as analysis_application
+        rectangle "<$application_web>\n模型训练" as model_training_application
+    }
+}
+
+' 终端层
+frame "终端层" as terminal_layer {
+    together {
+        rectangle "<$rust>\n\n前端(Yew)" as frontend
+        rectangle "<$rust>\n\n后端(Axum)" as backend
+
+        frontend -right-> backend
+    }
+}
+
+' 引擎层
+frame "引擎层" as engine_layer {
+    together {
+        rectangle "<$java>\n\n数据引擎" as data_engine
+        rectangle "<$python>\n\n智能引擎" as data_agent
+    }
+}
+
+' 基础设施层
+frame "基础设施层" as infra_layer {
+    node "<$k8s>\nk8s基础环境" as kubernetes {
+        top to bottom direction
+        package "中间件" {
+            together {
+                [Kafka] <<($kafka)>> as kafka
+                [MySQL] <<($mysql)>> as mysql
+                [Redis] <<($redis)>> as redis
+                [HDFS] <<($hdfs)>> as hdfs
+
+                [Milvus] <<($milvus)>> as milvus
+                [Doris] <<($doris)>> as doris
+                [Spark] <<($spark)>> as spark
+                [Flink] <<($flink)>> as flink
+            }
+        }
+    }
+}
+
+' 层级连接（确保垂直对齐）
+application_layer -down-> terminal_layer
+terminal_layer -down-> engine_layer
+engine_layer -down-> infra_layer
+
 @enduml

@@ -1,0 +1,53 @@
+@startuml
+!include <archimate/Archimate>
+!include <cloudinsight/python>
+!include <logos/java>
+!include <logos/scala>
+!include <logos/kafka>
+!include <cloudinsight/hdfs>
+!include <cloudinsight/mysql>
+!include <cloudinsight/file>
+!include <awslib/AWSCommon>
+!include <office/Concepts/application_web>
+!include <tupadr3/font-awesome-6/warehouse>
+!include ../lib/debezium.puml
+!include ../lib/flink.puml
+!include ../lib/hive.puml
+!include ../lib/spark.puml
+!include ../lib/doris.puml
+!include ../lib/dataX.puml
+
+title "标准化ETL\n主要处理结构化数据, 呈配置化和SQL化"
+
+!theme cerulean-outline
+
+left to right direction
+
+database "<$mysql>\nmysql" as mysql
+database "<$doris>\ndoris" as doris
+rectangle "<$application_web>" as application
+
+frame "数据链路" as dataflow {
+
+    rectangle "全量" as full {
+        rectangle "<$dataX>" as datax
+
+        mysql --> datax: 全量采集
+        datax --> doris: 全量数据写入doris并加工
+    }
+    rectangle "增量" as cdc {
+        left to right direction
+
+        rectangle "<$debezium>" as debezium
+        queue "<$kafka>" as kafka
+        rectangle "<$flink>\nflink" as flink
+
+        mysql --> debezium: 增量采集
+        debezium --> kafka: 推送增量数据
+        kafka --> flink: 消费增量数据
+        flink --> doris: 增量数据写入doris并加工
+    }
+}
+doris --> application: 数据查询
+
+@enduml
