@@ -2,7 +2,7 @@
 
 ## dataX依赖
 
-数据引擎需要利用DataX来实现数据同步功能，实现方式是集成dataX的库来实现，但是需要依赖配置文件、插件等基础数据。所以需要在项目目录下添加datax目录，以此来调试或构建镜像。
+数据引擎需要利用DataX来实现全量数据同步，实现方式是集成dataX的库来实现，但是需要依赖配置文件、插件等基础数据。所以需要在项目目录下添加datax目录，以此来调试或构建镜像。
 步骤如下:
 
 1、下载dataX到本地
@@ -37,6 +37,16 @@ rm -fr lib bin tmp script
 rm -fr reeader/{unused plugins} writer/{unused plugins}}
 
 ```
+
+## Debezium依赖
+
+数据引擎需要利用Debezium来实现增量数据同步，对采集的数据源有如下权限要求:
+
+- SELECT
+- RELOAD
+- SHOW DATABASES
+- REPLICATION SLAVE
+- REPLICATION CLIEN
 
 
 
