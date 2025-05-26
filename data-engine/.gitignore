@@ -40,3 +40,4 @@ build/
 launcher/src/main/resources/config.ini
 .idea
 /data-engine-launcher/src/main/resources/config.ini
+datax
