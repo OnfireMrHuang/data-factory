@@ -1,13 +1,12 @@
-package io.github.hww.data.engine.common.ingestion;
+package io.github.hww.data.engine.common.debezium;
 
 import io.debezium.engine.ChangeEvent;
-import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
 
 import java.io.IOException;
 import java.util.Properties;
 
-public final class DebeziumIncrementalLoad {
+public final class DebeziumEngine {
 
     public void start() throws IOException {
 
@@ -28,7 +27,7 @@ public final class DebeziumIncrementalLoad {
         props.setProperty("schema.history.internal.file.filename", "/path/to/storage/schemahistory.dat");
 
         // Create the engine with this configuration ...
-        try (DebeziumEngine<ChangeEvent<String, String>> engine = DebeziumEngine.create(Json.class)
+        try (io.debezium.engine.DebeziumEngine<ChangeEvent<String, String>> engine = io.debezium.engine.DebeziumEngine.create(Json.class)
                 .using(props)
                 .notifying(record -> {
                     System.out.println(record);
