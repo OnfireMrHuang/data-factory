@@ -20,7 +20,7 @@
         <maven.compiler.source>13</maven.compiler.source>
         <maven.compiler.target>13</maven.compiler.target>
         <datax.version>1.0.0.1</datax.version>
-        <debezium.version>2.6.2.Final</debezium.version>
+        <debezium.version>3.1.1.Final</debezium.version>
         <minio.version>8.5.6</minio.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
@@ -131,6 +131,22 @@
             <groupId>io.debezium</groupId>
             <artifactId>debezium-ddl-parser</artifactId>
             <version>${debezium.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-runtime</artifactId>
+            <version>3.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-api</artifactId>
+            <version>3.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>3.9.0</version>
         </dependency>
 
         <dependency>

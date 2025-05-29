@@ -4,37 +4,21 @@ import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.format.Json;
 
 import java.io.IOException;
-import java.util.Properties;
 
-public final class DebeziumEngine {
+public class DebeziumEngine {
 
-    public void start() throws IOException {
+    ConnectorProperties props;
 
-        final Properties props = new Properties();
-        props.setProperty("name", "engine");
-        props.setProperty("connector.class", "io.debezium.connector.mysql.MySqlConnector");
-        props.setProperty("offset.storage", "org.apache.kafka.connect.storage.FileOffsetBackingStore");
-        props.setProperty("offset.storage.file.filename", "/path/to/storage/offsets.dat");
-        props.setProperty("offset.flush.interval.ms", "60000");
-        /* begin connector properties */
-        props.setProperty("database.hostname", "localhost");
-        props.setProperty("database.port", "3306");
-        props.setProperty("database.user", "mysqluser");
-        props.setProperty("database.password", "mysqlpw");
-        props.setProperty("database.server.id", "85744");
-        props.setProperty("topic.prefix", "my-app-connector");
-        props.setProperty("schema.history.internal", "io.debezium.storage.file.history.FileSchemaHistory");
-        props.setProperty("schema.history.internal.file.filename", "/path/to/storage/schemahistory.dat");
-
-        // Create the engine with this configuration ...
-        try (io.debezium.engine.DebeziumEngine<ChangeEvent<String, String>> engine = io.debezium.engine.DebeziumEngine.create(Json.class)
-                .using(props)
-                .notifying(record -> {
-                    System.out.println(record);
-                }).build()
-        ) {
-            engine.run();
-        }
+    public DebeziumEngine(ConnectorProperties props) {
+        this.props = props;
     }
 
+    public void start() {
+        io.debezium.engine.DebeziumEngine<ChangeEvent<String, String>> engine = io.debezium.engine.DebeziumEngine.create(Json.class)
+                .using(props.genDebeziumProperties())
+                .notifying(record -> {
+                    System.out.println(record);
+                }).build();
+        engine.run();
+    }
 }
