@@ -73,9 +73,9 @@
 
 如果完成，在后面标记 `--已实现`
 
-1. data-engine: mysql -> doris数据同步demo 
-2. data-engine: mysql -> kafka增量采集demo
-3. data-terminal: 项目框架搭建
+1. data-engine: mysql -> doris数据同步demo --已实现
+2. data-engine: mysql增量采集demo --已实现
+3. data-terminal: 项目框架demo&&搭建 -- 实现中
 4. data-terminal: 权限管理实现
 5. data-terminal: 数据源管理实现
 6. data-terminal: 主题管理实现
