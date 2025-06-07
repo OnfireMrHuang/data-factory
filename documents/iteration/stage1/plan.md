@@ -75,18 +75,10 @@
 
 1. data-engine: mysql -> doris数据同步demo --已实现
 2. data-engine: mysql增量采集demo --已实现
-3. data-terminal: 项目框架demo&&搭建 -- 实现中
-4. data-terminal: 权限管理实现
-5. data-terminal: 数据源管理实现
-6. data-terminal: 主题管理实现
-7. data-terminal: 明细/维度表管理-流处理任务实现
-8. data-engine: 流处理任务实现
-9. data-terminal: 任务管理-流任务查看
-10. data-terminal: 明细/维度表管理-批处理任务实现
-11. data-engine: 批处理任务实现
-12. data-terminal: 任务管理-批任务查看
-13. data-terminal: 汇总表管理实现
-14. data-terminal: 数据服务管理实现
+3. data-terminal: 项目框架搭建 -- 已实现
+4. data-terminal: 登陆页开发 -- 实现中
+5. data-terminal: 开发页一级开发 
+
 
 
 
