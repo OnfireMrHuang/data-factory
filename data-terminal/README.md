@@ -11,12 +11,17 @@ project/
 ```
 
 ### Tailwind
-1. Install npm: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
-2. Install the Tailwind CSS CLI: https://tailwindcss.com/docs/installation
-3. Run the following command in the root of the project to start the Tailwind CSS compiler:
+
+1. Install NPM: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
+
+2. Install the Tailwind CSS CLI: https://tailwindcss.com/docs/installation/tailwind-cli
+
+3. Install daisyUI as a Tailwind plugin: https://daisyui.com/docs/install/ 
+
+4. Install tailwindcss-typography: https://github.com/tailwindlabs/tailwindcss-typography
 
 ```bash
-npx tailwindcss -i ./tailwind.css -o ./assets/tailwind.css --watch
+npx @tailwindcss/cli -i ./input.css -o ./assets/tailwind.css --watch
 ```
 
 ### Serving Your App
