@@ -21,6 +21,7 @@
         <maven.compiler.target>13</maven.compiler.target>
         <datax.version>1.0.0.1</datax.version>
         <debezium.version>3.1.1.Final</debezium.version>
+        <antlr.version>4.11.1</antlr.version>
         <minio.version>8.5.6</minio.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
@@ -176,8 +177,84 @@
             <artifactId>spring-test</artifactId>
             <scope>test</scope>
         </dependency>
-
-
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <version>${antlr.version}</version>
+                <executions>
+                    <execution>
+                        <id>antlr-mysql</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>src/main/java/io/github/hww/data/engine/common/antlr4/mysql
+                            </sourceDirectory>
+                            <outputDirectory>
+                                target/generated-sources/antlr4/io/github/hww/data/engine/common/antlr4/mysql
+                            </outputDirectory>
+                            <libDirectory>
+                                target/generated-sources/antlr4/io/github/hww/data/engine/common/antlr4/mysql
+                            </libDirectory>
+                            <visitor>true</visitor>
+                            <arguments>
+                                <argument>-package</argument>
+                                <argument>io.github.hww.data.engine.common.antlr4.mysql</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>antlr-plsql</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>src/main/java/io/github/hww/data/engine/common/antlr4/plsql
+                            </sourceDirectory>
+                            <outputDirectory>
+                                target/generated-sources/antlr4/io/github/hww/data/engine/common/antlr4/plsql
+                            </outputDirectory>
+                            <libDirectory>
+                                target/generated-sources/antlr4/io/github/hww/data/engine/common/antlr4/plsql
+                            </libDirectory>
+                            <visitor>true</visitor>
+                            <arguments>
+                                <argument>-package</argument>
+                                <argument>io.github.hww.data.engine.common.antlr4.plsql</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>antlr-postgresql</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>src/main/java/io/github/hww/data/engine/common/antlr4/postgresql
+                            </sourceDirectory>
+                            <outputDirectory>
+                                target/generated-sources/antlr4/io/github/hww/data/engine/common/antlr4/postgresql
+                            </outputDirectory>
+                            <libDirectory>
+                                target/generated-sources/antlr4/io/github/hww/data/engine/common/antlr4/postgresql
+                            </libDirectory>
+                            <visitor>true</visitor>
+                            <arguments>
+                                <argument>-package</argument>
+                                <argument>io.github.hww.data.engine.common.antlr4.postgresql</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
