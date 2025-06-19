@@ -11,7 +11,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public class SqlParseUtils {
+public final class Antlr4SqlParseUtils {
 
     private static final BiConsumer<MySqlLexer, MySqlParser> initializer = new RefreshableParserInitializer<MySqlLexer, MySqlParser>(){};
 

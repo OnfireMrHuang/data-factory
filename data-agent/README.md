@@ -11,6 +11,16 @@ AI is the new electricity and will transform and improve nearly all areas of hum
 
 ## 参考资料
 
+### LangChain
+
+> LangChain: https://python.langchain.com/docs/concepts/architecture/
+> LangGraph: https://langchain-ai.github.io/langgraph/concepts/why-langgraph/
+> LangSmith: https://docs.smith.langchain.com/
+> LangChainHub: https://smith.langchain.com/hub
+> repo: https://github.com/langchain-ai/langchain
+
+### MCP by Anthropic
+
 MCP应用开发工具:
 > video: https://www.youtube.com/watch?v=kQmXtrmQ5Zg&t=1s
 > 核心概念： https://modelcontextprotocol.io/docs/concepts/architecture
@@ -30,5 +40,6 @@ MCP Client:
 > Client快速开发: https://modelcontextprotocol.io/quickstart/client
 
 
-其他:
+### 其他:
+
 https://blog.csdn.net/ddnosh/article/details/124072298

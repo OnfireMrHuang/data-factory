@@ -1,6 +1,7 @@
 mod components;
 
-use crate::components::login::Login;
+use crate::components::framework::Framework;
+
 
 use dioxus::prelude::*;
 
@@ -14,6 +15,6 @@ fn app() -> Element {
             // Urls are relative to your Cargo.toml file
             href: asset!("/assets/tailwind.css")
         }
-        Login{}
+        Framework{}
     }
 }

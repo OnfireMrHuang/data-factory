@@ -4,6 +4,7 @@
 
 # HTML title tag content
 title = "data-terminal"
+favicon = "favicon.svg"
 
 # include `assets` in web platform
 [web.resource]
