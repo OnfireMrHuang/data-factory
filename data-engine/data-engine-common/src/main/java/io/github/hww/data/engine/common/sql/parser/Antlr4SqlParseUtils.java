@@ -3,7 +3,7 @@ package io.github.hww.data.engine.common.sql.parser;
 import io.github.hww.data.engine.common.antlr4.mysql.MySqlParser;
 import io.github.hww.data.engine.common.antlr4.mysql.MySqlLexer;
 import io.github.hww.data.engine.common.sql.parser.model.SelectQuery;
-import io.github.hww.data.engine.common.sql.parser.visitor.MysqlSelectVisitor;
+import io.github.hww.data.engine.common.sql.parser.visitor.MysqlSelectAntlr4Visitor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -30,7 +30,7 @@ public final class Antlr4SqlParseUtils {
 
             ParserRuleContext tree = parseFunction.apply(mysqlParser);
 
-            return new MysqlSelectVisitor().visit(tree);
+            return new MysqlSelectAntlr4Visitor().visit(tree);
         } finally {
             if(mysqlParser != null) {
                 mysqlParser.reset();
