@@ -15,7 +15,7 @@ public class SqlParseUtils {
 
     private static final BiConsumer<MySqlLexer, MySqlParser> initializer = new RefreshableParserInitializer<MySqlLexer, MySqlParser>(){};
 
-    public static SelectQuery parserMysqlSelect(String sql) {
+    public static SelectQuery parseMysqlSelect(String sql) {
         final Function<MySqlParser, ParserRuleContext> parseFunction = MySqlParser::selectStatement;
 
         MySqlLexer mysqlLexer = null;
