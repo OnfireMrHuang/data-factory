@@ -28,7 +28,7 @@ enum SubMenu {
 
 #[component]
 pub fn SidebarLeft() -> Element {
-    let mut expanded = use_signal(|| Some(MainMenu::DataIntegration));
+    let mut expanded = use_signal(|| None as Option<MainMenu>);
     let mut selected = use_signal(|| None as Option<SubMenu>);
 
     let submenu_of = |submenu: SubMenu| match submenu {
@@ -42,14 +42,14 @@ pub fn SidebarLeft() -> Element {
     let render_submenu = |main: MainMenu| match main {
         MainMenu::DataIntegration => {
             let db_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::DatabaseIntegration) {
                     class.push_str(" text-sky-500");
                 }
                 class
             };
             let custom_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::CustomIntegration) {
                     class.push_str(" text-sky-500");
                 }
@@ -72,14 +72,14 @@ pub fn SidebarLeft() -> Element {
         },
         MainMenu::DataDevelopment => {
             let wide_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::WideTableDevelopment) {
                     class.push_str(" text-sky-500");
                 }
                 class
             };
             let custom_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::CustomDevelopment) {
                     class.push_str(" text-sky-500");
                 }
@@ -102,21 +102,21 @@ pub fn SidebarLeft() -> Element {
         },
         MainMenu::VersionManagement => {
             let list_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::VersionList) {
                     class.push_str(" text-sky-500");
                 }
                 class
             };
             let archive_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::Archive) {
                     class.push_str(" text-sky-500");
                 }
                 class
             };
             let rollback_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::Rollback) {
                     class.push_str(" text-sky-500");
                 }
@@ -144,21 +144,21 @@ pub fn SidebarLeft() -> Element {
         },
         MainMenu::OpsMonitoring => {
             let wide_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::WideTableTasks) {
                     class.push_str(" text-sky-500");
                 }
                 class
             };
             let stream_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::StreamTasks) {
                     class.push_str(" text-sky-500");
                 }
                 class
             };
             let batch_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::BatchTasks) {
                     class.push_str(" text-sky-500");
                 }
@@ -186,14 +186,14 @@ pub fn SidebarLeft() -> Element {
         },
         MainMenu::DataSupply => {
             let service_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::DataService) {
                     class.push_str(" text-sky-500");
                 }
                 class
             };
             let sync_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                 if selected() == Some(SubMenu::DataSync) {
                     class.push_str(" text-sky-500");
                 }
@@ -217,11 +217,21 @@ pub fn SidebarLeft() -> Element {
     };
 
     rsx! {
-        aside { class: "w-48 bg-base-200 flex flex-col p-4 gap-2",
+        aside { 
+            class: "w-48 bg-base-200 flex flex-col p-4",
+            // 主页一级菜单按钮
+            button {
+                class: "btn btn-ghost btn-sm flex items-center gap-2 text-sky-500 w-full justify-start",
+                // SVG 占位符 icon
+                svg { width: "16", height: "16", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg",
+                    path { d: "M3 12l9-9 9 9M4 10v10a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V10" }
+                }
+                span { "主页" }
+            }
             // 一级菜单
             button {
                 class: {
-                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                     let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::DataIntegration));
                     if is_selected || expanded() == Some(MainMenu::DataIntegration) {
                         class.push_str(" text-sky-500");
@@ -249,7 +259,7 @@ pub fn SidebarLeft() -> Element {
 
             button {
                 class: {
-                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                     let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::DataDevelopment));
                     if is_selected || expanded() == Some(MainMenu::DataDevelopment) {
                         class.push_str(" text-sky-500");
@@ -276,7 +286,7 @@ pub fn SidebarLeft() -> Element {
 
             button {
                 class: {
-                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                     let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::VersionManagement));
                     if is_selected || expanded() == Some(MainMenu::VersionManagement) {
                         class.push_str(" text-sky-500");
@@ -303,7 +313,7 @@ pub fn SidebarLeft() -> Element {
 
             button {
                 class: {
-                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                     let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::OpsMonitoring));
                     if is_selected || expanded() == Some(MainMenu::OpsMonitoring) {
                         class.push_str(" text-sky-500");
@@ -330,7 +340,7 @@ pub fn SidebarLeft() -> Element {
 
             button {
                 class: {
-                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2".to_string();
+                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
                     let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::DataSupply));
                     if is_selected || expanded() == Some(MainMenu::DataSupply) {
                         class.push_str(" text-sky-500");
