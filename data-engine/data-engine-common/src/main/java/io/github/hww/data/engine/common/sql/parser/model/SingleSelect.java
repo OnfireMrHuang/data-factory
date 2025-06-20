@@ -1,5 +1,6 @@
 package io.github.hww.data.engine.common.sql.parser.model;
 
+import io.github.hww.data.engine.common.sql.parser.model.exp.Expression;
 import lombok.Data;
 
 import java.util.List;
@@ -8,23 +9,25 @@ import java.util.List;
 @Data
 public class SingleSelect {
 
-    private boolean setDistinct;
+    private Boolean distinct;
 
-    private List<Expression> selectExpressions;
+    private List<Expression> selectColumns;
 
-    private TableSource fromTableSource;
+    private TableSource from;
 
-    private List<JoinTableSource> joinTables;
+    private List<JoinTableSource> joins;
 
-    private Condition where;
+    private Expression where;
 
-    private List<Expression> groupByExpressions;
+    private List<Expression> groupBy;
 
-    private Condition having;
+    private Expression having;
 
-    private List<Expression> orderByExpressions;
+    private List<Expression> order;
 
     private Integer offset;
 
     private Integer limit;
+
+    private List<Expression> windows;
 }

@@ -6,5 +6,4 @@ public class JoinTableSource {
 
     private TableSource joinTableSource;
 
-    private Condition onCondition;
 }

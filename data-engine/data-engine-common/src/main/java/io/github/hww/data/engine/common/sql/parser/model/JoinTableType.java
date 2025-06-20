@@ -6,7 +6,7 @@ public enum JoinTableType {
     RightJoin("right join"),
     FullJoin("full join");
 
-    private String joinType;
+    private final String joinType;
 
     JoinTableType(String joinType) {
         this.joinType = joinType;
