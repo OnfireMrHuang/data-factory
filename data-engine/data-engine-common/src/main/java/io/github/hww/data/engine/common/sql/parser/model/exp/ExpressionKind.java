@@ -1,8 +1,14 @@
 package io.github.hww.data.engine.common.sql.parser.model.exp;
 
 public enum ExpressionKind {
+    Alias("alias"),
     Column("column"),
     Boolean("boolean"),
+    Condition("condition"),
+    Case("case"),
+    Func("func"),
+    Order("order"),
+    Window("window"),
     Literal("literal");
 
     private final String expressionKind;

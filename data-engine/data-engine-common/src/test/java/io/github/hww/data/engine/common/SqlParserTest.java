@@ -5,12 +5,12 @@ import org.junit.Test;
 public class SqlParserTest {
 
     @Test
-    public void testDuridParser() {
+    public void testDruidParseSelect() {
 
     }
 
     @Test
-    public void testAntlrParser() {
+    public void testAntlrParseSelect() {
 
     }
 }
