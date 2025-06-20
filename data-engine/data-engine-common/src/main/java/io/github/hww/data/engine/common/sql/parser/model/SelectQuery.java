@@ -10,7 +10,7 @@ public class SelectQuery {
     /**
      * 联合查询操作符: union, union all, except, except all, intersect, intersect all
      */
-    private String combineOperator;
+    private CombineOperator combineOperator;
 
     /**
      * 单个查询
