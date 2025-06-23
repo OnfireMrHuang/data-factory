@@ -9,6 +9,8 @@ public enum ExpressionKind {
     Func("func"),
     Order("order"),
     Window("window"),
+    Star("star"),
+    Value("value"),
     Literal("literal");
 
     private final String expressionKind;

@@ -14,6 +14,8 @@ public enum BooleanOperator {
     NotIn("not in"),
     IsNull("is null"),
     IsNotNull("is not null"),
+    Between("between"),
+    NotBetween("not between"),
     Exists("exists"),
     NotExists("not exists");
 
