@@ -7,15 +7,18 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dioxus = { version = "0.6.0", features = ["router", "fullstack"] }
+dioxus = { version = "0.6.3", features = ["router"] }
+axum = "0.8.4"
+tokio = { version = "1.45.1", features = ["full"] }
+dioxus-ssr = "0.6.2"
+
 
 [features]
-default = ["web"]
-web = ["dioxus/web"]
-desktop = ["dioxus/desktop"]
-mobile = ["dioxus/mobile"]
-
-[profile]
+default = []
+web = []
+desktop = []
+mobile = []
+server = []
 
 [profile.wasm-dev]
 inherits = "dev"

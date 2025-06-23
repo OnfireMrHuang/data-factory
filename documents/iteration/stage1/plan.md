@@ -76,8 +76,9 @@
 1. data-engine: mysql -> doris数据同步demo --已实现
 2. data-engine: mysql增量采集demo --已实现
 3. data-terminal: 项目框架搭建 -- 已实现
-4. data-terminal: 登陆页开发 -- 实现中
-5. data-terminal: 开发页一级开发 
+4. data-terminal: 登陆页开发 -- 已经实现
+5. data-terminal: 首页开发 -- 已经实现
+6. data-terminal: 搭建后端并实现登陆后 -> 首页的功能实现 --实现中
 
 
 
