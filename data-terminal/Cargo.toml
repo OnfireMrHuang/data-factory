@@ -1,24 +1,13 @@
-[package]
-name = "data-terminal"
-version = "0.1.0"
-authors = ["huangww01 <huangww01@mingyuanyun.com>"]
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+members = [
+	# 后端
+	"backend",
+	# 前端
+	"frontend"
+]
 
-[dependencies]
-dioxus = { version = "0.6.3", features = ["router"] }
-axum = "0.8.4"
-tokio = { version = "1.45.1", features = ["full"] }
-dioxus-ssr = "0.6.2"
-
-
-[features]
-default = []
-web = []
-desktop = []
-mobile = []
-server = []
+[profile]
 
 [profile.wasm-dev]
 inherits = "dev"
@@ -29,3 +18,4 @@ inherits = "dev"
 
 [profile.android-dev]
 inherits = "dev"
+
