@@ -6,6 +6,9 @@ mod repositories;
 
 #[tokio::main]
 async fn main() {
+    // initialize configuration
+    utils::config::Setting::init();
+
     // initialize tracing
     tracing_subscriber::fmt::init();
 
