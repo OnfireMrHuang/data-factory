@@ -1,12 +1,15 @@
-mod components;
-mod pages;
-mod routes;
+pub mod components;
+pub mod pages;
+pub mod routes;
 
 use dioxus::prelude::*;
 use crate::routes::AppRouter;
+use dioxus::logger::tracing::{Level};
 
 
 fn main() {
+    dioxus::logger::init(Level::INFO).expect("logger failed to init");
+
     dioxus::launch(app);
 }
 

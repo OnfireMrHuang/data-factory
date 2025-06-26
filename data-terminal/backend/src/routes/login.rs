@@ -49,8 +49,7 @@ async fn login(
         );
     }
 
-    // 校验密码（bcrypt）
-    if !bcrypt::verify(&admin.password, &payload.password).unwrap_or(false) {
+    if admin.password != payload.password {
         return (
             StatusCode::UNAUTHORIZED,
             jar,

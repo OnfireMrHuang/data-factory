@@ -5,7 +5,6 @@ use crate::{pages::{catch_all::PageNotFound, home::Home, login::Login}};
 
 #[derive(Routable, Clone)]
 #[rustfmt::skip]
-
 pub enum Route {
 
     #[route("/login")]

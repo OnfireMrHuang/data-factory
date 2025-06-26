@@ -33,7 +33,7 @@ MCP应用开发工具:
 MCP Server:
 > Server快速开发: https://modelcontextprotocol.io/quickstart/server
 > MCP inspector: 开发MCP Serve的调试利器: https://github.com/modelcontextprotocol/inspector.git
-> 开源的MCP Server列表: https://github.com/modelcontextprotocol/servers.git
+> 开源的MCP Server列表: https://github.com/modelcontextprotocol/servers.git | https://glama.ai/mcp
 
 
 MCP Client:
