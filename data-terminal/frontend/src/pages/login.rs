@@ -1,15 +1,16 @@
 use dioxus::prelude::*;
 use crate::routes::Route;
 use dioxus::logger::tracing::info;
+use async_std::task::sleep;
 
 #[component]
 pub fn Login() -> Element {
 
     let mut username_signal = use_signal(|| "".to_string());
     let mut password_signal = use_signal(|| "".to_string());
+    let mut error_msg_signal = use_signal(|| "".to_string());
 
     rsx! {
-        
         div { class: "flex w-full h-screen",
             div { class: "w-1/2 bg-cover bg-center bg-no-repeat",
                 img {
@@ -44,19 +45,15 @@ pub fn Login() -> Element {
                             button {
                                 class: "btn btn-primary mt-6",
                                 onclick: move |evt| {
-
                                     evt.prevent_default();
-
                                     let username = username_signal();
                                     let password = password_signal();
-
                                     spawn(async move {
                                         let resp = reqwest::Client::new().post("http://localhost:3000/api/v1/login")
                                             .timeout(std::time::Duration::from_secs(10))
                                             .header("Content-Type", "application/json")
                                             .json(&serde_json::json!({ "username": username, "password": password }))
                                             .send().await;
-
                                         match resp {
                                             Ok(r) => {
                                                 let json: serde_json::Value = r.json().await.unwrap_or_default();
@@ -65,17 +62,24 @@ pub fn Login() -> Element {
                                                     NavigationTarget::Internal(Route::Home {});
                                                 } else {
                                                     let msg = json.get("msg").and_then(|v| v.as_str()).unwrap_or("Login failed");
-                                                    // web_sys::window().unwrap().alert_with_message(msg).ok();
-                                                    print!("{}", msg)
+                                                    error_msg_signal.set(msg.to_string());
+                                                    spawn({
+                                                        async move {
+                                                            sleep(std::time::Duration::from_secs(3)).await;
+                                                            error_msg_signal.set("".to_string());
+                                                        }
+                                                    });
                                                 }
                                             }
                                             Err(_) => {
-                                                // 打印错误:
-                                                print!(
-                                                    "{}",
-                                                    "登录失败，请检查用户名密码是否正确"
-                                                )
-                                                // web_sys::window().unwrap().alert_with_message("Network error").ok();
+                                                info!("login error!!!");
+                                                error_msg_signal.set("网络错误，请稍后重试".to_string());
+                                                spawn({
+                                                    async move {
+                                                        sleep(std::time::Duration::from_secs(3)).await;
+                                                        error_msg_signal.set("".to_string());
+                                                    }
+                                                });
                                             }
                                         }
                                     });
@@ -83,10 +87,17 @@ pub fn Login() -> Element {
                                 "Login"
                             }
                         }
+                        // 错误信息 label
+                        {if !error_msg_signal().is_empty() {
+                            Some(rsx!(
+                                label { class: "text-red-500 mt-2", "{error_msg_signal}" }
+                            ))
+                        } else {
+                            None
+                        }}
                     }
                 }
             }
         }
-
     }
 }
