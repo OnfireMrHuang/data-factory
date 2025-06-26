@@ -3,14 +3,15 @@ use config::{File, Environment};
 use serde::Deserialize;
 use once_cell::sync::OnceCell;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Setting {
     pub database: Database,
     pub admin: Admin,
+    pub jwt: Jwt,
 }
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Database {
     pub host: String,
     pub port: u16,
@@ -19,13 +20,17 @@ pub struct Database {
     pub database: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Admin {
     pub username: String,
     pub password: String,
 }
 
-
+#[derive(Debug, Deserialize, Clone)]
+pub struct Jwt {
+    pub secret: String,
+    pub expires: i64,
+}
 
 static SETTING: OnceCell<Setting> = OnceCell::new();
 

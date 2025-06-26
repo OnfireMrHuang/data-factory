@@ -15,4 +15,5 @@ bcrypt = "0.17.0"
 jsonwebtoken = "9.3.1"
 axum-extra = { version = "0.10.1", features = ["cookie"] }
 chrono = { version = "0.4.41", features = ["serde"] }
+cookie = "0.18.0"
 

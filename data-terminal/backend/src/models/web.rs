@@ -7,7 +7,7 @@ pub struct LoginRequest {
 }
 
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Response<T> {
     pub result: bool,
     pub msg: String,

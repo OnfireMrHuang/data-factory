@@ -304,6 +304,7 @@ dependencies = [
  "bcrypt",
  "chrono",
  "config",
+ "cookie",
  "jsonwebtoken",
  "once_cell",
  "serde",
