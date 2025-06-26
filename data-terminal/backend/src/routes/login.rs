@@ -9,7 +9,6 @@ use axum_extra::{
     extract::cookie::{Cookie, CookieJar},
 };
 use cookie::time::Duration;
-use bcrypt::{verify};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use chrono::{Utc, Duration as ChronoDuration};
@@ -33,29 +32,34 @@ pub fn routes() -> Router {
 async fn login(
     jar: CookieJar,
     Json(payload): Json<web::LoginRequest>,
-) -> (StatusCode, Json<web::Response<String>>) {
-
+) -> impl IntoResponse {
     let setting = Setting::get();
     let admin = &setting.admin;
 
     // 校验用户名
     if payload.username != admin.username {
-        return (StatusCode::UNAUTHORIZED, Json(web::Response::<String> {
-            result: false,
-            msg: "username is incorrect".to_string(),
-            data: "".to_string(),
-        }));
+        return (
+            StatusCode::UNAUTHORIZED,
+            jar,
+            Json(web::Response::<String> {
+                result: false,
+                msg: "username is incorrect".to_string(),
+                data: "".to_string(),
+            }),
+        );
     }
 
     // 校验密码（bcrypt）
-    // 将配置中的明文密码加密后，与前端传过来的加密密码进行校验
-    let admin_password_hash = bcrypt::hash(&admin.password, bcrypt::DEFAULT_COST).unwrap();
-    if !verify(&admin_password_hash, &payload.password).unwrap_or(false) {
-        return (StatusCode::UNAUTHORIZED, Json(web::Response::<String> {
-            result: false,
-            msg: "password is incorrect".to_string(),
-            data: "".to_string(),
-        }));
+    if !bcrypt::verify(&admin.password, &payload.password).unwrap_or(false) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            jar,
+            Json(web::Response::<String> {
+                result: false,
+                msg: "password is incorrect".to_string(),
+                data: "".to_string(),
+            }),
+        );
     }
 
     // 生成 JWT
@@ -67,25 +71,35 @@ async fn login(
     };
     let secret = Setting::get().jwt.secret.clone();
     let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_bytes()))
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(web::Response::<String>{
-            result: false,
-            msg: "creating token occur error".to_string(),
-            data: "".to_string(),
-        }))).unwrap();
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                jar.clone(),
+                Json(web::Response::<String> {
+                    result: false,
+                    msg: "creating token occur error".to_string(),
+                    data: "".to_string(),
+                }),
+            )
+        })
+        .unwrap();
 
     // 设置 Cookie
     let cookie = Cookie::build(("token", token.clone()))
         .http_only(true)
         .path("/")
         .max_age(Duration::days(1));
+    let jar = jar.add(cookie);
 
-    jar.add(cookie);
-
-    (StatusCode::OK, Json(web::Response::<String>{
-        result: true,
-        msg: "login success".to_string(),
-        data: "".to_string(),  
-    }))
+    (
+        StatusCode::OK,
+        jar,
+        Json(web::Response::<String> {
+            result: true,
+            msg: "login success".to_string(),
+            data: "".to_string(),
+        }),
+    )
 }
 
 
