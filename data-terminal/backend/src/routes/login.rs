@@ -1,7 +1,6 @@
 use axum::{
-    extract::FromRequestParts,
-    http::{request::Parts, StatusCode},
-    response::{IntoResponse, Response},
+    http::StatusCode,
+    response::IntoResponse,
     routing::{post},
     Json, Router,
 };
@@ -9,18 +8,11 @@ use axum_extra::{
     extract::cookie::{Cookie, CookieJar},
 };
 use cookie::time::Duration;
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use serde::{Deserialize, Serialize};
+use jsonwebtoken::{encode, EncodingKey, Header};
 use chrono::{Utc, Duration as ChronoDuration};
-use std::sync::LazyLock;
-use std::fmt::Display;
 use crate::utils::config::Setting;
 use crate::models::web;
-
-static KEYS: LazyLock<Keys> = LazyLock::new(|| {
-    let secret = Setting::get().jwt.secret.clone();
-    Keys::new(secret.as_bytes())
-});
+use super::jwt::Claims;
 
 
 pub fn routes() -> Router {
@@ -66,6 +58,7 @@ async fn login(
     let claims = Claims {
         sub: admin.username.clone(),
         company: "".to_string(),
+        project: "".to_string(),
         exp,
     };
     let secret = Setting::get().jwt.secret.clone();
@@ -101,78 +94,3 @@ async fn login(
     )
 }
 
-
-struct Keys {
-    encoding: EncodingKey,
-    decoding: DecodingKey,
-}
-
-impl Keys {
-    fn new(secret: &[u8]) -> Self {
-        Self {
-            encoding: EncodingKey::from_secret(secret),
-            decoding: DecodingKey::from_secret(secret),
-        }
-    }
-}
-
-#[derive(Debug)]
-enum AuthError {
-    WrongCredentials,
-    MissingCredentials,
-    TokenCreation,
-    InvalidToken,
-}
-
-impl IntoResponse for AuthError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            AuthError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Wrong credentials"),
-            AuthError::MissingCredentials => (StatusCode::BAD_REQUEST, "Missing credentials"),
-            AuthError::TokenCreation => (StatusCode::INTERNAL_SERVER_ERROR, "Token creation error"),
-            AuthError::InvalidToken => (StatusCode::BAD_REQUEST, "Invalid token"),
-        };
-        let body = Json(web::Response::<()> {
-            result: false,
-            msg: error_message.to_string(),
-            data: (),
-        });
-        (status, body).into_response()
-    }
-}
-
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    sub: String,
-    company: String,
-    exp: usize,
-}
-
-impl Display for Claims {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Email: {}\nCompany: {}", self.sub, self.company)
-    }
-}
-
-impl<S> FromRequestParts<S> for Claims
-where
-    S: Send + Sync,
-{
-    type Rejection = AuthError;
-
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-
-        let jar = CookieJar::from_headers(&parts.headers);
-        let token = jar
-            .get("token")
-            .map(|cookie| cookie.value().to_string())
-            .ok_or(AuthError::MissingCredentials)?;
-
-        // 校验 token
-        let token_data = decode::<Claims>(&token, &KEYS.decoding, &Validation::default())
-            .map_err(|_| AuthError::InvalidToken)?;
-
-        Ok(token_data.claims)
-    }
-}

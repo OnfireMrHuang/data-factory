@@ -1,10 +1,11 @@
-
 mod login;
+mod project;
+mod jwt;
 
-use axum::Router;
+use axum::{
+    Router
+};
 use tower_http::cors::{Any, CorsLayer};
-
-
 
 
 pub fn router() -> Router {
@@ -20,5 +21,16 @@ pub fn router() -> Router {
 }
 
 fn api_routes_v1() -> Router {
-    Router::new().nest("/login", login::routes())
+    // UnAuth
+    let public_routes = Router::new()
+        .nest("/login", login::routes());
+
+    // JwtAuth
+    let protected_routes = Router::new()
+        .nest("/project", project::routes());
+
+    // 合并两组路由
+    public_routes.merge(protected_routes)
 }
+
+
