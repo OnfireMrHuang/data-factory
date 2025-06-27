@@ -1,0 +1,20 @@
+@startuml
+start
+
+:Create Model;
+
+if (Select Runtime Type?) then (Daemon)
+    :Select Language;
+    note right: Python, Java
+    :Configure Daemon Settings;
+else (Job)
+    :Select Language;
+    note left: SQL, Python
+    :Configure Job Plan;
+    note left: Schedule, Retries
+endif
+
+:Deploy/Submit;
+
+stop
+@enduml
