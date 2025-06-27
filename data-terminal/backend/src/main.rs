@@ -12,6 +12,9 @@ async fn main() {
     // initialize tracing
     tracing_subscriber::fmt::init();
 
+    // initialize database
+    utils::database::init().await;
+
     // build our application with a route
     let app = routes::router();
 

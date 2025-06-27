@@ -13,6 +13,7 @@ pub struct Setting {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Database {
+    pub prefix: String,
     pub host: String,
     pub port: u16,
     pub user: String,
