@@ -9,6 +9,8 @@ pub fn Login() -> Element {
     let mut username_signal = use_signal(|| "".to_string());
     let mut password_signal = use_signal(|| "".to_string());
     let mut error_msg_signal = use_signal(|| "".to_string());
+    let navigator = use_navigator(); 
+
 
     rsx! {
         div { class: "flex w-full h-screen",
@@ -58,8 +60,7 @@ pub fn Login() -> Element {
                                             Ok(r) => {
                                                 let json: serde_json::Value = r.json().await.unwrap_or_default();
                                                 if json.get("result").and_then(|v| v.as_bool()).unwrap_or(false) {
-                                                    info!("login success, redirect to home page");
-                                                    NavigationTarget::Internal(Route::Home {});
+                                                    navigator.replace(Route::Home {});
                                                 } else {
                                                     let msg = json.get("msg").and_then(|v| v.as_str()).unwrap_or("Login failed");
                                                     error_msg_signal.set(msg.to_string());
