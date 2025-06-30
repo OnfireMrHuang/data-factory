@@ -2,13 +2,17 @@ use axum::{routing::{post, delete}, Router, http::StatusCode, Json, extract::Pat
 use super::jwt::Claims;
 use crate::models::web::Response;
 use crate::models::project::Project;
+use crate::autofac;
 
 
 pub fn routes() -> Router {
+    let state = autofac::get_app_state();
+
     Router::new()
     .route("/add", post(add_project))
     .route("/edit", post(edit_project))
     .route("/{code}", delete(del_project))
+    .with_state(state)
 }
 
 

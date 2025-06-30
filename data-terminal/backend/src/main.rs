@@ -3,6 +3,7 @@ mod models;
 mod services;
 mod utils;
 mod repositories;
+mod autofac;
 
 #[tokio::main]
 async fn main() {
@@ -13,7 +14,7 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     // initialize database
-    utils::database::init().await;
+    utils::database::config_db_init().await;
 
     // build our application with a route
     let app = routes::router();

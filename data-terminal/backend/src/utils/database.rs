@@ -1,10 +1,11 @@
+use std::{collections::HashMap, sync::{RwLock, LazyLock}};
+
 use sqlx::{mysql::MySqlPoolOptions, MySqlPool};
-use once_cell::sync::OnceCell;
 use crate::utils::config::Setting;
 
-static DB_POOL: OnceCell<MySqlPool> = OnceCell::new();
+static DB_POOL_MAP: LazyLock<RwLock<HashMap<String, MySqlPool>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
 
-pub async fn init() {
+pub async fn config_db_init() {
     let db = &Setting::get().database;
     let url = format!(
         "mysql://{}:{}@{}:{}/{}",
@@ -15,11 +16,19 @@ pub async fn init() {
         .connect(&url)
         .await
         .expect("数据库连接失败");
-    DB_POOL.set(pool).expect("数据库池已初始化");
+
+    DB_POOL_MAP.write().unwrap().insert(db.database.clone(), pool);
 }
 
-/// 获取全局数据库连接池
-pub fn get_pool() -> &'static MySqlPool {
-    DB_POOL.get().expect("数据库池未初始化")
+// 获取全局配置库
+pub fn get_config_db() -> MySqlPool {
+    let db = &Setting::get().database;
+    DB_POOL_MAP.read().unwrap()[&db.database].clone()
 }
 
+// 获取项目数据库
+pub fn get_project_db(code: String) -> MySqlPool {
+    let db_prefix = &Setting::get().database.prefix;
+    let db_name = format!("{}_{}", db_prefix, code);
+    DB_POOL_MAP.read().unwrap()[&db_name].clone()
+}
