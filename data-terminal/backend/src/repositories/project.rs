@@ -1,10 +1,10 @@
 use crate::models::{error::Error, Validator};
 use crate::models::project::Project;
-use shaku::{Component};
+use shaku::{Provider};
 use async_trait::async_trait;
 use super::ProjectRepo;
 
-#[derive(Component)]
+#[derive(Provider)]
 #[shaku(interface = ProjectRepo)]
 pub struct ProjectRepoImpl {}
 

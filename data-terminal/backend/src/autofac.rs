@@ -7,8 +7,8 @@ use crate::services::project::ProjectServiceImpl;
 
 module! {
     pub AutoFacModule {
-        components = [ProjectRepoImpl],
-        providers = [ProjectServiceImpl]
+        components = [],
+        providers = [ProjectRepoImpl, ProjectServiceImpl]
     }
 }
 

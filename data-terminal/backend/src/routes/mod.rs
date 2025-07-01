@@ -9,7 +9,7 @@ use tower_http::cors::{Any, CorsLayer};
 
 
 pub fn router() -> Router {
-    
+
     // 解决跨域问题以及报错问题
     Router::new()
         .nest("/api/v1", api_routes_v1())
@@ -22,6 +22,7 @@ pub fn router() -> Router {
 }
 
 fn api_routes_v1() -> Router {
+
     // UnAuth
     let public_routes = Router::new()
         .nest("/login", login::routes());
