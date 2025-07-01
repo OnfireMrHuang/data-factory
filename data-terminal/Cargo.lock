@@ -405,6 +405,7 @@ dependencies = [
 name = "backend"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "axum",
  "axum-extra",
  "chrono",
@@ -417,6 +418,7 @@ dependencies = [
  "sqlx",
  "strum",
  "strum_macros",
+ "thiserror 2.0.12",
  "tokio",
  "toml",
  "tower-http",

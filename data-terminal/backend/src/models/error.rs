@@ -1,8 +1,13 @@
+use tokio::sync::watch::error;
 
 
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+
+    #[error("not implemented")]
+    NotImplemented,
+
     #[error("Database error")]
     DbError(sqlx::Error),
 
@@ -14,9 +19,6 @@ pub enum Error {
 
     #[error("Invalid start or end time")]
     InvalidTime,
-
-    #[error("Conflict record")]
-    ConflictRecord(RecordConflictInfo),
 
     #[error("No record found by the given condition")]
     NotFound,
@@ -35,6 +37,12 @@ pub enum Error {
 
     #[error("unknown error")]
     Unknown,
+
+    #[error("{0} value is empty")]
+    EmptyValue(String),
+
+    #[error("invalid project code: {0}")]
+    InvalidProjectCode(String),
 }
 
 impl PartialEq for Error {
@@ -43,7 +51,6 @@ impl PartialEq for Error {
             // TODO: this is not a good way to compare DB errors, but we don't do that in the code
             (Self::DbError(_), Self::DbError(_)) => true,
             (Self::InvalidTime, Self::InvalidTime) => true,
-            (Self::ConflictRecord(v1), Self::ConflictRecord(v2)) => v1 == v2,
             (Self::NotFound, Self::NotFound) => true,
             (Self::InvalidRecordId(v1), Self::InvalidRecordId(v2)) => v1 == v2,
             (Self::Unknown, Self::Unknown) => true,
@@ -55,15 +62,6 @@ impl PartialEq for Error {
 impl From<sqlx::Error> for Error {
     fn from(e: sqlx::Error) -> Self {
         match e {
-            sqlx::Error::Database(e) => {
-                let err: &PgDatabaseError = e.downcast_ref();
-                match (err.code(), err.schema(), err.table()) {
-                    ("23P01", Some("rsvp"), Some("Records")) => {
-                        Error::ConflictRecord(err.detail().unwrap().parse().unwrap())
-                    }
-                    _ => Error::DbError(sqlx::Error::Database(e)),
-                }
-            }
             sqlx::Error::RowNotFound => Error::NotFound,
             _ => Error::DbError(e),
         }

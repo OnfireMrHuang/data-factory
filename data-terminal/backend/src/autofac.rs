@@ -1,12 +1,14 @@
 
 use std::sync::Arc;
 use axum::extract::FromRef;
-use shaku::{module, Component, Interface};
+use shaku::{module};
+use crate::repositories::project::ProjectRepoImpl;
+use crate::services::project::ProjectServiceImpl;
 
 module! {
     pub AutoFacModule {
-        components = [],
-        providers = []
+        components = [ProjectRepoImpl],
+        providers = [ProjectServiceImpl]
     }
 }
 

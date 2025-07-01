@@ -20,4 +20,6 @@ strum_macros = "0.27.1"
 strum = { version = "0.27.1", features = ["derive"] }
 sqlx = { version = "0.8.6", features = ["mysql", "runtime-tokio", "macros", "chrono", "uuid", "rust_decimal"] }
 shaku = "0.6.2"
+thiserror = "2.0.12"
+async-trait = "0.1.88"
 

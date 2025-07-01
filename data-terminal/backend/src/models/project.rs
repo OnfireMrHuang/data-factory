@@ -1,6 +1,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::models::Validator;
+use crate::models::Error;
+
 #[derive(Debug, Serialize, Deserialize)]
 #[derive(Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "snake_case")]
@@ -32,4 +35,16 @@ pub struct Project {
     pub created_at: String,
     #[serde(default)]
     pub updated_at: String,
+}
+
+impl Validator for Project {
+    fn validate(&self) -> Result<(), Error> {
+        if self.code.is_empty() {
+            return Err(Error::EmptyValue("code".to_string()));
+        }
+        if self.name.is_empty() {
+            return Err(Error::EmptyValue("name".to_string()));
+        }
+        Ok(())
+    }
 }
