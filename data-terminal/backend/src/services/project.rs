@@ -18,15 +18,27 @@ pub struct ProjectServiceImpl {
 #[async_trait]
 impl ProjectService for ProjectServiceImpl {
     async fn add_project(&self, project: Project) -> Result<String, Error> {
-        Err(Error::NotImplemented)
+        let result = self.repo.add_project(project).await;
+        match result {
+            Ok(project) => Ok(project),
+            Err(e) => Err(e),
+        }
     }
 
     async fn del_project(&self, code: String) -> Result<(), Error> {
-        Err(Error::NotImplemented)
+        let result = self.repo.del_project(code).await;
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e),
+        }
     }
 
     async fn list_project(&self) -> Result<Vec<Project>, Error> {
-        Err(Error::NotImplemented)
+        let result = self.repo.list_project().await;
+        match result {
+            Ok(projects) => Ok(projects),
+            Err(e) => Err(e),
+        }
     }
 }
 

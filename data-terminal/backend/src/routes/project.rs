@@ -1,6 +1,5 @@
 use axum::{routing::{post, delete}, Router, http::StatusCode, Json, extract::{Path, State}};
 use shaku::HasProvider;
-use shaku_axum::InjectProvided;
 use super::jwt::Claims;
 use crate::models::web::Response;
 use crate::models::project::Project;
@@ -25,24 +24,29 @@ pub fn routes() -> Router {
 async fn add_project(
     claims: Claims,
     State(state): State<autofac::AppState>,
-    service: InjectProvided<AutoFacModule, dyn ProjectService>,
     Json(payload): Json<Project>,
 ) -> (StatusCode, Json<Response<String>>) {
-    let module = Arc::<AutoFacModule>::from(&state);
-    let service: Box<dyn ProjectService> = module.as_ref().provide().unwrap();
-    let result: Result<String, crate::models::Error> = service.add_project(payload).await;
-    if result.is_err() {
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(Response::<String>{
-            result: false,
-            msg: result.err().unwrap().to_string(),
-            data: "".to_string(),
-        }));
+    let project_service: Box<dyn ProjectService> = state
+        .get_auto_fac_module()
+        .provide().unwrap();
+
+    let ans = project_service.add_project(payload).await;
+    match ans {
+        Ok(id) => {
+            return (StatusCode::OK, Json(Response::<String>{
+                result: true,
+                msg: "".to_string(),
+                data: id,
+            }))
+        }
+        Err(e) => {
+            return (StatusCode::OK, Json(Response::<String>{
+                result: false,
+                msg: e.to_string(),
+                data: "".to_string(),
+            }))
+        }
     }
-    (StatusCode::OK, Json(Response::<String>{
-        result: true,
-        msg: "".to_string(),
-        data: result.unwrap(),
-    }))
 }
 
 
@@ -51,21 +55,53 @@ async fn edit_project(
     State(_state): State<autofac::AppState>,
     Json(payload): Json<Project>,
 ) -> (StatusCode, Json<Response<String>>) {
-    (StatusCode::OK, Json(Response::<String>{
-        result: true,
-        msg: "".to_string(),
-        data: "".to_string(),
-    }))
+    let project_service: Box<dyn ProjectService> = _state
+        .get_auto_fac_module()
+        .provide().unwrap();
+
+    let ans = project_service.add_project(payload).await;
+    match ans {
+        Ok(id) => {
+            return (StatusCode::OK, Json(Response::<String>{
+                result: true,
+                msg: "".to_string(),
+                data: id,
+            }))
+        }
+        Err(e) => {
+            return (StatusCode::OK, Json(Response::<String>{
+                result: false,
+                msg: e.to_string(),
+                data: "".to_string(),
+            }))
+        }
+    }
 }
 
 async fn del_project(
     claims: Claims,
-    Path(code): Path<String>,
     State(_state): State<autofac::AppState>,
+    Path(code): Path<String>,
 ) -> (StatusCode, Json<Response<String>>) {
-    (StatusCode::OK, Json(Response::<String>{
-        result: true,
-        msg: "".to_string(),
-        data: "".to_string(),
-    }))
+    let project_service: Box<dyn ProjectService> = _state
+        .get_auto_fac_module()
+        .provide().unwrap();
+
+    let ans = project_service.del_project(code).await;
+    match ans {
+        Ok(_) => {
+            return (StatusCode::OK, Json(Response::<String>{
+                result: true,
+                msg: "".to_string(),
+                data: "".to_string(),
+            }))
+        }
+        Err(e) => {
+            return (StatusCode::OK, Json(Response::<String>{
+                result: false,
+                msg: e.to_string(),
+                data: "".to_string(),
+            }))
+        }
+    }
 }

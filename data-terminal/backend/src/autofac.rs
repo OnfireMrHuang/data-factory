@@ -17,9 +17,9 @@ pub struct AppState {
     module: Arc<AutoFacModule>,
 }
 
-impl FromRef<AppState> for Arc<AutoFacModule> {
-    fn from_ref(app_state: &AppState) -> Arc<AutoFacModule> {
-        app_state.module.clone()
+impl AppState {   
+    pub fn get_auto_fac_module(&self) -> Arc<AutoFacModule> {
+        self.module.clone()
     }
 }
 

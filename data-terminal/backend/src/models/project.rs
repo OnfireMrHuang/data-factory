@@ -1,12 +1,13 @@
 
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 
 use crate::models::Validator;
 use crate::models::Error;
 
-#[derive(Debug, Serialize, Deserialize)]
-#[derive(Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
 #[strum(serialize_all = "snake_case")]
+#[sqlx(rename_all = "snake_case")]
 pub enum CreateStatus {
     Pending,
     Running,
@@ -21,7 +22,7 @@ impl Default for CreateStatus {
 }
 
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromRow, Default)]
 pub struct Project {
     pub code: String,
     pub name: String,
