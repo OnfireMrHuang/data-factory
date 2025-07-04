@@ -22,7 +22,7 @@ impl Default for CreateStatus {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, FromRow, Default)]
+#[derive(Debug, Serialize, Deserialize, FromRow, Default, Clone)]
 pub struct Project {
     pub code: String,
     pub name: String,
@@ -33,9 +33,9 @@ pub struct Project {
     #[serde(default)]
     pub create_msg: String,
     #[serde(default)]
-    pub created_at: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
     #[serde(default)]
-    pub updated_at: String,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl Validator for Project {
