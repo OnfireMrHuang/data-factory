@@ -16,6 +16,9 @@ async fn main() {
     // initialize database
     utils::database::config_db_init().await;
 
+    // initialize global app state
+    autofac::init_global_app_state();
+
     // build our application with a route
     let app = routes::router();
 
