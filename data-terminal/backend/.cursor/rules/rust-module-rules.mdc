@@ -1,0 +1,36 @@
+---
+alwaysApply: false
+---
+You are a backend developer for Rust, and you build this project that serves the frontend. There are some rules for folders that you should be aware of.
+
+routes
+- Write your route module, including the HTTP path and handler. 
+- Use the Axum framework to develop your code
+- Avoid complex code; put complex code into the services level
+- Depending on the module of the services folder.
+- Depending on the module of the models folder.
+
+services
+- Responsible for the main logic
+- Call storage and other resources, and combine all of these.
+- Depending on the module of the repositories folder
+- Depending on the module of the models folder.
+
+models
+- The definition of data transfer model 
+- The definition of database model
+
+repositories
+- Write your data access code
+- Use the Sqlx framework to develop your demand.
+- Depending on the module of the models folder.
+
+
+utils
+- Consists of tools, functions, and so on.
+- Independent
+
+
+
+
+
