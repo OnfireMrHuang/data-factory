@@ -38,7 +38,7 @@ static SETTING: OnceCell<Setting> = OnceCell::new();
 impl Setting {
     pub fn new() -> Result<Self, config::ConfigError> {
         let cfg = Config::builder()
-            .add_source(File::with_name("config/Setting")) // 自动查找 config.toml/json/yaml
+            .add_source(File::with_name("backend/config/Setting")) // 自动查找 config.toml/json/yaml
             .add_source(Environment::with_prefix("APP")) // 读取 `APP_DATABASE_URL` 等变量
             .build()?;
         cfg.try_deserialize()

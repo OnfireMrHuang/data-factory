@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
+
 use crate::models::Validator;
 use crate::models::Error;
 

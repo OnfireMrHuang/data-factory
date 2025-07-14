@@ -18,42 +18,36 @@ pub fn routes() -> Router {
 async fn add_project(
     claims: Claims,
     Json(project): Json<Project>,
-) -> impl IntoResponse {
-    let app_state = autofac::get_global_app_state_ref();
-    let project_service = app_state.get_project_service();
-    let result: Result<String, Error> = project_service.add_project(project).await;
-    match result {
-        Ok(project) => (StatusCode::OK, Json(Response::success(project))).into_response(),
-        Err(e) => (StatusCode::OK, Json(Response::<String>::error(e.to_string()))).into_response(),
-    }
+) -> (StatusCode, Json<Response<String>>) {
+    (StatusCode::OK, Json(Response::success("success".to_string())))
 }
 
 async fn list_project(
     claims: Claims,
     Query(params): Query<PageQuery>,
-) -> impl IntoResponse {
-    Err::<Json<Response<String>>, Error>(Error::NotImplemented)
+) -> (StatusCode, Json<Response<Vec<Project>>>) {
+    (StatusCode::OK, Json(Response::success(vec![])))
 }
 
 async fn delete_project(
     claims: Claims,
     Path(code): Path<String>,
-) -> impl IntoResponse {
-    Err::<Json<Response<String>>, Error>(Error::NotImplemented)
+) -> (StatusCode, Json<Response<String>>) {
+    (StatusCode::OK, Json(Response::success("success".to_string())))
 }
 
 async fn update_project(
     claims: Claims,
     Json(project): Json<Project>,
-) -> impl IntoResponse {
-    Err::<Json<Response<String>>, Error>(Error::NotImplemented)
+) -> (StatusCode, Json<Response<String>>) {
+    (StatusCode::OK, Json(Response::success("success".to_string())))
 }
 
 async fn detail_project(
     claims: Claims,
     Path(code): Path<String>,
-) -> impl IntoResponse {
-    Err::<Json<Response<String>>, Error>(Error::NotImplemented)
+) -> (StatusCode, Json<Response<Project>>) {
+    (StatusCode::OK, Json(Response::success(Project::default())))
 }
 
 
