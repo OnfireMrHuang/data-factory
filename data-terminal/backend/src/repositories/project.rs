@@ -9,6 +9,7 @@ use chrono::Utc;
 use shaku::Provider;
 use sqlx::Executor;
 use std::sync::Once;
+use crate::models::web::PageQuery;
 
 #[derive(Provider)]
 #[shaku(interface = ProjectRepo)]
@@ -88,10 +89,19 @@ impl ProjectRepo for ProjectRepoImpl {
         Ok(result)
     }
 
-    async fn list_project(&self) -> Result<Vec<Project>, Error> {
+    async fn list_project(&self, params: PageQuery) -> Result<Vec<Project>, Error> {
         let pool = get_config_db();
-        let sql = "SELECT * FROM df_c_project";
-        let rows = sqlx::query_as::<_, Project>(sql).fetch_all(&pool).await?;
+        let keyword = params.keyword.unwrap_or_default();
+        let page = params.page.unwrap_or(1);
+        let page_size = params.page_size.unwrap_or(10);
+        let offset = (page - 1) * page_size;
+        let sql = "SELECT * FROM df_c_project WHERE name LIKE ? LIMIT ? OFFSET ?";
+        let rows = sqlx::query_as::<_, Project>(sql)
+            .bind(format!("%{}%", keyword))
+            .bind(page_size as i64)
+            .bind(offset as i64)
+            .fetch_all(&pool)
+            .await?;
 
         Ok(rows)
     }
@@ -182,7 +192,12 @@ mod tests {
         let repo = ProjectRepoImpl {};
         let project = sample_project();
         let _ = repo.add_project(project.clone()).await;
-        let list = repo.list_project().await.unwrap();
+        let params = PageQuery {
+            keyword: None,
+            page: Some(1),
+            page_size: Some(10),
+        };
+        let list = repo.list_project(params).await.unwrap();
         assert!(list.iter().any(|p| p.code == "test_code"));
         let test_project = list.iter().find(|p| p.code == "test_code").unwrap();
         assert_eq!(test_project.name, "Test Project");

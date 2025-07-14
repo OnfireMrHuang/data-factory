@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use shaku::Interface;
 use crate::models::project::Project;
 use crate::models::error::Error;
+use crate::models::web::PageQuery;
 
 #[async_trait]
 pub trait ProjectRepo: Interface {
@@ -13,5 +14,5 @@ pub trait ProjectRepo: Interface {
     async fn edit_project(&self, project: Project) -> Result<(), Error>;
     async fn del_project(&self, code: String) -> Result<(), Error>;
     async fn get_project(&self, code: String) -> Result<Project, Error>;
-    async fn list_project(&self) -> Result<Vec<Project>, Error>;
+    async fn list_project(&self, params: PageQuery) -> Result<Vec<Project>, Error>;
 }

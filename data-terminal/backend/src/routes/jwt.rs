@@ -1,8 +1,5 @@
 use axum::{
-    extract::{FromRequestParts, FromRequest},
-    http::{request::Parts, StatusCode},
-    response::{IntoResponse, Response},
-    Json,
+    extract::{FromRequestParts}, http::{request::Parts, StatusCode}, response::IntoResponse, Json
 };
 use axum_extra::{
     extract::cookie::CookieJar,
@@ -12,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
 use std::fmt::Display;
 use crate::utils::config::Setting;
-use crate::models::web;
+use crate::models::web::Response;
 
 
 
@@ -30,20 +27,15 @@ pub enum AuthError {
     TokenCreation,
     InvalidToken,
 }
-
 impl IntoResponse for AuthError {
-    fn into_response(self) -> Response {
+    fn into_response(self) -> axum::response::Response {
         let (status, error_message) = match self {
             AuthError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Wrong credentials"),
-            AuthError::MissingCredentials => (StatusCode::BAD_REQUEST, "Missing credentials"),
+            AuthError::MissingCredentials => (StatusCode::BAD_REQUEST, "Missing credentials"), 
             AuthError::TokenCreation => (StatusCode::INTERNAL_SERVER_ERROR, "Token creation error"),
             AuthError::InvalidToken => (StatusCode::BAD_REQUEST, "Invalid token"),
         };
-        let body = Json(web::Response::<()> {
-            result: false,
-            msg: error_message.to_string(),
-            data: (),
-        });
+        let body = Json(Response::<()>::error(error_message.to_string()));
         (status, body).into_response()
     }
 }

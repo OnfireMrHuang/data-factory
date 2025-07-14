@@ -1,4 +1,8 @@
 use tokio::sync::watch::error;
+use axum::response::IntoResponse;
+use crate::models::web::Response;
+
+
 
 
 
@@ -68,5 +72,19 @@ impl From<sqlx::Error> for Error {
     }
 }
 
+
+// Implement IntoResponse for Error so it can be used in Axum handlers
+impl IntoResponse for Error {
+    fn into_response(self) -> axum::response::Response {
+        use axum::Json;
+        use crate::models::web::Response as WebResponse;
+        let body = Json(WebResponse::<()> {
+            result: false,
+            msg: self.to_string(),
+            data: (),
+        });
+        (axum::http::StatusCode::INTERNAL_SERVER_ERROR, body).into_response()
+    }
+}
 
 
