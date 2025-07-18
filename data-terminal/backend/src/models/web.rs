@@ -29,7 +29,7 @@ impl<T> Response<T> {
         Self {
             result: false,
             msg,
-            data: Default::default(),
+            data: T::default(),
         }
     }
 }

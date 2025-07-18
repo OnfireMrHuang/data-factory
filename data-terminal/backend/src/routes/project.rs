@@ -1,8 +1,7 @@
-use axum::{extract::{Path, Query}, http::StatusCode, response::IntoResponse, routing::{delete, get, post}, Json, Router};
+use axum::{extract::{Path, Query}, http::StatusCode, routing::{delete, get, post}, Json, Router, debug_handler};
 use super::jwt::Claims;
 use crate::{autofac, models::project::Project};
 use crate::models::web::{Response, PageQuery};
-use crate::models::error::Error;
 
 
 pub fn routes() -> Router {
@@ -15,39 +14,64 @@ pub fn routes() -> Router {
 }
 
 
+#[debug_handler]
 async fn add_project(
     claims: Claims,
     Json(project): Json<Project>,
 ) -> (StatusCode, Json<Response<String>>) {
-    (StatusCode::OK, Json(Response::success("success".to_string())))
+    let result = autofac::get_global_app_state_ref().get_project_service().add_project(project).await;
+    match result {
+        Ok(code) => (StatusCode::OK, Json(Response::success(code))),
+        Err(e) => (StatusCode::OK, Json(Response::error(e.to_string()))),
+    }
 }
 
+#[debug_handler]
 async fn list_project(
     claims: Claims,
     Query(params): Query<PageQuery>,
 ) -> (StatusCode, Json<Response<Vec<Project>>>) {
-    (StatusCode::OK, Json(Response::success(vec![])))
+    let result = autofac::get_global_app_state_ref().get_project_service().list_project(params).await;
+    match result {
+        Ok(projects) => (StatusCode::OK, Json(Response::success(projects))),
+        Err(e) => (StatusCode::OK, Json(Response::error(e.to_string()))),
+    }
 }
 
+#[debug_handler]
 async fn delete_project(
     claims: Claims,
     Path(code): Path<String>,
 ) -> (StatusCode, Json<Response<String>>) {
-    (StatusCode::OK, Json(Response::success("success".to_string())))
+  let result = autofac::get_global_app_state_ref().get_project_service().del_project(code).await;
+  match result {
+    Ok(_) => (StatusCode::OK, Json(Response::success("".to_string()))),
+    Err(e) => (StatusCode::OK, Json(Response::error(e.to_string()))),
+  }
 }
 
+#[debug_handler]
 async fn update_project(
     claims: Claims,
     Json(project): Json<Project>,
 ) -> (StatusCode, Json<Response<String>>) {
-    (StatusCode::OK, Json(Response::success("success".to_string())))
+  let result = autofac::get_global_app_state_ref().get_project_service().edit_project(project).await;
+  match result {
+    Ok(_) => (StatusCode::OK, Json(Response::success("".to_string()))),
+    Err(e) => (StatusCode::OK, Json(Response::error(e.to_string()))),
+  }
 }
 
+#[debug_handler]
 async fn detail_project(
     claims: Claims,
     Path(code): Path<String>,
 ) -> (StatusCode, Json<Response<Project>>) {
-    (StatusCode::OK, Json(Response::success(Project::default())))
+  let result = autofac::get_global_app_state_ref().get_project_service().get_project(code).await;
+  match result {
+    Ok(project) => (StatusCode::OK, Json(Response::success(project))),
+    Err(e) => (StatusCode::OK, Json(Response::error(e.to_string()))),
+  }
 }
 
 

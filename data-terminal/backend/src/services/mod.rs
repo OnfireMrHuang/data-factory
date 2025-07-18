@@ -7,7 +7,7 @@ use crate::models::web::PageQuery;
 
 
 #[async_trait]
-pub trait ProjectService {
+pub trait ProjectService: Send {
     async fn add_project(&self, project: Project) -> Result<String, Error>;
     async fn edit_project(&self, project: Project) -> Result<(), Error>;
     async fn del_project(&self, code: String) -> Result<(), Error>;
