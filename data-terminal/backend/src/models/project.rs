@@ -1,4 +1,6 @@
 
+use std::default;
+
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
@@ -33,6 +35,8 @@ pub struct Project {
     pub create_status: CreateStatus,
     #[serde(default)]
     pub create_msg: String,
+    #[serde(default)]
+    pub logo: String,
     #[serde(default)]
     pub created_at: chrono::DateTime<chrono::Utc>,
     #[serde(default)]

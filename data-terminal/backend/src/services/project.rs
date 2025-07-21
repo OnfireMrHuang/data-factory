@@ -2,7 +2,7 @@
 use crate::repositories::{ProjectRepo};
 use crate::models::{Error};
 use crate::models::web::PageQuery;
-use crate::models::project::Project;
+use crate::models::project::{Project, CreateStatus};
 use shaku::Provider;
 use async_trait::async_trait;
 use super::ProjectService;
@@ -18,7 +18,10 @@ pub struct ProjectServiceImpl {
 
 #[async_trait]
 impl ProjectService for ProjectServiceImpl {
-    async fn add_project(&self, project: Project) -> Result<String, Error> {
+    async fn add_project(&self, mut project: Project) -> Result<String, Error> {
+        project.create_status = CreateStatus::Pending;
+        project.create_msg = "".to_string();
+        project.logo = "".to_string();
         let result = self.repo.add_project(project).await;
         match result {
             Ok(project) => Ok(project),

@@ -7,10 +7,10 @@ use crate::models::web::{Response, PageQuery};
 pub fn routes() -> Router {
     Router::new()
         .route("/add", post(add_project))
-        .route("/list", get(list_project))
         .route("/update", post(update_project))
-        .route("/delete", delete(delete_project))
-        .route("/detail", get(detail_project))
+        .route("/list", get(list_project))
+        .route("/{code}", get(detail_project))
+        .route("/{code}", delete(delete_project))
 }
 
 
