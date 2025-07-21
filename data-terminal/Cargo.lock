@@ -1991,7 +1991,9 @@ dependencies = [
  "async-std",
  "dioxus",
  "dioxus-logger",
+ "log",
  "reqwest",
+ "serde",
  "serde_json",
 ]
 

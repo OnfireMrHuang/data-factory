@@ -1,15 +1,12 @@
 use dioxus::prelude::*;
+use super::project_selector::ProjectSelector;
 
 #[component]
 pub fn Navbar() -> Element {
     rsx! {
         nav { class: "flex items-center justify-between h-16 px-4 bg-base-300",
-            // 左侧 Select
-            select { class: "mr-4 w-auto bg-base-200 border-none shadow-none text-base-content px-2 py-1 rounded focus:outline-none focus:ring-0",
-                option { selected: "false", disabled: "false", "选择一个项目" }
-                option { "项目1" }
-                option { "项目2" }
-            }
+            // 左侧项目选择器
+            ProjectSelector {}
             // 中间 input
             div { class: "flex-1 flex justify-start",
                 div { class: "relative w-1/5 mx-4",
