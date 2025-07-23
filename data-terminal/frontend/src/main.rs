@@ -1,6 +1,7 @@
 pub mod components;
 pub mod pages;
 pub mod routes;
+pub mod utils;
 
 use dioxus::prelude::*;
 use crate::routes::AppRouter;
