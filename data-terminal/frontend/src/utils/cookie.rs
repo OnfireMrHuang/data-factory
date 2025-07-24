@@ -9,3 +9,24 @@ pub fn get_browser_cookies() -> String {
     let cookie = html_document.cookie().unwrap();
     return cookie;
 }
+
+// 检查特定cookie是否存在
+pub fn has_cookie(name: &str) -> bool {
+    let cookies = get_browser_cookies();
+    cookies.contains(&format!("{}=", name))
+}
+
+// 获取特定cookie的值
+pub fn get_cookie_value(name: &str) -> Option<String> {
+    let cookies = get_browser_cookies();
+    let cookie_parts: Vec<&str> = cookies.split(';').collect();
+    
+    for part in cookie_parts {
+        let trimmed = part.trim();
+        if trimmed.starts_with(&format!("{}=", name)) {
+            let value = trimmed.split('=').nth(1)?;
+            return Some(value.to_string());
+        }
+    }
+    None
+}

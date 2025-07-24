@@ -6,6 +6,7 @@ use axum::{
     Router
 };
 use tower_http::cors::{Any, CorsLayer};
+use axum::http::{HeaderName, Method}; 
 
 
 pub fn router() -> Router {
@@ -15,9 +16,28 @@ pub fn router() -> Router {
         .nest("/api/v1", api_routes_v1())
         .layer(
             CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any)
+                .allow_origin("http://127.0.0.1:8080".parse::<axum::http::HeaderValue>().unwrap())
+                .allow_methods([
+                    Method::GET,
+                    Method::POST,
+                    Method::PUT,
+                    Method::DELETE,
+                    Method::OPTIONS
+                ])
+                .allow_headers([
+                    HeaderName::from_static("content-type"),
+                    HeaderName::from_static("authorization"),
+                    HeaderName::from_static("accept"),
+                    HeaderName::from_static("origin"),
+                    HeaderName::from_static("x-requested-with"),
+                    HeaderName::from_static("cookie"),
+                    HeaderName::from_static("credentials")
+                ])
+                .allow_credentials(true)  // 关键：允许携带凭证
+                .expose_headers([
+                    HeaderName::from_static("set-cookie"),
+                    HeaderName::from_static("authorization")
+                ])  // 暴露 set-cookie 头
         )
 }
 

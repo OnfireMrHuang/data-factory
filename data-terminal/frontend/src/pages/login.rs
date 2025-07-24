@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 use crate::routes::Route;
+use crate::utils::cookie;
 use dioxus::logger::tracing::info;
 use async_std::task::sleep;
 
@@ -51,16 +52,32 @@ pub fn Login() -> Element {
                                     let username = username_signal();
                                     let password = password_signal();
                                     spawn(async move {
-                                        let resp = reqwest::Client::new().post("http://localhost:3000/api/v1/login")
+                                        let resp = reqwest::Client::new()
+                                            .post("http://127.0.0.1:3000/api/v1/login")
                                             .timeout(std::time::Duration::from_secs(10))
                                             .header("Content-Type", "application/json")
                                             .json(&serde_json::json!({ "username": username, "password": password }))
                                             .send().await;
                                         match resp {
                                             Ok(r) => {
+                                                info!("响应状态: {:?}", r.status());
+                                                info!("响应头: {:?}", r.headers());
+                                                
                                                 let json: serde_json::Value = r.json().await.unwrap_or_default();
+                                                info!("响应JSON: {:?}", json);
+                                                
                                                 if json.get("result").and_then(|v| v.as_bool()).unwrap_or(false) {
-                                                    navigator.replace(Route::Home {});
+                                                    info!("登录成功，检查Cookie...");
+                                                    info!("当前所有Cookie: {}", cookie::get_browser_cookies());
+                                                    
+                                                    // 检查cookie是否设置成功
+                                                    if cookie::has_cookie("token") {
+                                                        info!("Cookie设置成功！");
+                                                        navigator.replace(Route::Home {});
+                                                    } else {
+                                                        info!("Cookie设置失败！");
+                                                        error_msg_signal.set("登录成功但Cookie设置失败".to_string());
+                                                    }
                                                 } else {
                                                     let msg = json.get("msg").and_then(|v| v.as_str()).unwrap_or("Login failed");
                                                     error_msg_signal.set(msg.to_string());

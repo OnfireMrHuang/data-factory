@@ -5,7 +5,7 @@ use axum::{
     Json, Router,
 };
 use axum_extra::{
-    extract::cookie::{Cookie, CookieJar},
+    extract::{cookie::{Cookie, CookieJar}},
 };
 use cookie::time::Duration;
 use jsonwebtoken::{encode, EncodingKey, Header};
@@ -13,6 +13,7 @@ use chrono::{Utc, Duration as ChronoDuration};
 use crate::utils::config::Setting;
 use crate::models::web;
 use super::jwt::Claims;
+use tracing::info;
 
 
 pub fn routes() -> Router {
@@ -76,11 +77,26 @@ async fn login(
         })
         .unwrap();
 
-    // 设置 Cookie
+    // 设置 token cookie
     let cookie = Cookie::build(("token", token.clone()))
         .http_only(true)
         .path("/")
-        .max_age(Duration::days(1));
+        .max_age(Duration::days(1))
+        .same_site(cookie::SameSite::Lax)
+        .secure(false)
+        .domain("127.0.0.1");
+    info!("设置token cookie: {:?}", cookie);
+    let jar = jar.add(cookie);
+
+    // 设置project_code cookie
+    let cookie = Cookie::build(("project_code", "None"))
+        .http_only(true)
+        .path("/")
+        .max_age(Duration::days(1))
+        .same_site(cookie::SameSite::Lax)
+        .secure(false)
+        .domain("127.0.0.1");
+    info!("设置project_code cookie: {:?}", cookie);
     let jar = jar.add(cookie);
 
     (
