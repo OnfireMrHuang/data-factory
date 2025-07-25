@@ -52,7 +52,11 @@ pub fn Login() -> Element {
                                     let username = username_signal();
                                     let password = password_signal();
                                     spawn(async move {
-                                        let resp = reqwest::Client::new()
+                                        let client = reqwest::Client::builder()
+                                        .cookie_store(true)
+                                        .build()
+                                        .unwrap();
+                                        let resp = client
                                             .post("http://127.0.0.1:3000/api/v1/login")
                                             .timeout(std::time::Duration::from_secs(10))
                                             .header("Content-Type", "application/json")

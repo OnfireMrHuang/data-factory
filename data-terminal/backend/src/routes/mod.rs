@@ -16,7 +16,7 @@ pub fn router() -> Router {
         .nest("/api/v1", api_routes_v1())
         .layer(
             CorsLayer::new()
-                .allow_origin("http://127.0.0.1:8080".parse::<axum::http::HeaderValue>().unwrap())
+                .allow_origin("http://localhost:8080".parse::<axum::http::HeaderValue>().unwrap())
                 .allow_methods([
                     Method::GET,
                     Method::POST,
@@ -36,8 +36,11 @@ pub fn router() -> Router {
                 .allow_credentials(true)  // 关键：允许携带凭证
                 .expose_headers([
                     HeaderName::from_static("set-cookie"),
-                    HeaderName::from_static("authorization")
+                    HeaderName::from_static("authorization"),
+                    HeaderName::from_static("access-control-allow-credentials"),
+                    HeaderName::from_static("content-type")
                 ])  // 暴露 set-cookie 头
+                .max_age(std::time::Duration::from_secs(86400))  // 预检请求缓存时间
         )
 }
 

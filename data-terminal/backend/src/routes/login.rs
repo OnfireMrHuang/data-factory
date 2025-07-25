@@ -79,23 +79,23 @@ async fn login(
 
     // 设置 token cookie
     let cookie = Cookie::build(("token", token.clone()))
-        .http_only(true)
+        .http_only(false)  // 允许JavaScript访问
         .path("/")
         .max_age(Duration::days(1))
-        .same_site(cookie::SameSite::Lax)
+        .same_site(cookie::SameSite::None)
         .secure(false)
-        .domain("127.0.0.1");
+        .domain("localhost");  // 使用localhost
     info!("设置token cookie: {:?}", cookie);
     let jar = jar.add(cookie);
 
     // 设置project_code cookie
     let cookie = Cookie::build(("project_code", "None"))
-        .http_only(true)
+        .http_only(false)  // 允许JavaScript访问
         .path("/")
         .max_age(Duration::days(1))
-        .same_site(cookie::SameSite::Lax)
+        .same_site(cookie::SameSite::None)
         .secure(false)
-        .domain("127.0.0.1");
+        .domain("localhost");  // 使用localhost
     info!("设置project_code cookie: {:?}", cookie);
     let jar = jar.add(cookie);
 

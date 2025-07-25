@@ -40,7 +40,7 @@ pub fn ProjectSelector() -> Element {
                 tracing::info!("cookie: {:?}", cookie);
                 let client = reqwest::Client::new();
                 let response = client
-                    .get("http://127.0.0.1:3000/api/v1/project/list")
+                    .get("http://localhost:3000/api/v1/project/list")
                     .header("Cookie", cookie)
                     .send()
                     .await;
