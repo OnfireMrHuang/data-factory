@@ -77,25 +77,23 @@ async fn login(
         })
         .unwrap();
 
-    // 设置 token cookie
+    // 设置 token cookie - 使用Strict SameSite策略
     let cookie = Cookie::build(("token", token.clone()))
         .http_only(false)  // 允许JavaScript访问
         .path("/")
         .max_age(Duration::days(1))
-        .same_site(cookie::SameSite::None)
-        .secure(false)
-        .domain("localhost");  // 使用localhost
+        .same_site(cookie::SameSite::Strict)  // 使用Strict，确保同站点
+        .secure(false);  // 不指定domain，让浏览器自动处理
     info!("设置token cookie: {:?}", cookie);
     let jar = jar.add(cookie);
 
-    // 设置project_code cookie
+    // 设置project_code cookie - 使用Strict SameSite策略
     let cookie = Cookie::build(("project_code", "None"))
         .http_only(false)  // 允许JavaScript访问
         .path("/")
         .max_age(Duration::days(1))
-        .same_site(cookie::SameSite::None)
-        .secure(false)
-        .domain("localhost");  // 使用localhost
+        .same_site(cookie::SameSite::Strict)  // 使用Strict，确保同站点
+        .secure(false);  // 不指定domain，让浏览器自动处理
     info!("设置project_code cookie: {:?}", cookie);
     let jar = jar.add(cookie);
 

@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use crate::routes::Route;
-use crate::utils::cookie;
+use crate::utils::{cookie, request::{create_client, HttpRequest, RequestBuilder}, error::RequestError};
 use dioxus::logger::tracing::info;
 use async_std::task::sleep;
 
@@ -52,22 +52,16 @@ pub fn Login() -> Element {
                                     let username = username_signal();
                                     let password = password_signal();
                                     spawn(async move {
-                                        let client = reqwest::Client::builder()
-                                        .cookie_store(true)
-                                        .build()
-                                        .unwrap();
-                                        let resp = client
-                                            .post("http://127.0.0.1:3000/api/v1/login")
-                                            .timeout(std::time::Duration::from_secs(10))
+                                        let client = create_client("http://localhost:3000");
+                                        let req_config = RequestBuilder::new()
                                             .header("Content-Type", "application/json")
-                                            .json(&serde_json::json!({ "username": username, "password": password }))
-                                            .send().await;
+                                            .build();
+                                        let resp = client.post("/api/v1/login", Some(req_config), serde_json::json!({ "username": username, "password": password })).await;
                                         match resp {
-                                            Ok(r) => {
-                                                info!("响应状态: {:?}", r.status());
-                                                info!("响应头: {:?}", r.headers());
+                                            Ok(response_text) => {
+                                                info!("响应文本: {}", response_text);
                                                 
-                                                let json: serde_json::Value = r.json().await.unwrap_or_default();
+                                                let json: serde_json::Value = serde_json::from_str(&response_text).unwrap_or_default();
                                                 info!("响应JSON: {:?}", json);
                                                 
                                                 if json.get("result").and_then(|v| v.as_bool()).unwrap_or(false) {
@@ -75,7 +69,12 @@ pub fn Login() -> Element {
                                                     info!("当前所有Cookie: {}", cookie::get_browser_cookies());
                                                     
                                                     // 检查cookie是否设置成功
-                                                    if cookie::has_cookie("token") {
+                                                    let has_token = cookie::has_cookie("token");
+                                                    let has_project_code = cookie::has_cookie("project_code");
+                                                    info!("token cookie存在: {}", has_token);
+                                                    info!("project_code cookie存在: {}", has_project_code);
+                                                    
+                                                    if has_token {
                                                         info!("Cookie设置成功！");
                                                         navigator.replace(Route::Home {});
                                                     } else {
@@ -93,9 +92,16 @@ pub fn Login() -> Element {
                                                     });
                                                 }
                                             }
-                                            Err(_) => {
-                                                info!("login error!!!");
-                                                error_msg_signal.set("网络错误，请稍后重试".to_string());
+                                            Err(e) => {
+                                                info!("login error: {:?}", e);
+                                                let error_message = match e {
+                                                    RequestError::NetworkError(msg) => format!("网络错误: {}", msg),
+                                                    RequestError::HttpError { status, message } => format!("HTTP错误 {}: {}", status, message),
+                                                    RequestError::AuthenticationError(msg) => format!("认证错误: {}", msg),
+                                                    RequestError::TimeoutError => "请求超时".to_string(),
+                                                    _ => "网络错误，请稍后重试".to_string(),
+                                                };
+                                                error_msg_signal.set(error_message);
                                                 spawn({
                                                     async move {
                                                         sleep(std::time::Duration::from_secs(3)).await;

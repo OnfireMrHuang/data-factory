@@ -13,7 +13,20 @@ pub fn get_browser_cookies() -> String {
 // 检查特定cookie是否存在
 pub fn has_cookie(name: &str) -> bool {
     let cookies = get_browser_cookies();
-    cookies.contains(&format!("{}=", name))
+    let has = cookies.contains(&format!("{}=", name));
+    log::info!("检查cookie '{}': 所有cookies='{}', 存在={}", name, cookies, has);
+    
+    // 更详细的调试信息
+    if !has {
+        log::info!("Cookie '{}' 未找到，尝试解析所有cookies:", name);
+        let cookie_parts: Vec<&str> = cookies.split(';').collect();
+        for (i, part) in cookie_parts.iter().enumerate() {
+            let trimmed = part.trim();
+            log::info!("  Cookie {}: '{}'", i, trimmed);
+        }
+    }
+    
+    has
 }
 
 // 获取特定cookie的值
