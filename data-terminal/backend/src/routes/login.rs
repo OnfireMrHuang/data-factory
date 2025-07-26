@@ -13,7 +13,7 @@ use chrono::{Utc, Duration as ChronoDuration};
 use crate::utils::config::Setting;
 use crate::models::web;
 use super::jwt::Claims;
-use tracing::info;
+
 
 
 pub fn routes() -> Router {
@@ -84,7 +84,6 @@ async fn login(
         .max_age(Duration::days(1))
         .same_site(cookie::SameSite::Strict)  // 使用Strict，确保同站点
         .secure(false);  // 不指定domain，让浏览器自动处理
-    info!("设置token cookie: {:?}", cookie);
     let jar = jar.add(cookie);
 
     // 设置project_code cookie - 使用Strict SameSite策略
@@ -94,7 +93,6 @@ async fn login(
         .max_age(Duration::days(1))
         .same_site(cookie::SameSite::Strict)  // 使用Strict，确保同站点
         .secure(false);  // 不指定domain，让浏览器自动处理
-    info!("设置project_code cookie: {:?}", cookie);
     let jar = jar.add(cookie);
 
     (

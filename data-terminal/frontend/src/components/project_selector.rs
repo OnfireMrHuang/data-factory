@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
-use crate::utils::{cookie};
+use crate::utils::{cookie, request::{RequestBuilder, HttpRequest}};
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,18 +36,15 @@ pub fn ProjectSelector() -> Element {
         move || {
             loading.set(true);
             spawn(async move {
-                let cookie = cookie::get_browser_cookies();
-                tracing::info!("cookie: {:?}", cookie);
-                let client = reqwest::Client::new();
-                let response = client
-                    .get("http://localhost:3000/api/v1/project/list")
-                    .header("Cookie", cookie)
-                    .send()
-                    .await;
-                
+                let client = crate::utils::request::create_client("http://localhost:3000");
+                let req_config = RequestBuilder::new()
+                    .header("Content-Type", "application/json")
+                    .header("Cookie", &cookie::get_browser_cookies())
+                    .build();
+                let response = client.get("/api/v1/project/list", Some(req_config)).await;   
                 match response {
-                    Ok(resp) => {
-                        if let Ok(api_response) = resp.json::<ApiResponse<Vec<Project>>>().await {
+                    Ok(response_text) => {
+                        if let Ok(api_response) = serde_json::from_str::<ApiResponse<Vec<Project>>>(&response_text) {
                             if api_response.result {
                                 projects.set(api_response.data);
                             }

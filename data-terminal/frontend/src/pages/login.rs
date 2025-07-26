@@ -59,26 +59,13 @@ pub fn Login() -> Element {
                                         let resp = client.post("/api/v1/login", Some(req_config), serde_json::json!({ "username": username, "password": password })).await;
                                         match resp {
                                             Ok(response_text) => {
-                                                info!("响应文本: {}", response_text);
-                                                
                                                 let json: serde_json::Value = serde_json::from_str(&response_text).unwrap_or_default();
-                                                info!("响应JSON: {:?}", json);
-                                                
                                                 if json.get("result").and_then(|v| v.as_bool()).unwrap_or(false) {
-                                                    info!("登录成功，检查Cookie...");
-                                                    info!("当前所有Cookie: {}", cookie::get_browser_cookies());
-                                                    
                                                     // 检查cookie是否设置成功
                                                     let has_token = cookie::has_cookie("token");
-                                                    let has_project_code = cookie::has_cookie("project_code");
-                                                    info!("token cookie存在: {}", has_token);
-                                                    info!("project_code cookie存在: {}", has_project_code);
-                                                    
                                                     if has_token {
-                                                        info!("Cookie设置成功！");
                                                         navigator.replace(Route::Home {});
                                                     } else {
-                                                        info!("Cookie设置失败！");
                                                         error_msg_signal.set("登录成功但Cookie设置失败".to_string());
                                                     }
                                                 } else {
@@ -93,7 +80,6 @@ pub fn Login() -> Element {
                                                 }
                                             }
                                             Err(e) => {
-                                                info!("login error: {:?}", e);
                                                 let error_message = match e {
                                                     RequestError::NetworkError(msg) => format!("网络错误: {}", msg),
                                                     RequestError::HttpError { status, message } => format!("HTTP错误 {}: {}", status, message),
