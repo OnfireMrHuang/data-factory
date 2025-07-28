@@ -40,6 +40,9 @@ pub fn ProjectSelector() -> Element {
     let mut selected_project = use_signal(|| None as Option<Project>);
     let mut show_project_modal = use_signal(|| false);
     let mut modal_mode = use_signal(|| ProjectModalMode::Add);
+    let mut show_delete_modal = use_signal(|| false);
+    let mut selected_project_for_action = use_signal(|| None as Option<Project>);
+    let mut show_action_menu = use_signal(|| None as Option<String>);
 
     // 获取项目列表
     let fetch_projects = {
@@ -171,8 +174,58 @@ pub fn ProjectSelector() -> Element {
         }
     };
 
+
+
+    // 处理删除确认
+    let handle_delete_confirm = {
+        let mut show_delete_modal = show_delete_modal.clone();
+        let mut fetch_projects = fetch_projects.clone();
+        move |project: Project| {
+            spawn(async move {
+                let client = crate::utils::request::create_client("http://localhost:3000");
+                let req_config = RequestBuilder::new()
+                    .header("Content-Type", "application/json")
+                    .header("Cookie", &cookie::get_browser_cookies())
+                    .build();
+                
+                let project_data = serde_json::json!({
+                    "code": project.code
+                });
+                let response = client.post("/api/v1/project/delete", Some(req_config), Some(project_data.to_string())).await;
+                match response {
+                    Ok(_) => {
+                        log::info!("Project deleted successfully");
+                        fetch_projects();
+                    }
+                    Err(e) => {
+                        log::error!("Failed to delete project: {}", e);
+                    }
+                }
+            });
+            show_delete_modal.set(false);
+        }
+    };
+
+    // 处理删除取消
+    let handle_delete_cancel = {
+        let mut show_delete_modal = show_delete_modal.clone();
+        move |_| {
+            show_delete_modal.set(false);
+        }
+    };
+
+    // 处理点击外部关闭菜单
+    let handle_click_outside = {
+        let mut show_action_menu = show_action_menu.clone();
+        move |_| {
+            show_action_menu.set(None);
+        }
+    };
+
     rsx! {
-        div { class: "relative",
+        div { 
+            class: "relative",
+            onclick: handle_click_outside,
             // 项目选择器按钮
             button { 
                 class: "flex items-center gap-2 px-3 py-2 bg-base-200 hover:bg-base-300 rounded-lg transition-colors",
@@ -245,10 +298,11 @@ pub fn ProjectSelector() -> Element {
                             } else {
                                 div { class: "space-y-1",
                                     for project in projects() {
+                                        let project_clone = project.clone();
                                         div { 
                                             class: "flex items-center justify-between p-3 hover:bg-base-200 cursor-pointer",
                                             onclick: move |_| {
-                                                selected_project.set(Some(project.clone()));
+                                                selected_project.set(Some(project_clone.clone()));
                                                 show_dropdown.set(false);
                                             },
                                             div { class: "flex items-center gap-3",
@@ -267,17 +321,65 @@ pub fn ProjectSelector() -> Element {
                                                     div { class: "text-xs text-base-content/60", "{project.description}" }
                                                 }
                                             }
-                                            button { 
-                                                class: "btn btn-ghost btn-xs",
-                                                onclick: move |_| {
-                                                },
-                                                svg { 
-                                                    class: "w-3 h-3", 
-                                                    fill: "none", 
-                                                    stroke: "currentColor", 
-                                                    stroke_width: "2", 
-                                                    view_box: "0 0 24 24",
-                                                    path { d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }
+                                            div { class: "relative",
+                                                button { 
+                                                    class: "btn btn-ghost btn-xs",
+                                                    onclick: move |event| {
+                                                        event.stop_propagation();
+                                                        selected_project_for_action.set(Some(project.clone()));
+                                                        show_action_menu.set(Some(project.code.clone()));
+                                                    },
+                                                    svg { 
+                                                        class: "w-3 h-3", 
+                                                        fill: "none", 
+                                                        stroke: "currentColor", 
+                                                        stroke_width: "2", 
+                                                        view_box: "0 0 24 24",
+                                                        path { d: "M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" }
+                                                    }
+                                                }
+                                                
+                                                // 操作菜单
+                                                if show_action_menu() == Some(project.code.clone()) {
+                                                    div { 
+                                                        class: "absolute right-0 top-full mt-1 w-32 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50",
+                                                        div { class: "py-1",
+                                                            button { 
+                                                                class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2",
+                                                                onclick: move |_| {
+                                                                    modal_mode.set(ProjectModalMode::Edit(project.clone()));
+                                                                    show_project_modal.set(true);
+                                                                    show_action_menu.set(None);
+                                                                },
+                                                                svg { 
+                                                                    class: "w-3 h-3", 
+                                                                    fill: "none", 
+                                                                    stroke: "currentColor", 
+                                                                    stroke_width: "2", 
+                                                                    view_box: "0 0 24 24",
+                                                                    path { d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }
+                                                                }
+                                                                "编辑"
+                                                            }
+                                                            button { 
+                                                                class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2 text-error",
+                                                                onclick: move |_| {
+                                                                    selected_project_for_action.set(Some(project.clone()));
+                                                                    show_delete_modal.set(true);
+                                                                    show_action_menu.set(None);
+                                                                },
+                                                                svg { 
+                                                                    class: "w-3 h-3", 
+                                                                    fill: "none", 
+                                                                    stroke: "currentColor", 
+                                                                    stroke_width: "2", 
+                                                                    view_box: "0 0 24 24",
+                                                                    path { d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }
+                                                                }
+                                                                "删除"
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -296,6 +398,17 @@ pub fn ProjectSelector() -> Element {
             mode: modal_mode(),
             on_confirm: handle_confirm,
             on_cancel: handle_cancel,
+        }
+
+        // 项目删除确认弹窗
+        if show_delete_modal() {
+            if let Some(project) = selected_project_for_action() {
+                ProjectDel {
+                    project: project,
+                    on_confirm: handle_delete_confirm,
+                    on_cancel: handle_delete_cancel,
+                }
+            }
         }
     }
 } 
@@ -422,5 +535,64 @@ pub fn ProjectAddOrEdit(
     }
 }
 
+#[component]
+pub fn ProjectDel(
+    project: Project,
+    on_confirm: Callback<Project>,
+    on_cancel: Callback<()>,
+) -> Element {
+    let handle_confirm = {
+        let on_confirm = on_confirm.clone();
+        let project = project.clone();
+        move |_| {
+            on_confirm.call(project.clone());
+        }
+    };
 
+    let handle_cancel = {
+        let on_cancel = on_cancel.clone();
+        move |_| {
+            on_cancel.call(());
+        }
+    };
 
+    rsx! {
+        dialog { 
+            class: "modal modal-open",
+            div { 
+                class: "modal-box",
+                h3 { 
+                    class: "text-lg font-bold mb-4", 
+                    "删除确认" 
+                }
+                
+                p { 
+                    class: "py-4 text-base-content/80", 
+                    "请确认是否删除该项目" 
+                }
+                
+                div { 
+                    class: "modal-action",
+                    button { 
+                        class: "btn btn-outline",
+                        onclick: handle_cancel,
+                        "取消" 
+                    }
+                    
+                    button { 
+                        class: "btn btn-error",
+                        onclick: handle_confirm,
+                        "确认删除" 
+                    }
+                }
+            }
+            
+            form { 
+                method: "dialog", 
+                class: "modal-backdrop",
+                onclick: handle_cancel,
+                button { "close" }
+            }
+        }
+    }
+}
