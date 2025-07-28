@@ -1,5 +1,5 @@
 
-use gloo_net::http::{Request as GlooRequest};
+use gloo::net::http::{Request as GlooRequest};
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 use crate::utils::error::{RequestError, RequestResult};
