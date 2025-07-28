@@ -1,10 +1,14 @@
 [workspace]
 
 members = [
+	# 公共依赖
+	"common",
 	# 后端
 	"backend",
 	# 前端
-	"frontend"
+	"frontend",
+	# 文档站点
+	"docsite"
 ]
 
 [profile.wasm-dev]
