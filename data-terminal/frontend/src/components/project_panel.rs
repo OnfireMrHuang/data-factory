@@ -1,4 +1,4 @@
-use crate::models::project::{Project, ProjectModalMode};
+use crate::models::project::{self, Project, ProjectModalMode};
 use crate::models::protocol::ApiResponse;
 use crate::utils::{
     cookie,
@@ -408,102 +408,92 @@ pub fn ProjectList(
     show_project_add_or_edit_modal: Signal<bool>,
     show_project_delete_modal: Signal<bool>,
 ) -> Element {
-    rsx! {
-        div { class: "max-h-64 overflow-y-auto",
-            if loading() {
-                div { class: "p-4 text-center text-base-content/60",
-                    "加载中..."
-                }
-            } else {
-                if projects().is_empty() {
-                    div { class: "p-4 text-center text-base-content/60",
-                        "暂无项目"
+    let project_list = projects().clone();
+    let is_empty = project_list.is_empty();
+    let project_list_rendered = project_list.iter().cloned().map(|project| {
+        let project_for_selected = project.clone();
+        let project_for_action = project.clone();
+        let project_for_edit = project.clone();
+        let project_for_delete = project.clone();
+        rsx! {
+            div {
+                class: "flex items-center justify-between p-3 hover:bg-base-200 cursor-pointer",
+                onclick: move |_| {
+                    selected_project.set(Some(project_for_selected.clone()));
+                    show_dropdown.set(false);
+                },
+                div { class: "flex items-center gap-3",
+                    div { class: "w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center",
+                        svg {
+                            class: "w-4 h-4 text-primary",
+                            fill: "none",
+                            stroke: "currentColor",
+                            stroke_width: "2",
+                            view_box: "0 0 24 24",
+                            path { d: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" }
+                        }
                     }
-                } else {
-                    div { class: "space-y-1",
-                        for project in projects().iter() {
-                            div {
-                                class: "flex items-center justify-between p-3 hover:bg-base-200 cursor-pointer",
-                                onclick: move |_| {
-                                    selected_project.set(Some(project.clone()));
-                                    show_dropdown.set(false);
-                                },
-                                div { class: "flex items-center gap-3",
-                                    div { class: "w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center",
-                                        svg {
-                                            class: "w-4 h-4 text-primary",
-                                            fill: "none",
-                                            stroke: "currentColor",
-                                            stroke_width: "2",
-                                            view_box: "0 0 24 24",
-                                            path { d: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" }
-                                        }
-                                    }
-                                    div { class: "flex-1",
-                                        div { class: "font-medium text-sm", "{project.name}" }
-                                        div { class: "text-xs text-base-content/60", "{project.description}" }
-                                    }
-                                }
-                                div { class: "relative",
-                                    button {
-                                        class: "btn btn-ghost btn-xs",
-                                        onclick: move |event| {
-                                            event.stop_propagation();
-                                            selected_project_for_action.set(Some(project.clone()));
-                                            show_action_menu.set(Some(project.code.clone()));
-                                        },
-                                        svg {
-                                            class: "w-3 h-3",
-                                            fill: "none",
-                                            stroke: "currentColor",
-                                            stroke_width: "2",
-                                            view_box: "0 0 24 24",
-                                            path { d: "M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" }
-                                        }
-                                    }
+                    div { class: "flex-1",
+                        div { class: "font-medium text-sm", "{project.name}" }
+                        div { class: "text-xs text-base-content/60", "{project.description}" }
+                    }
+                }
+                div { class: "relative",
+                    button {
+                        class: "btn btn-ghost btn-xs",
+                        onclick: move |event| {
+                            event.stop_propagation();
+                            selected_project_for_action.set(Some(project_for_action.clone()));
+                            show_action_menu.set(Some(project_for_action.code.clone()));
+                        },
+                        svg {
+                            class: "w-3 h-3",
+                            fill: "none",
+                            stroke: "currentColor",
+                            stroke_width: "2",
+                            view_box: "0 0 24 24",
+                            path { d: "M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" }
+                        }
+                    }
 
-                                    // 操作菜单
-                                    if show_action_menu() == Some(project.code.clone()) {
-                                        div {
-                                            class: "absolute right-0 top-full mt-1 w-32 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50",
-                                            div { class: "py-1",
-                                                button {
-                                                    class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2",
-                                                    onclick: move |_| {
-                                                        modal_mode.set(ProjectModalMode::Edit(project.clone()));
-                                                        show_project_add_or_edit_modal.set(true);
-                                                        show_action_menu.set(None);
-                                                    },
-                                                    svg {
-                                                        class: "w-3 h-3",
-                                                        fill: "none",
-                                                        stroke: "currentColor",
-                                                        stroke_width: "2",
-                                                        view_box: "0 0 24 24",
-                                                        path { d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }
-                                                    }
-                                                    "编辑"
-                                                }
-                                                button {
-                                                    class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2 text-error",
-                                                    onclick: move |_| {
-                                                        selected_project_for_action.set(Some(project.clone()));
-                                                        show_project_delete_modal.set(true);
-                                                        show_action_menu.set(None);
-                                                    },
-                                                    svg {
-                                                        class: "w-3 h-3",
-                                                        fill: "none",
-                                                        stroke: "currentColor",
-                                                        stroke_width: "2",
-                                                        view_box: "0 0 24 24",
-                                                        path { d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }
-                                                    }
-                                                    "删除"
-                                                }
-                                            }
-                                        }
+                    // 操作菜单
+                    if show_action_menu() == Some(project.code.clone()) {
+                        div {
+                            class: "absolute right-0 top-full mt-1 w-32 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50",
+                            div { class: "py-1",
+                                button {
+                                    class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2",
+                                    onclick: move |_| {
+                                        modal_mode.set(ProjectModalMode::Edit(project_for_edit.clone()));
+                                        show_project_add_or_edit_modal.set(true);
+                                        show_action_menu.set(None);
+                                    },
+                                    svg {
+                                        class: "w-3 h-3",
+                                        fill: "none",
+                                        stroke: "currentColor",
+                                        stroke_width: "2",
+                                        view_box: "0 0 24 24",
+                                        path { d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }
                                     }
+                                    "编辑"
+                                }
+                                button {
+                                    class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2 text-error",
+                                    onclick: move |_| {
+                                        selected_project_for_action.set(Some(project_for_delete.clone()));
+                                        show_project_delete_modal.set(true);
+                                        show_action_menu.set(None);
+                                    },
+                                    svg {
+                                        class: "w-3 h-3",
+                                        fill: "none",
+                                        stroke: "currentColor",
+                                        stroke_width: "2",
+                                        view_box: "0 0 24 24",
+                                        path { d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }
+                                    }
+                                    "删除"
                                 }
                             }
                         }
@@ -511,8 +501,30 @@ pub fn ProjectList(
                 }
             }
         }
+    });
+
+
+    rsx! {
+        div { class: "max-h-64 overflow-y-auto",
+            if loading() {
+                div { class: "p-4 text-center text-base-content/60",
+                    "加载中..."
+                }
+            } else {
+                if is_empty {
+                    div { class: "p-4 text-center text-base-content/60",
+                        "暂无项目"
+                    }
+                } else {
+                    div { class: "space-y-1",
+                        {project_list_rendered}
+                    }
+                }
+            }
+        }
     }
 }
+
 
 // 项目新增或编辑组件
 #[component]
