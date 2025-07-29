@@ -1,8 +1,6 @@
 [workspace]
 
 members = [
-	# 公共依赖
-	"common",
 	# 后端
 	"backend",
 	# 前端

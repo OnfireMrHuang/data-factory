@@ -1,12 +1,12 @@
 use dioxus::prelude::*;
-use super::project_selector::ProjectSelector;
+use super::project_panel::ProjectPanel;
 
 #[component]
 pub fn Navbar() -> Element {
     rsx! {
         nav { class: "flex items-center justify-between h-16 px-4 bg-base-300",
             // 左侧项目选择器
-            ProjectSelector {}
+            ProjectPanel {}
             // 中间 input
             div { class: "flex-1 flex justify-start",
                 div { class: "relative w-1/5 mx-4",

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use crate::routes::Route;
 use crate::utils::{cookie, request::{create_client, HttpRequest, RequestBuilder}, error::RequestError};
 use dioxus::logger::tracing::info;
-use async_std::task::sleep;
+use gloo::timers::future::sleep;
 
 #[component]
 pub fn Login() -> Element {

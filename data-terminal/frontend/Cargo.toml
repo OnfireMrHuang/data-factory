@@ -7,16 +7,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dioxus = { version = "0.6.3", features = ["router"] }
+dioxus = { version = "0.6.3", features = ["router", "web"] }
 dioxus-logger = "0.6.2"
-reqwest = { version = "0.12.20", features = ["json", "cookies", "native-tls"]}
+dioxus-toast = { version = "0.6.0", default-features = false, features = ["web"] }
+daisy_rsx = "0.1.42"
+dioxus-free-icons = "0.9.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde-wasm-bindgen = "0.6"
 wasm-bindgen-futures = "0.4"
 log = "0.4"
 tracing = "0.1.41"
-async-std = { version = "1.12", features = ["attributes"] }
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3.77", features = [
     "Window",
@@ -29,11 +30,10 @@ web-sys = { version = "0.3.77", features = [
     "Response",
     "Headers"
 ]}
-gloo = "0.11.0"
+gloo = { version = "0.11.0", features = ["futures"] }
 async-trait = "0.1"
 thiserror = "2.0.12"
-daisy_rsx = "0.1.42"
-dioxus-free-icons = "0.9.0"
+
 
 
 
