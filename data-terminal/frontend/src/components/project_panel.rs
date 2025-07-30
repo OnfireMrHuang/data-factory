@@ -585,6 +585,19 @@ pub fn ProjectAddOrEdit(
         }
     };
 
+     // 校验：仅支持英文、数字、下划线，且首字符必须为英文
+     let mut code_error = use_signal(|| None::<String>);
+     let validate_code = |code: &str| {
+         let re = regex::Regex::new(r"^[a-zA-Z][a-zA-Z0-9_]*$").unwrap();
+         if code.is_empty() {
+             Some("项目编码不能为空".to_string())
+         } else if !re.is_match(code) {
+             Some("仅支持英文、数字、下划线，且首字符必须为英文".to_string())
+         } else {
+             None
+         }
+     };
+
     rsx! {
         dialog {
             class: "modal modal-open",
@@ -608,7 +621,15 @@ pub fn ProjectAddOrEdit(
                                 class: "input input-bordered w-full",
                                 placeholder: "请输入项目编码",
                                 value: "{project_code}",
-                                oninput: move |event| project_code.set(event.value().to_string())
+                                oninput: move |event| {
+                                    let value = event.value().to_string();
+                                    let err = validate_code(&value);
+                                    code_error.set(err);
+                                    project_code.set(value);
+                                }
+                            }
+                            if let Some(err) = code_error() {
+                                span { class: "text-error text-xs mt-1", "{err}" }
                             }
                         }
                     }
