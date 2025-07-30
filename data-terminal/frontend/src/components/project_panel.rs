@@ -1,4 +1,4 @@
-use crate::models::project::{self, Project, ProjectModalMode};
+use crate::models::project::{Project, ProjectModalMode};
 use crate::models::protocol::ApiResponse;
 use crate::utils::{
     cookie,
@@ -6,6 +6,8 @@ use crate::utils::{
 };
 use dioxus::prelude::*;
 use dioxus_toast::{Icon, ToastInfo, ToastManager};
+use dioxus::logger::tracing::info;
+use web_sys::console::info;
 
 #[component]
 pub fn ProjectPanel() -> Element {
@@ -20,6 +22,7 @@ pub fn ProjectPanel() -> Element {
     let mut show_project_delete_modal = use_signal(|| false); // 表示项目删除确认弹窗是否显示
     let mut selected_project_for_action = use_signal(|| None as Option<Project>); // 表示选中的项目
     let mut show_action_menu = use_signal(|| None as Option<String>); // 表示操作菜单是否显示
+    let mut menu_position = use_signal(|| "bottom" as &str); // 表示菜单显示位置：bottom 或 top
 
     let mut toast = use_signal(|| ToastManager::default()); // 表示错误弹窗
 
@@ -269,16 +272,6 @@ pub fn ProjectPanel() -> Element {
         }
     };
 
-    // 处理编辑项目
-    let handle_edit_project = {
-        let mut show_project_add_or_edit_modal = show_project_add_or_edit_modal.clone();
-        let mut modal_mode = modal_mode.clone();
-        move |project: Project| {
-            modal_mode.set(ProjectModalMode::Edit(project));
-            show_project_add_or_edit_modal.set(true);
-        }
-    };
-
     rsx! {
 
         // 错误弹窗
@@ -289,6 +282,7 @@ pub fn ProjectPanel() -> Element {
         // 项目主面板
         div {
             class: "relative",
+            style: "overflow: visible;",
             onclick: handle_click_outside,
 
             // 项目选择器按钮
@@ -328,6 +322,7 @@ pub fn ProjectPanel() -> Element {
             if show_dropdown() {
                 div {
                     class: "absolute top-full left-0 mt-2 w-80 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50",
+                    style: "min-width: 320px; max-width: calc(100vw - 2rem); max-height: 64rem;",
                     
                     // 项目配置区
                     ProjectConfig {
@@ -345,17 +340,21 @@ pub fn ProjectPanel() -> Element {
                         modal_mode: modal_mode.clone(),
                         show_project_add_or_edit_modal: show_project_add_or_edit_modal.clone(),
                         show_project_delete_modal: show_project_delete_modal.clone(),
+                        menu_position: menu_position.clone(),
                     }
                 }
             }
+
+
         }
 
         // 项目新增/编辑弹窗
-        ProjectAddOrEdit {
-            show: show_project_add_or_edit_modal(),
-            mode: modal_mode(),
-            on_confirm: handle_project_add_or_edit_confirm,
-            on_cancel: handle_project_add_or_edit_cancel,
+        if show_project_add_or_edit_modal() {
+            ProjectAddOrEdit {
+                mode: modal_mode(),
+                on_confirm: handle_project_add_or_edit_confirm,
+                on_cancel: handle_project_add_or_edit_cancel,
+            }
         }
 
         // 项目删除确认弹窗
@@ -407,17 +406,19 @@ pub fn ProjectList(
     modal_mode: Signal<ProjectModalMode>,
     show_project_add_or_edit_modal: Signal<bool>,
     show_project_delete_modal: Signal<bool>,
+    menu_position: Signal<&'static str>,
 ) -> Element {
     let project_list = projects().clone();
     let is_empty = project_list.is_empty();
-    let project_list_rendered = project_list.iter().cloned().map(|project| {
+    let project_list_rendered = project_list.iter().cloned().enumerate().map(|(index, project)| {
         let project_for_selected = project.clone();
         let project_for_action = project.clone();
         let project_for_edit = project.clone();
         let project_for_delete = project.clone();
+        let total_projects = project_list.len();
         rsx! {
             div {
-                class: "flex items-center justify-between p-3 hover:bg-base-200 cursor-pointer",
+                class: "flex items-center justify-between p-3 hover:bg-base-200 cursor-pointer relative",
                 onclick: move |_| {
                     selected_project.set(Some(project_for_selected.clone()));
                     show_dropdown.set(false);
@@ -438,28 +439,42 @@ pub fn ProjectList(
                         div { class: "text-xs text-base-content/60", "{project.description}" }
                     }
                 }
-                div { class: "relative",
-                    button {
-                        class: "btn btn-ghost btn-xs",
-                        onclick: move |event| {
-                            event.stop_propagation();
+                
+                // 水平三点按钮
+                button {
+                    class: "btn btn-ghost btn-xs p-1 relative",
+                    onclick: move |event| {
+                        event.stop_propagation();
+                        // 如果当前项目的菜单已经显示，则关闭；否则显示
+                        if show_action_menu() == Some(project_for_action.code.clone()) {
+                            show_action_menu.set(None);
+                        } else {
+                            // 判断菜单显示位置
+                            let position = if index > total_projects / 2 { "top" } else { "bottom" };
+                            menu_position.set(position);
+                            
                             selected_project_for_action.set(Some(project_for_action.clone()));
                             show_action_menu.set(Some(project_for_action.code.clone()));
-                        },
-                        svg {
-                            class: "w-3 h-3",
-                            fill: "none",
-                            stroke: "currentColor",
-                            stroke_width: "2",
-                            view_box: "0 0 24 24",
-                            path { d: "M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" }
                         }
+                    },
+                    svg {
+                        class: "w-4 h-4",
+                        fill: "none",
+                        stroke: "currentColor",
+                        stroke_width: "2",
+                        view_box: "0 0 24 24",
+                        path { d: "M4 6h16M4 12h16M4 18h16" }
                     }
 
-                    // 操作菜单
+                    // 操作菜单 - 根据位置显示在三点按钮上方或下方
                     if show_action_menu() == Some(project.code.clone()) {
                         div {
-                            class: "absolute right-0 top-full mt-1 w-32 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50",
+                            class: "absolute w-32 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50",
+                            style: if menu_position() == "top" {
+                                "right: 0; bottom: 100%; margin-bottom: 0.25rem;"
+                            } else {
+                                "right: 0; top: 100%; margin-top: 0.25rem;"
+                            },
                             div { class: "py-1",
                                 button {
                                     class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2",
@@ -505,7 +520,7 @@ pub fn ProjectList(
 
 
     rsx! {
-        div { class: "max-h-64 overflow-y-auto",
+        div { class: "h-96 overflow-y-auto",
             if loading() {
                 div { class: "p-4 text-center text-base-content/60",
                     "加载中..."
@@ -529,11 +544,13 @@ pub fn ProjectList(
 // 项目新增或编辑组件
 #[component]
 pub fn ProjectAddOrEdit(
-    show: bool,
     mode: ProjectModalMode,
     on_confirm: Callback<(String, String, String)>,
     on_cancel: Callback<()>,
 ) -> Element {
+
+    info!("mode: {:?}", mode);
+
     let mut project_code = use_signal(|| match &mode {
         ProjectModalMode::Add => String::new(),
         ProjectModalMode::Edit(project) => project.code.clone(),
@@ -570,7 +587,7 @@ pub fn ProjectAddOrEdit(
 
     rsx! {
         dialog {
-            class: if show { "modal modal-open" } else { "modal" },
+            class: "modal modal-open",
             div {
                 class: "modal-box",
                 h3 {

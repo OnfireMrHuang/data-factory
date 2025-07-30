@@ -1,7 +1,6 @@
 use dioxus::prelude::*;
 use crate::routes::Route;
 use crate::utils::{cookie, request::{create_client, HttpRequest, RequestBuilder}, error::RequestError};
-use dioxus::logger::tracing::info;
 use gloo::timers::future::sleep;
 
 #[component]
