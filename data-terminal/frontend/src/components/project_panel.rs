@@ -6,8 +6,6 @@ use crate::utils::{
 };
 use dioxus::prelude::*;
 use dioxus_toast::{Icon, ToastInfo, ToastManager};
-use dioxus::logger::tracing::info;
-use web_sys::console::info;
 
 #[component]
 pub fn ProjectPanel() -> Element {
@@ -112,7 +110,7 @@ pub fn ProjectPanel() -> Element {
                             .await;
                         match response {
                             Ok(result) => {
-                                match serde_json::from_str::<ApiResponse<Project>>(&result) {
+                                match serde_json::from_str::<ApiResponse<String>>(&result) {
                                     Ok(api_response) => {
                                         if api_response.result {
                                             fetch_projects(); // 刷新项目列表
@@ -151,7 +149,7 @@ pub fn ProjectPanel() -> Element {
                             .await;
                         match response {
                             Ok(result) => {
-                                match serde_json::from_str::<ApiResponse<Project>>(&result) {
+                                match serde_json::from_str::<ApiResponse<String>>(&result) {
                                     Ok(api_response) => {
                                         if api_response.result {
                                             fetch_projects(); // 刷新项目列表
@@ -202,19 +200,19 @@ pub fn ProjectPanel() -> Element {
                 let mut error_msg = String::new();
                 let client = crate::utils::request::create_client("http://localhost:3000");
                 let req_config = RequestBuilder::new()
-                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
                     .header("Cookie", &cookie::get_browser_cookies())
                     .build();
 
                 let response = client
                     .delete(
-                        &format!("/api/v1/project/delete/{}", project.code),
+                        &format!("/api/v1/project/{}", project.code),
                         Some(req_config),
                     )
                     .await;
                 match response {
                     Ok(result) => {
-                        match serde_json::from_str::<ApiResponse<Project>>(&result) {
+                        match serde_json::from_str::<ApiResponse<String>>(&result) {
                             Ok(api_response) => {
                                 if api_response.result {
                                     fetch_projects(); // 刷新项目列表
@@ -394,6 +392,131 @@ pub fn ProjectConfig(
     }
 }
 
+// 项目列表项组件
+#[component]
+pub fn ProjectItem(
+    index: usize,
+    project: Project,
+    total_projects: usize,
+    selected_project: Signal<Option<Project>>,
+    show_dropdown: Signal<bool>,
+    selected_project_for_action: Signal<Option<Project>>,
+    show_action_menu: Signal<Option<String>>,
+    menu_position: Signal<&'static str>,
+    modal_mode: Signal<ProjectModalMode>,
+    show_project_add_or_edit_modal: Signal<bool>,
+    show_project_delete_modal: Signal<bool>,
+) -> Element {
+
+    let project_for_selected = project.clone();
+    let project_for_action = project.clone();
+    let project_for_edit = project.clone();
+    let project_for_delete = project.clone();
+
+    rsx! {
+        div {
+            class: "flex items-center justify-between p-3 hover:bg-base-200 cursor-pointer relative",
+            onclick: move |_| {
+                selected_project.set(Some(project_for_selected.clone()));
+                show_dropdown.set(false);
+            },
+            div { class: "flex items-center gap-3",
+                div { class: "w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center",
+                    svg {
+                        class: "w-4 h-4 text-primary",
+                        fill: "none",
+                        stroke: "currentColor",
+                        stroke_width: "2",
+                        view_box: "0 0 24 24",
+                        path { d: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" }
+                    }
+                }
+                div { class: "flex-1",
+                    div { class: "font-medium text-sm", "{project.name}" }
+                    div { class: "text-xs text-base-content/60", "{project.description}" }
+                }
+            }
+            
+            // 水平三点按钮
+            button {
+                class: "btn btn-ghost btn-xs p-1 relative",
+                onclick: move |event| {
+                    event.stop_propagation();
+                    // 如果当前项目的菜单已经显示，则关闭；否则显示
+                    if show_action_menu() == Some(project_for_action.code.clone()) {
+                        show_action_menu.set(None);
+                    } else {
+                        // 判断菜单显示位置
+                        let position = if index > total_projects / 2 { "top" } else { "bottom" };
+                        menu_position.set(position);
+                        
+                        selected_project_for_action.set(Some(project_for_action.clone()));
+                        show_action_menu.set(Some(project_for_action.code.clone()));
+                    }
+                },
+                svg {
+                    class: "w-4 h-4",
+                    fill: "none",
+                    stroke: "currentColor",
+                    stroke_width: "2",
+                    view_box: "0 0 24 24",
+                    path { d: "M4 6h16M4 12h16M4 18h16" }
+                }
+
+                // 操作菜单 - 根据位置显示在三点按钮上方或下方
+                if show_action_menu() == Some(project.code.clone()) {
+                    div {
+                        class: "absolute w-32 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50",
+                        style: if menu_position() == "top" {
+                            "right: 0; bottom: 100%; margin-bottom: 0.25rem;"
+                        } else {
+                            "right: 0; top: 100%; margin-top: 0.25rem;"
+                        },
+                        div { class: "py-1",
+                            button {
+                                class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2",
+                                onclick: move |event| {
+                                    event.stop_propagation();
+                                    show_action_menu.set(None);
+                                    modal_mode.set(ProjectModalMode::Edit(project_for_edit.clone()));
+                                    show_project_add_or_edit_modal.set(true);
+                                },
+                                svg {
+                                    class: "w-3 h-3",
+                                    fill: "none",
+                                    stroke: "currentColor",
+                                    stroke_width: "2",
+                                    view_box: "0 0 24 24",
+                                    path { d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }
+                                }
+                                "编辑"
+                            }
+                            button {
+                                class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2 text-error",
+                                onclick: move |event| {
+                                    event.stop_propagation();
+                                    show_action_menu.set(None);
+                                    selected_project_for_action.set(Some(project_for_delete.clone()));
+                                    show_project_delete_modal.set(true);
+                                },
+                                svg {
+                                    class: "w-3 h-3",
+                                    fill: "none",
+                                    stroke: "currentColor",
+                                    stroke_width: "2",
+                                    view_box: "0 0 24 24",
+                                    path { d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }
+                                }
+                                "删除"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // 项目列表区组件
 #[component]
 pub fn ProjectList(
@@ -408,116 +531,8 @@ pub fn ProjectList(
     show_project_delete_modal: Signal<bool>,
     menu_position: Signal<&'static str>,
 ) -> Element {
-    let project_list = projects().clone();
-    let is_empty = project_list.is_empty();
-    let project_list_rendered = project_list.iter().cloned().enumerate().map(|(index, project)| {
-        let project_for_selected = project.clone();
-        let project_for_action = project.clone();
-        let project_for_edit = project.clone();
-        let project_for_delete = project.clone();
-        let total_projects = project_list.len();
-        rsx! {
-            div {
-                class: "flex items-center justify-between p-3 hover:bg-base-200 cursor-pointer relative",
-                onclick: move |_| {
-                    selected_project.set(Some(project_for_selected.clone()));
-                    show_dropdown.set(false);
-                },
-                div { class: "flex items-center gap-3",
-                    div { class: "w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center",
-                        svg {
-                            class: "w-4 h-4 text-primary",
-                            fill: "none",
-                            stroke: "currentColor",
-                            stroke_width: "2",
-                            view_box: "0 0 24 24",
-                            path { d: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" }
-                        }
-                    }
-                    div { class: "flex-1",
-                        div { class: "font-medium text-sm", "{project.name}" }
-                        div { class: "text-xs text-base-content/60", "{project.description}" }
-                    }
-                }
-                
-                // 水平三点按钮
-                button {
-                    class: "btn btn-ghost btn-xs p-1 relative",
-                    onclick: move |event| {
-                        event.stop_propagation();
-                        // 如果当前项目的菜单已经显示，则关闭；否则显示
-                        if show_action_menu() == Some(project_for_action.code.clone()) {
-                            show_action_menu.set(None);
-                        } else {
-                            // 判断菜单显示位置
-                            let position = if index > total_projects / 2 { "top" } else { "bottom" };
-                            menu_position.set(position);
-                            
-                            selected_project_for_action.set(Some(project_for_action.clone()));
-                            show_action_menu.set(Some(project_for_action.code.clone()));
-                        }
-                    },
-                    svg {
-                        class: "w-4 h-4",
-                        fill: "none",
-                        stroke: "currentColor",
-                        stroke_width: "2",
-                        view_box: "0 0 24 24",
-                        path { d: "M4 6h16M4 12h16M4 18h16" }
-                    }
-
-                    // 操作菜单 - 根据位置显示在三点按钮上方或下方
-                    if show_action_menu() == Some(project.code.clone()) {
-                        div {
-                            class: "absolute w-32 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50",
-                            style: if menu_position() == "top" {
-                                "right: 0; bottom: 100%; margin-bottom: 0.25rem;"
-                            } else {
-                                "right: 0; top: 100%; margin-top: 0.25rem;"
-                            },
-                            div { class: "py-1",
-                                button {
-                                    class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2",
-                                    onclick: move |_| {
-                                        modal_mode.set(ProjectModalMode::Edit(project_for_edit.clone()));
-                                        show_project_add_or_edit_modal.set(true);
-                                        show_action_menu.set(None);
-                                    },
-                                    svg {
-                                        class: "w-3 h-3",
-                                        fill: "none",
-                                        stroke: "currentColor",
-                                        stroke_width: "2",
-                                        view_box: "0 0 24 24",
-                                        path { d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }
-                                    }
-                                    "编辑"
-                                }
-                                button {
-                                    class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2 text-error",
-                                    onclick: move |_| {
-                                        selected_project_for_action.set(Some(project_for_delete.clone()));
-                                        show_project_delete_modal.set(true);
-                                        show_action_menu.set(None);
-                                    },
-                                    svg {
-                                        class: "w-3 h-3",
-                                        fill: "none",
-                                        stroke: "currentColor",
-                                        stroke_width: "2",
-                                        view_box: "0 0 24 24",
-                                        path { d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }
-                                    }
-                                    "删除"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    });
-
+    let is_empty = projects().is_empty();
+    let total_projects = projects().len();
 
     rsx! {
         div { class: "h-96 overflow-y-auto",
@@ -532,7 +547,21 @@ pub fn ProjectList(
                     }
                 } else {
                     div { class: "space-y-1",
-                        {project_list_rendered}
+                        for (index, project) in projects().iter().enumerate() {
+                            ProjectItem {
+                                index: index,
+                                project: project.clone(),
+                                total_projects: total_projects,
+                                selected_project: selected_project.clone(),
+                                show_dropdown: show_dropdown.clone(),
+                                selected_project_for_action: selected_project_for_action.clone(),
+                                show_action_menu: show_action_menu.clone(),
+                                menu_position: menu_position.clone(),
+                                modal_mode: modal_mode.clone(),
+                                show_project_add_or_edit_modal: show_project_add_or_edit_modal.clone(),
+                                show_project_delete_modal: show_project_delete_modal.clone(),
+                            }
+                        }
                     }
                 }
             }
@@ -548,8 +577,6 @@ pub fn ProjectAddOrEdit(
     on_confirm: Callback<(String, String, String)>,
     on_cancel: Callback<()>,
 ) -> Element {
-
-    info!("mode: {:?}", mode);
 
     let mut project_code = use_signal(|| match &mode {
         ProjectModalMode::Add => String::new(),
@@ -587,16 +614,7 @@ pub fn ProjectAddOrEdit(
 
      // 校验：仅支持英文、数字、下划线，且首字符必须为英文
      let mut code_error = use_signal(|| None::<String>);
-     let validate_code = |code: &str| {
-         let re = regex::Regex::new(r"^[a-zA-Z][a-zA-Z0-9_]*$").unwrap();
-         if code.is_empty() {
-             Some("项目编码不能为空".to_string())
-         } else if !re.is_match(code) {
-             Some("仅支持英文、数字、下划线，且首字符必须为英文".to_string())
-         } else {
-             None
-         }
-     };
+     let validate_code = crate::utils::validate::validate_code;
 
     rsx! {
         dialog {
