@@ -47,6 +47,9 @@ pub enum Error {
 
     #[error("invalid project code: {0}")]
     InvalidProjectCode(String),
+
+    #[error("invalid value: {0}")]
+    InvalidValue(String),
 }
 
 impl PartialEq for Error {

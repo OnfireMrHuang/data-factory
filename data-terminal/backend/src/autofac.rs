@@ -1,17 +1,16 @@
 use std::sync::{Arc, Mutex};
-use std::any::Any;
 use once_cell::sync::Lazy;
-use axum::extract::FromRef;
-use shaku::{module, HasComponent, HasProvider};
+use shaku::{module, HasProvider};
 use crate::repositories::project::ProjectRepoImpl;
+use crate::repositories::resource::ResourceRepoImpl;
 use crate::services::project::ProjectServiceImpl;
-use crate::repositories::ProjectRepo;
-use crate::services::ProjectService;
+use crate::services::resource::ResourceServiceImpl;
+use crate::services::{ProjectService, ResourceService};
 
 module! {
     pub AutoFacModule {
         components = [],
-        providers = [ProjectRepoImpl, ProjectServiceImpl]
+        providers = [ProjectRepoImpl, ProjectServiceImpl, ResourceRepoImpl, ResourceServiceImpl]
     }
 }
 
@@ -61,6 +60,11 @@ impl AppState {
 
     /// 获取 ProjectService 实例
     pub fn get_project_service(&self) -> Box<dyn ProjectService> {
+        self.module.provide().unwrap()
+    }
+
+    /// 获取 ResourceService 实例
+    pub fn get_resource_service(&self) -> Box<dyn ResourceService> {
         self.module.provide().unwrap()
     }
 }

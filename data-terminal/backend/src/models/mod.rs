@@ -2,6 +2,7 @@
 pub mod web;
 pub mod project;
 pub mod error;
+pub mod resource;
 
 
 pub use error::Error;
