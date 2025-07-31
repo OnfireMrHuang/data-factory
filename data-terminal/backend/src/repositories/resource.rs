@@ -25,8 +25,9 @@ impl ResourceRepo for ResourceRepoImpl {
         let config = resource.config.clone();
         let created_at = resource.created_at;
         let updated_at = resource.updated_at;
+        let status = resource.status;
 
-        let sql = "INSERT INTO df_c_resource (id, name, description, category, resource_type, config, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        let sql = "INSERT INTO df_c_resource (id, name, description, category, resource_type, config, created_at, updated_at, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         let _ = pool
             .execute(
                 sqlx::query(sql)
@@ -37,7 +38,8 @@ impl ResourceRepo for ResourceRepoImpl {
                     .bind(&resource_type)
                     .bind(&config)
                     .bind(&created_at)
-                    .bind(&updated_at),
+                    .bind(&updated_at)
+                    .bind(&status),
             )
             .await?;
 
@@ -55,8 +57,9 @@ impl ResourceRepo for ResourceRepoImpl {
         let resource_type = resource.resource_type;
         let config = resource.config.clone();
         let updated_at = resource.updated_at;
+        let status = resource.status;
 
-        let sql = "UPDATE df_c_resource SET name = ?, description = ?, category = ?, resource_type = ?, config = ?, updated_at = ? WHERE id = ?";
+        let sql = "UPDATE df_c_resource SET name = ?, description = ?, category = ?, resource_type = ?, config = ?, updated_at = ?, status = ? WHERE id = ?";
         let _ = pool
             .execute(
                 sqlx::query(sql)
@@ -66,6 +69,7 @@ impl ResourceRepo for ResourceRepoImpl {
                     .bind(&resource_type)
                     .bind(&config)
                     .bind(&updated_at)
+                    .bind(&status)
                     .bind(&id),
             )
             .await?;

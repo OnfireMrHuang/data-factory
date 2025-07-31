@@ -28,6 +28,7 @@ create table if not exists df_c_resource
     category    enum('database', 'filesystem', 'queue', 'batch_compute', 'stream_compute', 'vector_database') not null comment '资源类型',
     resource_type varchar(64)  not null comment '资源类型: 例如doris、mysql、postgres、hdfs、kafka、spark、flink、mailvus等等',
     config      JSON         not null comment '资源配置',
+    status      enum('active', 'inactive') not null default 'active' comment '资源状态',
     created_at  timestamp    not null default current_timestamp comment '创建时间',
     updated_at  timestamp    not null default current_timestamp on update current_timestamp comment '更新时间',
     primary key (id)

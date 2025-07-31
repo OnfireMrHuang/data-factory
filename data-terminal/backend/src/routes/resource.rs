@@ -1,6 +1,6 @@
 use axum::{extract::{Path, Query}, http::StatusCode, routing::{delete, get, post}, Json, Router, debug_handler};
 use super::jwt::Claims;
-use crate::{autofac, models::resource::Resource};
+use crate::{autofac, models::resource::{Resource, ResourceReadOnly, ResourceCreateUpdate}};
 use crate::models::web::{Response, PageQuery};
 
 pub fn routes() -> Router {
@@ -15,7 +15,7 @@ pub fn routes() -> Router {
 #[debug_handler]
 async fn add_resource(
     claims: Claims,
-    Json(resource): Json<Resource>,
+    Json(resource): Json<ResourceCreateUpdate>,
 ) -> (StatusCode, Json<Response<String>>) {
     let result = autofac::get_global_app_state_ref().get_resource_service().add_resource(resource).await;
     match result {
@@ -28,7 +28,7 @@ async fn add_resource(
 async fn list_resource(
     claims: Claims,
     Query(params): Query<PageQuery>,
-) -> (StatusCode, Json<Response<Vec<Resource>>>) {
+) -> (StatusCode, Json<Response<Vec<ResourceReadOnly>>>) {
     let result = autofac::get_global_app_state_ref().get_resource_service().list_resource(params).await;
     match result {
         Ok(resources) => (StatusCode::OK, Json(Response::success(resources))),
@@ -51,7 +51,7 @@ async fn delete_resource(
 #[debug_handler]
 async fn update_resource(
     claims: Claims,
-    Json(resource): Json<Resource>,
+    Json(resource): Json<ResourceCreateUpdate>,
 ) -> (StatusCode, Json<Response<String>>) {
     let result = autofac::get_global_app_state_ref().get_resource_service().edit_resource(resource).await;
     match result {
@@ -64,7 +64,7 @@ async fn update_resource(
 async fn detail_resource(
     claims: Claims,
     Path(id): Path<String>,
-) -> (StatusCode, Json<Response<Resource>>) {
+) -> (StatusCode, Json<Response<ResourceReadOnly>>) {
     let result = autofac::get_global_app_state_ref().get_resource_service().get_resource(id).await;
     match result {
         Ok(resource) => (StatusCode::OK, Json(Response::success(resource))),
