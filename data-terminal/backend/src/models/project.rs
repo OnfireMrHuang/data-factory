@@ -1,8 +1,7 @@
 
-use std::default;
-
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use regex::Regex;
 
 
 use crate::models::Validator;
@@ -48,6 +47,13 @@ impl Validator for Project {
         if self.code.is_empty() {
             return Err(Error::EmptyValue("code".to_string()));
         }
+        // code仅支持英文、数字、下划线，且首字符必须为英文
+        let re = Regex::new(r"^[a-zA-Z][a-zA-Z0-9_]*$").unwrap();
+        if !re.is_match(&self.code) {
+            return Err(Error::InvalidProjectCode("code".to_string()));
+        }
+
+
         if self.name.is_empty() {
             return Err(Error::EmptyValue("name".to_string()));
         }

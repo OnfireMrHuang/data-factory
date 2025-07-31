@@ -361,6 +361,7 @@ dependencies = [
  "cookie",
  "jsonwebtoken",
  "once_cell",
+ "regex",
  "serde",
  "shaku",
  "sqlx",
