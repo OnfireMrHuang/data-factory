@@ -22,14 +22,14 @@ pub fn ResourcePage() -> Element {
     // 获取资源图标
     let get_resource_icon = |resource_type: &ResourceType| {
         match resource_type {
-            ResourceType::Mysql => "🗄️",
-            ResourceType::Postgres => "🐘",
-            ResourceType::Doris => "🦌",
-            ResourceType::Mailvus => "🔍",
-            ResourceType::Spark => "⚡",
-            ResourceType::Flink => "🌊",
-            ResourceType::Kafka => "📨",
-            ResourceType::Hdfs => "📁",
+            ResourceType::Mysql => include_str!("../../assets/resource/mysql.svg"),
+            ResourceType::Postgres => include_str!("../../assets/resource/postgres.svg"),
+            ResourceType::Doris => include_str!("../../assets/resource/doris.svg"),
+            ResourceType::Mailvus => include_str!("../../assets/resource/milvus.svg"),
+            ResourceType::Spark => include_str!("../../assets/resource/spark.svg"),
+            ResourceType::Flink => include_str!("../../assets/resource/flink.svg"),
+            ResourceType::Kafka => include_str!("../../assets/resource/kafka.svg"),
+            ResourceType::Hdfs => include_str!("../../assets/resource/hdfs.svg"),
         }
     };
 
@@ -177,7 +177,10 @@ pub fn ResourcePage() -> Element {
                                             class: "bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow",
                                             div { class: "flex items-center justify-between",
                                                 div { class: "flex items-center space-x-4",
-                                                    div { class: "text-2xl", "{icon}" }
+                                                    div { 
+                                                        class: "w-24 h-24 flex items-center justify-center",
+                                                        dangerous_inner_html: "{icon.replace(\"width=\\\"800\\\" height=\\\"800\\\"\", \"width=\\\"64\\\" height=\\\"64\\\"\").replace(\"width=\\\"88\\\" height=\\\"30\\\"\", \"width=\\\"64\\\" height=\\\"64\\\"\")}"
+                                                    }
                                                     div {
                                                         div { class: "font-medium text-gray-900", "{name}" }
                                                         div { class: "text-sm text-gray-500", "{description}" }
@@ -227,6 +230,17 @@ fn get_all_categories() -> Vec<Category> {
 fn get_mock_resources() -> Vec<Resource> {
     vec![
         Resource {
+            id: "7".to_string(),
+            name: "Doris分析型数据库".to_string(),
+            description: "高性能MPP分析型数据库".to_string(),
+            category: Category::RelationalDatabase,
+            resource_type: ResourceType::Doris,
+            config: serde_json::json!({}),
+            created_at: "2024-01-01T00:00:00Z".to_string(),
+            updated_at: "2024-01-01T00:00:00Z".to_string(),
+            status: Status::Active,
+        },
+        Resource {
             id: "1".to_string(),
             name: "MySQL主库".to_string(),
             description: "生产环境主数据库".to_string(),
@@ -269,6 +283,17 @@ fn get_mock_resources() -> Vec<Resource> {
             created_at: "2024-01-01T00:00:00Z".to_string(),
             updated_at: "2024-01-01T00:00:00Z".to_string(),
             status: Status::Inactive,
+        },
+        Resource {
+            id: "7".to_string(),
+            name: "Flink流处理集群".to_string(),
+            description: "实时流式数据处理集群".to_string(),
+            category: Category::StreamCompute,
+            resource_type: ResourceType::Flink,
+            config: serde_json::json!({}),
+            created_at: "2024-01-01T00:00:00Z".to_string(),
+            updated_at: "2024-01-01T00:00:00Z".to_string(),
+            status: Status::Active,
         },
         Resource {
             id: "5".to_string(),
