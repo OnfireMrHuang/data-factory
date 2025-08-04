@@ -8,17 +8,21 @@ use crate::models::Error;
 #[strum(serialize_all = "snake_case")]
 #[sqlx(rename_all = "snake_case")]
 pub enum Category {
-    Database,
-    Filesystem,
+    RelationalDatabase,
+    TimeSeriesDatabase,
+    DocumentDatabase,
+    VectorDatabase,
+    GraphDatabase,
+    KVDatabase,
+    Filesystem, 
     Queue,
     BatchCompute,
     StreamCompute,
-    VectorDatabase,
 }
 
 impl Default for Category {
     fn default() -> Self {
-        Self::Database
+        Self::RelationalDatabase
     }
 }
 
