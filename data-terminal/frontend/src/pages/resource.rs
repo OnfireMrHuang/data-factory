@@ -197,11 +197,18 @@ pub fn ResourcePage() -> Element {
                                                     }
                                                     div { class: "relative",
                                                         button {
-                                                            class: "text-gray-400 hover:text-gray-600 p-1",
+                                                            class: "btn btn-ghost btn-xs p-1 relative",
                                                             onclick: move |_| {
                                                                 // TODO: 显示更多操作菜单
                                                             },
-                                                            "⋮"
+                                                            svg {
+                                                                class: "w-4 h-4",
+                                                                fill: "none",
+                                                                stroke: "currentColor",
+                                                                stroke_width: "2",
+                                                                view_box: "0 0 24 24",
+                                                                path { d: "M4 6h16M4 12h16M4 18h16" }
+                                                            }
                                                         }
                                                     }
                                                 }
