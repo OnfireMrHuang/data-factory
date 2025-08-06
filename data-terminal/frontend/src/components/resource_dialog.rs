@@ -1,21 +1,55 @@
 use dioxus::prelude::*;
 use crate::models::protocol::{
-    Category, ResourceType, 
+    Category, ResourceType, Resource,
     DatabaseConfigForm, QueueConfigForm, FileSystemConfigForm, 
     VectorDatabaseConfigForm, BatchComputeConfigForm, StreamComputeConfigForm
 };
 
+#[derive(Clone, PartialEq)]
+pub enum ResourceModalMode {
+    Add,
+    Edit(Resource),
+    Detail(Resource),
+}
+
 #[component]
-pub fn AddResourceDialog(
-    show: Signal<bool>,
+pub fn ResourceDialog(
+    mode: ResourceModalMode,
     on_close: EventHandler<()>,
     on_test_connection: EventHandler<()>,
     on_save: EventHandler<()>,
 ) -> Element {
-    let mut dialog_category = use_signal(|| Category::RelationalDatabase);
-    let mut dialog_resource_type = use_signal(|| ResourceType::Mysql);
-    let mut resource_name = use_signal(|| String::new());
-    let mut resource_description = use_signal(|| String::new());
+    let is_detail_mode = matches!(mode, ResourceModalMode::Detail(_));
+    let is_edit_mode = matches!(mode, ResourceModalMode::Edit(_));
+    
+    // 初始化表单数据
+    let mut dialog_category = use_signal(|| {
+        match &mode {
+            ResourceModalMode::Add => Category::RelationalDatabase,
+            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => resource.category.clone(),
+        }
+    });
+    
+    let mut dialog_resource_type = use_signal(|| {
+        match &mode {
+            ResourceModalMode::Add => ResourceType::Mysql,
+            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => resource.resource_type.clone(),
+        }
+    });
+    
+    let mut resource_name = use_signal(|| {
+        match &mode {
+            ResourceModalMode::Add => String::new(),
+            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => resource.name.clone(),
+        }
+    });
+    
+    let mut resource_description = use_signal(|| {
+        match &mode {
+            ResourceModalMode::Add => String::new(),
+            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => resource.description.clone(),
+        }
+    });
     
     // 配置表单状态
     let mut database_config = use_signal(|| DatabaseConfigForm {
@@ -153,12 +187,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{database_config().host}",
                                     oninput: move |event| {
-                                        database_config.set(DatabaseConfigForm {
-                                            host: event.value(),
-                                            ..database_config()
-                                        });
+                                        if !is_detail_mode {
+                                            database_config.set(DatabaseConfigForm {
+                                                host: event.value(),
+                                                ..database_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -169,13 +206,16 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "input input-bordered w-full",
                                     r#type: "number",
+                                    disabled: is_detail_mode,
                                     value: "{database_config().port}",
                                     oninput: move |event| {
-                                        if let Ok(port) = event.value().parse::<u16>() {
-                                            database_config.set(DatabaseConfigForm {
-                                                port,
-                                                ..database_config()
-                                            });
+                                        if !is_detail_mode {
+                                            if let Ok(port) = event.value().parse::<u16>() {
+                                                database_config.set(DatabaseConfigForm {
+                                                    port,
+                                                    ..database_config()
+                                                });
+                                            }
                                         }
                                     }
                                 }
@@ -188,12 +228,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{database_config().username}",
                                     oninput: move |event| {
-                                        database_config.set(DatabaseConfigForm {
-                                            username: event.value(),
-                                            ..database_config()
-                                        });
+                                        if !is_detail_mode {
+                                            database_config.set(DatabaseConfigForm {
+                                                username: event.value(),
+                                                ..database_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -204,12 +247,15 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "input input-bordered w-full",
                                     r#type: "password",
+                                    disabled: is_detail_mode,
                                     value: "{database_config().password}",
                                     oninput: move |event| {
-                                        database_config.set(DatabaseConfigForm {
-                                            password: event.value(),
-                                            ..database_config()
-                                        });
+                                        if !is_detail_mode {
+                                            database_config.set(DatabaseConfigForm {
+                                                password: event.value(),
+                                                ..database_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -227,12 +273,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{queue_config().host}",
                                     oninput: move |event| {
-                                        queue_config.set(QueueConfigForm {
-                                            host: event.value(),
-                                            ..queue_config()
-                                        });
+                                        if !is_detail_mode {
+                                            queue_config.set(QueueConfigForm {
+                                                host: event.value(),
+                                                ..queue_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -243,13 +292,16 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "input input-bordered w-full",
                                     r#type: "number",
+                                    disabled: is_detail_mode,
                                     value: "{queue_config().port}",
                                     oninput: move |event| {
-                                        if let Ok(port) = event.value().parse::<u16>() {
-                                            queue_config.set(QueueConfigForm {
-                                                port,
-                                                ..queue_config()
-                                            });
+                                        if !is_detail_mode {
+                                            if let Ok(port) = event.value().parse::<u16>() {
+                                                queue_config.set(QueueConfigForm {
+                                                    port,
+                                                    ..queue_config()
+                                                });
+                                            }
                                         }
                                     }
                                 }
@@ -263,13 +315,16 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "input input-bordered w-full",
                                     r#type: "number",
+                                    disabled: is_detail_mode,
                                     value: "{queue_config().admin_port}",
                                     oninput: move |event| {
-                                        if let Ok(port) = event.value().parse::<u16>() {
-                                            queue_config.set(QueueConfigForm {
-                                                admin_port: port,
-                                                ..queue_config()
-                                            });
+                                        if !is_detail_mode {
+                                            if let Ok(port) = event.value().parse::<u16>() {
+                                                queue_config.set(QueueConfigForm {
+                                                    admin_port: port,
+                                                    ..queue_config()
+                                                });
+                                            }
                                         }
                                     }
                                 }
@@ -280,12 +335,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{queue_config().cluster_name.as_deref().unwrap_or(\"\")}",
                                     oninput: move |event| {
-                                        queue_config.set(QueueConfigForm {
-                                            cluster_name: Some(event.value()),
-                                            ..queue_config()
-                                        });
+                                        if !is_detail_mode {
+                                            queue_config.set(QueueConfigForm {
+                                                cluster_name: Some(event.value()),
+                                                ..queue_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -295,12 +353,15 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "checkbox",
                                     r#type: "checkbox",
+                                    disabled: is_detail_mode,
                                     checked: queue_config().ssl_enabled,
                                     onchange: move |event| {
-                                        queue_config.set(QueueConfigForm {
-                                            ssl_enabled: event.checked(),
-                                            ..queue_config()
-                                        });
+                                        if !is_detail_mode {
+                                            queue_config.set(QueueConfigForm {
+                                                ssl_enabled: event.checked(),
+                                                ..queue_config()
+                                            });
+                                        }
                                     }
                                 }
                                 span { class: "label-text ml-2", "启用SSL" }
@@ -309,12 +370,15 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "checkbox",
                                     r#type: "checkbox",
+                                    disabled: is_detail_mode,
                                     checked: queue_config().sasl_enabled,
                                     onchange: move |event| {
-                                        queue_config.set(QueueConfigForm {
-                                            sasl_enabled: event.checked(),
-                                            ..queue_config()
-                                        });
+                                        if !is_detail_mode {
+                                            queue_config.set(QueueConfigForm {
+                                                sasl_enabled: event.checked(),
+                                                ..queue_config()
+                                            });
+                                        }
                                     }
                                 }
                                 span { class: "label-text ml-2", "启用SASL" }
@@ -333,12 +397,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{filesystem_config().host}",
                                     oninput: move |event| {
-                                        filesystem_config.set(FileSystemConfigForm {
-                                            host: event.value(),
-                                            ..filesystem_config()
-                                        });
+                                        if !is_detail_mode {
+                                            filesystem_config.set(FileSystemConfigForm {
+                                                host: event.value(),
+                                                ..filesystem_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -349,13 +416,16 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "input input-bordered w-full",
                                     r#type: "number",
+                                    disabled: is_detail_mode,
                                     value: "{filesystem_config().port}",
                                     oninput: move |event| {
-                                        if let Ok(port) = event.value().parse::<u16>() {
-                                            filesystem_config.set(FileSystemConfigForm {
-                                                port,
-                                                ..filesystem_config()
-                                            });
+                                        if !is_detail_mode {
+                                            if let Ok(port) = event.value().parse::<u16>() {
+                                                filesystem_config.set(FileSystemConfigForm {
+                                                    port,
+                                                    ..filesystem_config()
+                                                });
+                                            }
                                         }
                                     }
                                 }
@@ -368,12 +438,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{filesystem_config().access_key_id.as_deref().unwrap_or(\"\")}",
                                     oninput: move |event| {
-                                        filesystem_config.set(FileSystemConfigForm {
-                                            access_key_id: Some(event.value()),
-                                            ..filesystem_config()
-                                        });
+                                        if !is_detail_mode {
+                                            filesystem_config.set(FileSystemConfigForm {
+                                                access_key_id: Some(event.value()),
+                                                ..filesystem_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -384,12 +457,15 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "input input-bordered w-full",
                                     r#type: "password",
+                                    disabled: is_detail_mode,
                                     value: "{filesystem_config().secret_access_key.as_deref().unwrap_or(\"\")}",
                                     oninput: move |event| {
-                                        filesystem_config.set(FileSystemConfigForm {
-                                            secret_access_key: Some(event.value()),
-                                            ..filesystem_config()
-                                        });
+                                        if !is_detail_mode {
+                                            filesystem_config.set(FileSystemConfigForm {
+                                                secret_access_key: Some(event.value()),
+                                                ..filesystem_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -401,12 +477,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{filesystem_config().region.as_deref().unwrap_or(\"\")}",
                                     oninput: move |event| {
-                                        filesystem_config.set(FileSystemConfigForm {
-                                            region: Some(event.value()),
-                                            ..filesystem_config()
-                                        });
+                                        if !is_detail_mode {
+                                            filesystem_config.set(FileSystemConfigForm {
+                                                region: Some(event.value()),
+                                                ..filesystem_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -416,12 +495,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{filesystem_config().bucket.as_deref().unwrap_or(\"\")}",
                                     oninput: move |event| {
-                                        filesystem_config.set(FileSystemConfigForm {
-                                            bucket: Some(event.value()),
-                                            ..filesystem_config()
-                                        });
+                                        if !is_detail_mode {
+                                            filesystem_config.set(FileSystemConfigForm {
+                                                bucket: Some(event.value()),
+                                                ..filesystem_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -439,12 +521,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{vector_config().host}",
                                     oninput: move |event| {
-                                        vector_config.set(VectorDatabaseConfigForm {
-                                            host: event.value(),
-                                            ..vector_config()
-                                        });
+                                        if !is_detail_mode {
+                                            vector_config.set(VectorDatabaseConfigForm {
+                                                host: event.value(),
+                                                ..vector_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -455,13 +540,16 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "input input-bordered w-full",
                                     r#type: "number",
+                                    disabled: is_detail_mode,
                                     value: "{vector_config().port}",
                                     oninput: move |event| {
-                                        if let Ok(port) = event.value().parse::<u16>() {
-                                            vector_config.set(VectorDatabaseConfigForm {
-                                                port,
-                                                ..vector_config()
-                                            });
+                                        if !is_detail_mode {
+                                            if let Ok(port) = event.value().parse::<u16>() {
+                                                vector_config.set(VectorDatabaseConfigForm {
+                                                    port,
+                                                    ..vector_config()
+                                                });
+                                            }
                                         }
                                     }
                                 }
@@ -474,12 +562,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{vector_config().collection_name.as_deref().unwrap_or(\"\")}",
                                     oninput: move |event| {
-                                        vector_config.set(VectorDatabaseConfigForm {
-                                            collection_name: Some(event.value()),
-                                            ..vector_config()
-                                        });
+                                        if !is_detail_mode {
+                                            vector_config.set(VectorDatabaseConfigForm {
+                                                collection_name: Some(event.value()),
+                                                ..vector_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -490,13 +581,16 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "input input-bordered w-full",
                                     r#type: "number",
+                                    disabled: is_detail_mode,
                                     value: "{vector_config().dimension.unwrap_or(0)}",
                                     oninput: move |event| {
-                                        if let Ok(dimension) = event.value().parse::<u32>() {
-                                            vector_config.set(VectorDatabaseConfigForm {
-                                                dimension: Some(dimension),
-                                                ..vector_config()
-                                            });
+                                        if !is_detail_mode {
+                                            if let Ok(dimension) = event.value().parse::<u32>() {
+                                                vector_config.set(VectorDatabaseConfigForm {
+                                                    dimension: Some(dimension),
+                                                    ..vector_config()
+                                                });
+                                            }
                                         }
                                     }
                                 }
@@ -515,12 +609,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{batch_compute_config().host}",
                                     oninput: move |event| {
-                                        batch_compute_config.set(BatchComputeConfigForm {
-                                            host: event.value(),
-                                            ..batch_compute_config()
-                                        });
+                                        if !is_detail_mode {
+                                            batch_compute_config.set(BatchComputeConfigForm {
+                                                host: event.value(),
+                                                ..batch_compute_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -531,13 +628,16 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "input input-bordered w-full",
                                     r#type: "number",
+                                    disabled: is_detail_mode,
                                     value: "{batch_compute_config().port}",
                                     oninput: move |event| {
-                                        if let Ok(port) = event.value().parse::<u16>() {
-                                            batch_compute_config.set(BatchComputeConfigForm {
-                                                port,
-                                                ..batch_compute_config()
-                                            });
+                                        if !is_detail_mode {
+                                            if let Ok(port) = event.value().parse::<u16>() {
+                                                batch_compute_config.set(BatchComputeConfigForm {
+                                                    port,
+                                                    ..batch_compute_config()
+                                                });
+                                            }
                                         }
                                     }
                                 }
@@ -550,12 +650,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{batch_compute_config().cluster_name.as_deref().unwrap_or(\"\")}",
                                     oninput: move |event| {
-                                        batch_compute_config.set(BatchComputeConfigForm {
-                                            cluster_name: Some(event.value()),
-                                            ..batch_compute_config()
-                                        });
+                                        if !is_detail_mode {
+                                            batch_compute_config.set(BatchComputeConfigForm {
+                                                cluster_name: Some(event.value()),
+                                                ..batch_compute_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -565,12 +668,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{batch_compute_config().master_url.as_deref().unwrap_or(\"\")}",
                                     oninput: move |event| {
-                                        batch_compute_config.set(BatchComputeConfigForm {
-                                            master_url: Some(event.value()),
-                                            ..batch_compute_config()
-                                        });
+                                        if !is_detail_mode {
+                                            batch_compute_config.set(BatchComputeConfigForm {
+                                                master_url: Some(event.value()),
+                                                ..batch_compute_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -588,12 +694,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{stream_compute_config().host}",
                                     oninput: move |event| {
-                                        stream_compute_config.set(StreamComputeConfigForm {
-                                            host: event.value(),
-                                            ..stream_compute_config()
-                                        });
+                                        if !is_detail_mode {
+                                            stream_compute_config.set(StreamComputeConfigForm {
+                                                host: event.value(),
+                                                ..stream_compute_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -604,13 +713,16 @@ pub fn AddResourceDialog(
                                 input {
                                     class: "input input-bordered w-full",
                                     r#type: "number",
+                                    disabled: is_detail_mode,
                                     value: "{stream_compute_config().port}",
                                     oninput: move |event| {
-                                        if let Ok(port) = event.value().parse::<u16>() {
-                                            stream_compute_config.set(StreamComputeConfigForm {
-                                                port,
-                                                ..stream_compute_config()
-                                            });
+                                        if !is_detail_mode {
+                                            if let Ok(port) = event.value().parse::<u16>() {
+                                                stream_compute_config.set(StreamComputeConfigForm {
+                                                    port,
+                                                    ..stream_compute_config()
+                                                });
+                                            }
                                         }
                                     }
                                 }
@@ -623,12 +735,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{stream_compute_config().cluster_name.as_deref().unwrap_or(\"\")}",
                                     oninput: move |event| {
-                                        stream_compute_config.set(StreamComputeConfigForm {
-                                            cluster_name: Some(event.value()),
-                                            ..stream_compute_config()
-                                        });
+                                        if !is_detail_mode {
+                                            stream_compute_config.set(StreamComputeConfigForm {
+                                                cluster_name: Some(event.value()),
+                                                ..stream_compute_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -638,12 +753,15 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     value: "{stream_compute_config().job_manager_url.as_deref().unwrap_or(\"\")}",
                                     oninput: move |event| {
-                                        stream_compute_config.set(StreamComputeConfigForm {
-                                            job_manager_url: Some(event.value()),
-                                            ..stream_compute_config()
-                                        });
+                                        if !is_detail_mode {
+                                            stream_compute_config.set(StreamComputeConfigForm {
+                                                job_manager_url: Some(event.value()),
+                                                ..stream_compute_config()
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -659,9 +777,11 @@ pub fn AddResourceDialog(
         }
     };
 
-    if !show() {
-        return rsx! { div {} };
-    }
+    let modal_title = match mode {
+        ResourceModalMode::Add => "新增资源",
+        ResourceModalMode::Edit(_) => "编辑资源",
+        ResourceModalMode::Detail(_) => "资源详情",
+    };
 
     rsx! {
         dialog {
@@ -670,7 +790,7 @@ pub fn AddResourceDialog(
                 class: "modal-box w-11/12 max-w-4xl max-h-[90vh] overflow-y-auto",
                 h3 {
                     class: "text-xl font-bold mb-6",
-                    "新增资源"
+                    "{modal_title}"
                 }
 
                 div { class: "space-y-6",
@@ -681,12 +801,15 @@ pub fn AddResourceDialog(
                         }
                         select {
                             class: "select select-bordered w-full",
+                            disabled: is_detail_mode || is_edit_mode,
                             value: "{dialog_category:?}",
                             onchange: move |event| {
-                                if let Ok(category) = serde_json::from_str::<Category>(&event.value()) {
-                                    dialog_category.set(category.clone());
-                                    if let Some(first_type) = get_resource_types(category).first() {
-                                        dialog_resource_type.set(first_type.clone());
+                                if !is_detail_mode && !is_edit_mode {
+                                    if let Ok(category) = serde_json::from_str::<Category>(&event.value()) {
+                                        dialog_category.set(category.clone());
+                                        if let Some(first_type) = get_resource_types(category).first() {
+                                            dialog_resource_type.set(first_type.clone());
+                                        }
                                     }
                                 }
                             },
@@ -709,10 +832,13 @@ pub fn AddResourceDialog(
                         }
                         select {
                             class: "select select-bordered w-full",
+                            disabled: is_detail_mode || is_edit_mode,
                             value: "{dialog_resource_type:?}",
                             onchange: move |event| {
-                                if let Ok(resource_type) = serde_json::from_str::<ResourceType>(&event.value()) {
-                                    dialog_resource_type.set(resource_type);
+                                if !is_detail_mode && !is_edit_mode {
+                                    if let Ok(resource_type) = serde_json::from_str::<ResourceType>(&event.value()) {
+                                        dialog_resource_type.set(resource_type);
+                                    }
                                 }
                             },
                             {get_resource_types(dialog_category()).into_iter().map(|resource_type| {
@@ -737,10 +863,13 @@ pub fn AddResourceDialog(
                                 }
                                 input {
                                     class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
                                     placeholder: "请输入资源名称",
                                     value: "{resource_name()}",
                                     oninput: move |event| {
-                                        resource_name.set(event.value());
+                                        if !is_detail_mode {
+                                            resource_name.set(event.value());
+                                        }
                                     }
                                 }
                             }
@@ -750,10 +879,13 @@ pub fn AddResourceDialog(
                                 }
                                 textarea {
                                     class: "textarea textarea-bordered w-full h-24",
+                                    disabled: is_detail_mode,
                                     placeholder: "请输入资源描述",
                                     value: "{resource_description()}",
                                     oninput: move |event| {
-                                        resource_description.set(event.value());
+                                        if !is_detail_mode {
+                                            resource_description.set(event.value());
+                                        }
                                     }
                                 }
                             }
@@ -774,21 +906,23 @@ pub fn AddResourceDialog(
                         onclick: move |_| {
                             on_close.call(());
                         },
-                        "取消"
+                        "关闭"
                     }
-                    button {
-                        class: "btn btn-info",
-                        onclick: move |_| {
-                            on_test_connection.call(());
-                        },
-                        "测试连接"
-                    }
-                    button {
-                        class: "btn btn-primary",
-                        onclick: move |_| {
-                            on_save.call(());
-                        },
-                        "保存"
+                    if !is_detail_mode {
+                        button {
+                            class: "btn btn-info",
+                            onclick: move |_| {
+                                on_test_connection.call(());
+                            },
+                            "测试连接"
+                        }
+                        button {
+                            class: "btn btn-primary",
+                            onclick: move |_| {
+                                on_save.call(());
+                            },
+                            if is_edit_mode { "更新" } else { "保存" }
+                        }
                     }
                 }
             }

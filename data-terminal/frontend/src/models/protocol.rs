@@ -44,7 +44,7 @@ pub enum Status {
 }
 
 // 资源结构体
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Resource {
     pub id: String,
     pub name: String,
