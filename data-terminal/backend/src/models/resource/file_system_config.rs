@@ -66,8 +66,6 @@ pub struct MountDirectory {
     pub auto_mount: bool,
     /// 挂载选项
     pub mount_options: HashMap<String, String>,
-    /// 创建时间
-    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl MountDirectory {
@@ -84,8 +82,7 @@ impl MountDirectory {
             local_path,
             read_only,
             auto_mount: true,
-            mount_options: HashMap::new(),
-            created_at: chrono::Utc::now(),
+            mount_options: HashMap::new()
         }
     }
 
@@ -107,10 +104,6 @@ impl MountDirectory {
 /// 文件系统连接配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileSystemConfig {
-    /// 配置ID
-    pub id: String,
-    /// 配置名称
-    pub name: String,
     /// 文件系统类型
     pub file_system_type: FileSystemType,
     /// 主机地址
@@ -121,6 +114,8 @@ pub struct FileSystemConfig {
     pub username: Option<String>,
     /// 密码
     pub password: Option<String>,
+    /// 是否启用SSL
+    pub ssl_enabled: bool,
     /// 认证令牌（用于S3等）
     pub auth_token: Option<String>,
     /// 密钥ID（用于S3等）
@@ -131,42 +126,26 @@ pub struct FileSystemConfig {
     pub region: Option<String>,
     /// 桶名称（用于S3等）
     pub bucket: Option<String>,
-    /// 连接超时时间（秒）
-    pub connection_timeout: u64,
-    /// 读取超时时间（秒）
-    pub read_timeout: u64,
-    /// 是否启用SSL/TLS
-    pub ssl_enabled: bool,
-    /// 额外连接参数
-    pub extra_params: HashMap<String, String>,
+
     /// 挂载目录列表
     pub mount_directories: Vec<MountDirectory>,
-    /// 是否启用
-    pub enabled: bool,
-    /// 创建时间
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    /// 更新时间
-    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl FileSystemConfig {
     /// 创建新的文件系统配置
     pub fn new(
-        id: String,
-        name: String,
         file_system_type: FileSystemType,
         host: String,
         port: Option<u16>,
+        ssl_enabled: bool,
     ) -> Self {
         let port = port.unwrap_or_else(|| file_system_type.default_port());
-        let now = chrono::Utc::now();
         
         Self {
-            id,
-            name,
             file_system_type,
             host,
             port,
+            ssl_enabled,
             username: None,
             password: None,
             auth_token: None,
@@ -174,14 +153,7 @@ impl FileSystemConfig {
             secret_access_key: None,
             region: None,
             bucket: None,
-            connection_timeout: 30,
-            read_timeout: 60,
-            ssl_enabled: false,
-            extra_params: HashMap::new(),
             mount_directories: Vec::new(),
-            enabled: true,
-            created_at: now,
-            updated_at: now,
         }
     }
 
@@ -204,8 +176,7 @@ impl FileSystemConfig {
 
     /// 验证配置是否有效
     pub fn is_valid(&self) -> bool {
-        !self.id.is_empty()
-            && !self.name.is_empty()
+        !self.host.is_empty()
             && !self.host.is_empty()
             && self.port > 0
     }
@@ -213,7 +184,6 @@ impl FileSystemConfig {
     /// 添加挂载目录
     pub fn add_mount_directory(&mut self, mount_dir: MountDirectory) {
         self.mount_directories.push(mount_dir);
-        self.updated_at = chrono::Utc::now();
     }
 
     /// 移除挂载目录
@@ -221,9 +191,6 @@ impl FileSystemConfig {
         let initial_len = self.mount_directories.len();
         self.mount_directories.retain(|dir| dir.name != name);
         let removed = initial_len != self.mount_directories.len();
-        if removed {
-            self.updated_at = chrono::Utc::now();
-        }
         removed
     }
 
@@ -234,9 +201,6 @@ impl FileSystemConfig {
 
     /// 更新配置
     pub fn update(&mut self, updates: FileSystemConfigUpdate) {
-        if let Some(name) = updates.name {
-            self.name = name;
-        }
         if let Some(host) = updates.host {
             self.host = host;
         }
@@ -264,30 +228,14 @@ impl FileSystemConfig {
         if let Some(bucket) = updates.bucket {
             self.bucket = Some(bucket);
         }
-        if let Some(connection_timeout) = updates.connection_timeout {
-            self.connection_timeout = connection_timeout;
-        }
-        if let Some(read_timeout) = updates.read_timeout {
-            self.read_timeout = read_timeout;
-        }
-        if let Some(ssl_enabled) = updates.ssl_enabled {
-            self.ssl_enabled = ssl_enabled;
-        }
-        if let Some(enabled) = updates.enabled {
-            self.enabled = enabled;
-        }
-        if let Some(extra_params) = updates.extra_params {
-            self.extra_params = extra_params;
-        }
-        
-        self.updated_at = chrono::Utc::now();
+
+
     }
 }
 
 /// 文件系统配置更新结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileSystemConfigUpdate {
-    pub name: Option<String>,
     pub host: Option<String>,
     pub port: Option<u16>,
     pub username: Option<String>,
@@ -297,11 +245,6 @@ pub struct FileSystemConfigUpdate {
     pub secret_access_key: Option<String>,
     pub region: Option<String>,
     pub bucket: Option<String>,
-    pub connection_timeout: Option<u64>,
-    pub read_timeout: Option<u64>,
-    pub ssl_enabled: Option<bool>,
-    pub enabled: Option<bool>,
-    pub extra_params: Option<HashMap<String, String>>,
 }
 
 /// 文件系统连接测试结果

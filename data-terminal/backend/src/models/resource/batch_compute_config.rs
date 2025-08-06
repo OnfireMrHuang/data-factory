@@ -139,10 +139,6 @@ impl Default for ResourceConfig {
 /// 批处理连接配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatchComputeConfig {
-    /// 配置ID
-    pub id: String,
-    /// 配置名称
-    pub name: String,
     /// 批处理引擎类型
     pub batch_compute_type: BatchComputeType,
     /// 主机地址
@@ -157,44 +153,27 @@ pub struct BatchComputeConfig {
     pub password: Option<String>,
     /// 集群名称
     pub cluster_name: Option<String>,
-    /// 连接超时时间（秒）
-    pub connection_timeout: u64,
-    /// 作业提交超时时间（秒）
-    pub job_submit_timeout: u64,
     /// 是否启用SSL/TLS
     pub ssl_enabled: bool,
     /// 是否启用Kerberos认证
     pub kerberos_enabled: bool,
     /// Kerberos主体
     pub kerberos_principal: Option<String>,
-    /// 额外连接参数
-    pub extra_params: HashMap<String, String>,
     /// 作业配置列表
     pub job_configs: Vec<JobConfig>,
-    /// 是否启用
-    pub enabled: bool,
-    /// 创建时间
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    /// 更新时间
-    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl BatchComputeConfig {
     /// 创建新的批处理配置
     pub fn new(
-        id: String,
-        name: String,
         batch_compute_type: BatchComputeType,
         host: String,
         port: Option<u16>,
     ) -> Self {
         let port = port.unwrap_or_else(|| batch_compute_type.default_port());
         let web_ui_port = batch_compute_type.web_ui_port();
-        let now = chrono::Utc::now();
         
         Self {
-            id,
-            name,
             batch_compute_type,
             host,
             port,
@@ -202,16 +181,10 @@ impl BatchComputeConfig {
             username: None,
             password: None,
             cluster_name: None,
-            connection_timeout: 30,
-            job_submit_timeout: 300,
             ssl_enabled: false,
             kerberos_enabled: false,
             kerberos_principal: None,
-            extra_params: HashMap::new(),
             job_configs: Vec::new(),
-            enabled: true,
-            created_at: now,
-            updated_at: now,
         }
     }
 
@@ -229,8 +202,7 @@ impl BatchComputeConfig {
 
     /// 验证配置是否有效
     pub fn is_valid(&self) -> bool {
-        !self.id.is_empty()
-            && !self.name.is_empty()
+        !self.host.is_empty()
             && !self.host.is_empty()
             && self.port > 0
     }
@@ -238,7 +210,6 @@ impl BatchComputeConfig {
     /// 添加作业配置
     pub fn add_job_config(&mut self, job_config: JobConfig) {
         self.job_configs.push(job_config);
-        self.updated_at = chrono::Utc::now();
     }
 
     /// 移除作业配置
@@ -246,9 +217,6 @@ impl BatchComputeConfig {
         let initial_len = self.job_configs.len();
         self.job_configs.retain(|job| job.name != name);
         let removed = initial_len != self.job_configs.len();
-        if removed {
-            self.updated_at = chrono::Utc::now();
-        }
         removed
     }
 
@@ -259,9 +227,6 @@ impl BatchComputeConfig {
 
     /// 更新配置
     pub fn update(&mut self, updates: BatchComputeConfigUpdate) {
-        if let Some(name) = updates.name {
-            self.name = name;
-        }
         if let Some(host) = updates.host {
             self.host = host;
         }
@@ -280,12 +245,6 @@ impl BatchComputeConfig {
         if let Some(cluster_name) = updates.cluster_name {
             self.cluster_name = Some(cluster_name);
         }
-        if let Some(connection_timeout) = updates.connection_timeout {
-            self.connection_timeout = connection_timeout;
-        }
-        if let Some(job_submit_timeout) = updates.job_submit_timeout {
-            self.job_submit_timeout = job_submit_timeout;
-        }
         if let Some(ssl_enabled) = updates.ssl_enabled {
             self.ssl_enabled = ssl_enabled;
         }
@@ -295,14 +254,6 @@ impl BatchComputeConfig {
         if let Some(kerberos_principal) = updates.kerberos_principal {
             self.kerberos_principal = Some(kerberos_principal);
         }
-        if let Some(enabled) = updates.enabled {
-            self.enabled = enabled;
-        }
-        if let Some(extra_params) = updates.extra_params {
-            self.extra_params = extra_params;
-        }
-        
-        self.updated_at = chrono::Utc::now();
     }
 }
 

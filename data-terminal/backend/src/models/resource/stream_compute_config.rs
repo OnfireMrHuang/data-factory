@@ -72,8 +72,6 @@ pub struct StreamJobConfig {
     pub checkpoint_config: CheckpointConfig,
     /// 是否启用
     pub enabled: bool,
-    /// 创建时间
-    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl StreamJobConfig {
@@ -89,7 +87,6 @@ impl StreamJobConfig {
             resource_config: StreamResourceConfig::default(),
             checkpoint_config: CheckpointConfig::default(),
             enabled: true,
-            created_at: chrono::Utc::now(),
         }
     }
 
@@ -172,10 +169,6 @@ impl Default for CheckpointConfig {
 /// 流处理连接配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamComputeConfig {
-    /// 配置ID
-    pub id: String,
-    /// 配置名称
-    pub name: String,
     /// 流处理引擎类型
     pub stream_compute_type: StreamComputeType,
     /// 主机地址
@@ -190,44 +183,27 @@ pub struct StreamComputeConfig {
     pub password: Option<String>,
     /// 集群名称
     pub cluster_name: Option<String>,
-    /// 连接超时时间（秒）
-    pub connection_timeout: u64,
-    /// 作业提交超时时间（秒）
-    pub job_submit_timeout: u64,
     /// 是否启用SSL/TLS
     pub ssl_enabled: bool,
     /// 是否启用高可用
     pub high_availability_enabled: bool,
     /// 高可用存储路径
     pub ha_storage_path: Option<String>,
-    /// 额外连接参数
-    pub extra_params: HashMap<String, String>,
     /// 流作业配置列表
     pub stream_job_configs: Vec<StreamJobConfig>,
-    /// 是否启用
-    pub enabled: bool,
-    /// 创建时间
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    /// 更新时间
-    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl StreamComputeConfig {
     /// 创建新的流处理配置
     pub fn new(
-        id: String,
-        name: String,
         stream_compute_type: StreamComputeType,
         host: String,
         port: Option<u16>,
     ) -> Self {
         let port = port.unwrap_or_else(|| stream_compute_type.default_port());
         let web_ui_port = stream_compute_type.web_ui_port();
-        let now = chrono::Utc::now();
         
         Self {
-            id,
-            name,
             stream_compute_type,
             host,
             port,
@@ -235,16 +211,10 @@ impl StreamComputeConfig {
             username: None,
             password: None,
             cluster_name: None,
-            connection_timeout: 30,
-            job_submit_timeout: 300,
             ssl_enabled: false,
             high_availability_enabled: false,
             ha_storage_path: None,
-            extra_params: HashMap::new(),
             stream_job_configs: Vec::new(),
-            enabled: true,
-            created_at: now,
-            updated_at: now,
         }
     }
 
@@ -262,8 +232,7 @@ impl StreamComputeConfig {
 
     /// 验证配置是否有效
     pub fn is_valid(&self) -> bool {
-        !self.id.is_empty()
-            && !self.name.is_empty()
+        !self.host.is_empty()
             && !self.host.is_empty()
             && self.port > 0
     }
@@ -271,7 +240,6 @@ impl StreamComputeConfig {
     /// 添加流作业配置
     pub fn add_stream_job_config(&mut self, job_config: StreamJobConfig) {
         self.stream_job_configs.push(job_config);
-        self.updated_at = chrono::Utc::now();
     }
 
     /// 移除流作业配置
@@ -279,9 +247,6 @@ impl StreamComputeConfig {
         let initial_len = self.stream_job_configs.len();
         self.stream_job_configs.retain(|job| job.name != name);
         let removed = initial_len != self.stream_job_configs.len();
-        if removed {
-            self.updated_at = chrono::Utc::now();
-        }
         removed
     }
 
@@ -292,9 +257,6 @@ impl StreamComputeConfig {
 
     /// 更新配置
     pub fn update(&mut self, updates: StreamComputeConfigUpdate) {
-        if let Some(name) = updates.name {
-            self.name = name;
-        }
         if let Some(host) = updates.host {
             self.host = host;
         }
@@ -313,12 +275,6 @@ impl StreamComputeConfig {
         if let Some(cluster_name) = updates.cluster_name {
             self.cluster_name = Some(cluster_name);
         }
-        if let Some(connection_timeout) = updates.connection_timeout {
-            self.connection_timeout = connection_timeout;
-        }
-        if let Some(job_submit_timeout) = updates.job_submit_timeout {
-            self.job_submit_timeout = job_submit_timeout;
-        }
         if let Some(ssl_enabled) = updates.ssl_enabled {
             self.ssl_enabled = ssl_enabled;
         }
@@ -328,34 +284,21 @@ impl StreamComputeConfig {
         if let Some(ha_storage_path) = updates.ha_storage_path {
             self.ha_storage_path = Some(ha_storage_path);
         }
-        if let Some(enabled) = updates.enabled {
-            self.enabled = enabled;
-        }
-        if let Some(extra_params) = updates.extra_params {
-            self.extra_params = extra_params;
-        }
-        
-        self.updated_at = chrono::Utc::now();
     }
 }
 
 /// 流处理配置更新结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamComputeConfigUpdate {
-    pub name: Option<String>,
     pub host: Option<String>,
     pub port: Option<u16>,
     pub web_ui_port: Option<u16>,
     pub username: Option<String>,
     pub password: Option<String>,
     pub cluster_name: Option<String>,
-    pub connection_timeout: Option<u64>,
-    pub job_submit_timeout: Option<u64>,
     pub ssl_enabled: Option<bool>,
     pub high_availability_enabled: Option<bool>,
     pub ha_storage_path: Option<String>,
-    pub enabled: Option<bool>,
-    pub extra_params: Option<HashMap<String, String>>,
 }
 
 /// 流处理连接测试结果
@@ -381,7 +324,6 @@ pub struct StreamComputeConfigList {
 /// 流处理配置创建请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateStreamComputeConfigRequest {
-    pub name: String,
     pub stream_compute_type: StreamComputeType,
     pub host: String,
     pub port: Option<u16>,
@@ -389,12 +331,9 @@ pub struct CreateStreamComputeConfigRequest {
     pub username: Option<String>,
     pub password: Option<String>,
     pub cluster_name: Option<String>,
-    pub connection_timeout: Option<u64>,
-    pub job_submit_timeout: Option<u64>,
     pub ssl_enabled: Option<bool>,
     pub high_availability_enabled: Option<bool>,
     pub ha_storage_path: Option<String>,
-    pub extra_params: Option<HashMap<String, String>>,
 }
 
 /// 流处理统计信息

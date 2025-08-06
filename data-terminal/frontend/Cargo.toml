@@ -10,6 +10,10 @@ edition = "2021"
 dioxus = { version = "0.6.3", features = ["router", "web"] }
 dioxus-logger = "0.6.2"
 dioxus-toast = { version = "0.6.0", default-features = false, features = ["web"] }
+dioxus-motion = { version = "0.3.1", optional = true, default-features = false }
+dioxus-sdk = { version = "0.6.0", features = [] }
+dioxus-query = { version = "0.8.1"}
+dioxus-use-js-macro = {version = "0.1.3"}
 daisy_rsx = "0.1.42"
 dioxus-free-icons = "0.9.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -40,9 +44,9 @@ regex = "1.11.1"
 
 [features]
 default = ["web"]
-web = ["dioxus/web"]
-desktop = ["dioxus/desktop"]
-mobile = ["dioxus/mobile"]
+web = ["dioxus/web", "dioxus-motion/web"]
+desktop = ["dioxus/desktop", "dioxus-motion/desktop"]
+mobile = ["dioxus/mobile", "dioxus-motion/desktop"]
 
 [profile.wasm-dev]
 inherits = "dev"

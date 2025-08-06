@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// 队列类型枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -68,8 +67,6 @@ pub struct TopicInfo {
     pub max_message_size: Option<u64>,
     /// 是否启用
     pub enabled: bool,
-    /// 创建时间
-    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl TopicInfo {
@@ -86,8 +83,7 @@ impl TopicInfo {
             compression_enabled: true,
             retention_days: Some(7),
             max_message_size: Some(1024 * 1024), // 1MB
-            enabled: true,
-            created_at: chrono::Utc::now(),
+            enabled: true
         }
     }
 
@@ -102,10 +98,6 @@ impl TopicInfo {
 /// 队列连接配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueueConfig {
-    /// 配置ID
-    pub id: String,
-    /// 配置名称
-    pub name: String,
     /// 队列类型
     pub queue_type: QueueType,
     /// 主机地址
@@ -122,46 +114,27 @@ pub struct QueueConfig {
     pub virtual_host: Option<String>,
     /// 集群名称
     pub cluster_name: Option<String>,
-    /// 连接超时时间（秒）
-    pub connection_timeout: u64,
-    /// 会话超时时间（秒）
-    pub session_timeout: u64,
-    /// 心跳间隔（秒）
-    pub heartbeat_interval: u64,
     /// 是否启用SSL/TLS
     pub ssl_enabled: bool,
     /// 是否启用SASL认证
     pub sasl_enabled: bool,
     /// SASL机制
     pub sasl_mechanism: Option<String>,
-    /// 额外连接参数
-    pub extra_params: HashMap<String, String>,
     /// Topic列表
     pub topics: Vec<TopicInfo>,
-    /// 是否启用
-    pub enabled: bool,
-    /// 创建时间
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    /// 更新时间
-    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl QueueConfig {
     /// 创建新的队列配置
     pub fn new(
-        id: String,
-        name: String,
         queue_type: QueueType,
         host: String,
         port: Option<u16>,
     ) -> Self {
         let port = port.unwrap_or_else(|| queue_type.default_port());
         let admin_port = queue_type.admin_port();
-        let now = chrono::Utc::now();
         
         Self {
-            id,
-            name,
             queue_type,
             host,
             port,
@@ -170,17 +143,10 @@ impl QueueConfig {
             password: None,
             virtual_host: None,
             cluster_name: None,
-            connection_timeout: 30,
-            session_timeout: 60,
-            heartbeat_interval: 30,
             ssl_enabled: false,
             sasl_enabled: false,
             sasl_mechanism: None,
-            extra_params: HashMap::new(),
             topics: Vec::new(),
-            enabled: true,
-            created_at: now,
-            updated_at: now,
         }
     }
 
@@ -198,8 +164,7 @@ impl QueueConfig {
 
     /// 验证配置是否有效
     pub fn is_valid(&self) -> bool {
-        !self.id.is_empty()
-            && !self.name.is_empty()
+        !self.host.is_empty()
             && !self.host.is_empty()
             && self.port > 0
     }
@@ -207,7 +172,6 @@ impl QueueConfig {
     /// 添加Topic
     pub fn add_topic(&mut self, topic: TopicInfo) {
         self.topics.push(topic);
-        self.updated_at = chrono::Utc::now();
     }
 
     /// 移除Topic
@@ -215,9 +179,6 @@ impl QueueConfig {
         let initial_len = self.topics.len();
         self.topics.retain(|topic| topic.name != name);
         let removed = initial_len != self.topics.len();
-        if removed {
-            self.updated_at = chrono::Utc::now();
-        }
         removed
     }
 
@@ -228,9 +189,6 @@ impl QueueConfig {
 
     /// 更新配置
     pub fn update(&mut self, updates: QueueConfigUpdate) {
-        if let Some(name) = updates.name {
-            self.name = name;
-        }
         if let Some(host) = updates.host {
             self.host = host;
         }
@@ -252,15 +210,7 @@ impl QueueConfig {
         if let Some(cluster_name) = updates.cluster_name {
             self.cluster_name = Some(cluster_name);
         }
-        if let Some(connection_timeout) = updates.connection_timeout {
-            self.connection_timeout = connection_timeout;
-        }
-        if let Some(session_timeout) = updates.session_timeout {
-            self.session_timeout = session_timeout;
-        }
-        if let Some(heartbeat_interval) = updates.heartbeat_interval {
-            self.heartbeat_interval = heartbeat_interval;
-        }
+
         if let Some(ssl_enabled) = updates.ssl_enabled {
             self.ssl_enabled = ssl_enabled;
         }
@@ -270,21 +220,13 @@ impl QueueConfig {
         if let Some(sasl_mechanism) = updates.sasl_mechanism {
             self.sasl_mechanism = Some(sasl_mechanism);
         }
-        if let Some(enabled) = updates.enabled {
-            self.enabled = enabled;
-        }
-        if let Some(extra_params) = updates.extra_params {
-            self.extra_params = extra_params;
-        }
-        
-        self.updated_at = chrono::Utc::now();
+
     }
 }
 
 /// 队列配置更新结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueueConfigUpdate {
-    pub name: Option<String>,
     pub host: Option<String>,
     pub port: Option<u16>,
     pub admin_port: Option<u16>,
@@ -292,14 +234,9 @@ pub struct QueueConfigUpdate {
     pub password: Option<String>,
     pub virtual_host: Option<String>,
     pub cluster_name: Option<String>,
-    pub connection_timeout: Option<u64>,
-    pub session_timeout: Option<u64>,
-    pub heartbeat_interval: Option<u64>,
     pub ssl_enabled: Option<bool>,
     pub sasl_enabled: Option<bool>,
     pub sasl_mechanism: Option<String>,
-    pub enabled: Option<bool>,
-    pub extra_params: Option<HashMap<String, String>>,
 }
 
 /// 队列连接测试结果
@@ -325,7 +262,6 @@ pub struct QueueConfigList {
 /// 队列配置创建请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateQueueConfigRequest {
-    pub name: String,
     pub queue_type: QueueType,
     pub host: String,
     pub port: Option<u16>,
@@ -334,13 +270,9 @@ pub struct CreateQueueConfigRequest {
     pub password: Option<String>,
     pub virtual_host: Option<String>,
     pub cluster_name: Option<String>,
-    pub connection_timeout: Option<u64>,
-    pub session_timeout: Option<u64>,
-    pub heartbeat_interval: Option<u64>,
     pub ssl_enabled: Option<bool>,
     pub sasl_enabled: Option<bool>,
     pub sasl_mechanism: Option<String>,
-    pub extra_params: Option<HashMap<String, String>>,
 }
 
 /// 队列统计信息

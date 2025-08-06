@@ -1,10 +1,14 @@
 use dioxus::prelude::*;
 use crate::models::protocol::{Resource, Category, ResourceType, Status};
+use crate::components::add_resource_dialog::AddResourceDialog;
 
 #[component]
 pub fn ResourcePage() -> Element {
     let mut selected_category = use_signal(|| Category::RelationalDatabase);
     let mut selected_resource_type = use_signal(|| ResourceType::Mysql);
+    
+    // 弹窗状态管理
+    let mut show_add_dialog = use_signal(|| false);
 
     // 获取资源类型
     let get_resource_types = |category: Category| {
@@ -89,7 +93,7 @@ pub fn ResourcePage() -> Element {
                     button {
                         class: "bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2",
                         onclick: move |_| {
-                            // TODO: 打开新增资源对话框
+                            show_add_dialog.set(true);
                         },
                         span { "➕" }
                         span { "新增资源" }
@@ -208,6 +212,20 @@ pub fn ResourcePage() -> Element {
                             }
                         }
                     }
+                }
+            }
+
+            // 新增资源弹窗
+            AddResourceDialog {
+                show: show_add_dialog,
+                on_close: move |_| {
+                    show_add_dialog.set(false);
+                },
+                on_test_connection: move |_| {
+                    // TODO: 测试连接
+                },
+                on_save: move |_| {
+                    // TODO: 保存资源
                 }
             }
         }

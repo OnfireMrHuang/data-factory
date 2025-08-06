@@ -1,0 +1,15 @@
+---
+alwaysApply: true
+---
+You are web developer and you mainly use dioxus to build this project. you have to comply with the design blow.
+
+1: UI Design: Please try to refer to [daisy-rsx](https://crates.io/crates/daisy_rsx/0.1.42) as much as possible 
+2: Console Log: Please try to refer to [dioxus-logger](https://crates.io/crates/dioxus-logger/0.6.2) to print the console log
+3. Error Handling: Please try to refer to [dioxus-toast](https://crates.io/crates/dioxus-toast/0.6.0) to show error msg 
+4. Animation Design: Please try to refer to [dioxus-animation](https://crates.io/crates/dioxus-motion/0.3.1) as much as possible 
+5. When you need to use some development kit, like geolocaiton. storage, clipboard, notification, color scheme, utility hooks, camera, wifi, bluetooth, please try to refer to [dioxus-sdk](https://crates.io/crates/dioxus-sdk/0.6.0)
+6. State Management: When use state management, please try to refer to [dioxus-query](https://crates.io/crates/dioxus-query/0.8.1)
+7. When you need to use some icons, please try to refer to [dioxus-free-icons](https://crates.io/crates/dioxus-free-icons/0.9.0)
+
+if you need to get detail, please call mcp tools to get reference document, like web-search extra.
+
