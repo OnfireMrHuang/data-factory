@@ -1,12 +1,15 @@
 use dioxus::prelude::*;
+use dioxus_router::prelude::*;
 use crate::models::protocol::{Resource, Category, ResourceType, Status};
 use crate::components::{
     resource_dialog::{ResourceDialog, ResourceModalMode},
     resource_delete_dialog::ResourceDeleteDialog,
 };
+use crate::routes::Route;
 
 #[component]
 pub fn ResourcePage() -> Element {
+    let navigator = use_navigator();
     let mut selected_category = use_signal(|| Category::RelationalDatabase);
     let mut selected_resource_type = use_signal(|| ResourceType::Mysql);
     
@@ -166,7 +169,7 @@ pub fn ResourcePage() -> Element {
                     button {
                         class: "text-gray-600 hover:text-gray-900 flex items-center space-x-2",
                         onclick: move |_| {
-                            // TODO: 导航到Home页面
+                            navigator.push(Route::Home {});
                         },
                         span { "←" }
                         span { "返回Home" }
