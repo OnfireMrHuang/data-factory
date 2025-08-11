@@ -26,7 +26,7 @@ create table if not exists df_c_resource
     name        varchar(64)  not null comment '资源名称',
     description varchar(255) default '' comment '资源描述',
     category    enum('relational_database', 'time_series_database','document_database','vector_database','graph_database', 
-    'kv_database','filesystem', 'queue', 'batch_compute', 'stream_compute') not null comment '资源类型',
+    'kv_database','filesystem', 'queue', 'batch_compute', 'stream_compute') not null comment '资源分类',
     resource_type varchar(64)  not null comment '资源类型: 例如doris、mysql、postgres、hdfs、kafka、spark、flink、mailvus等等',
     config      JSON         not null comment '资源配置',
     status      enum('active', 'inactive') not null default 'active' comment '资源状态',
