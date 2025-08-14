@@ -1,29 +1,34 @@
 use dioxus::prelude::*;
 use dioxus::hooks::use_signal;
+use dioxus_free_icons::{icons::{hi_outline_icons::*, fa_solid_icons::*, 
+    md_content_icons::*, md_notification_icons::*, md_hardware_icons::*, ld_icons::*}, Icon};
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum MainMenu {
-    DataIntegration,
-    DataDevelopment,
-    VersionManagement,
-    OpsMonitoring,
+    DataCollection,
+    DataProcessing,
     DataSupply,
+    OpsMonitoring,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum SubMenu {
-    DatabaseIntegration,
-    CustomIntegration,
+    // 数据采集
+    DataSourceManagement,
+    CollectionTasks,
+    // 数据加工
     WideTableDevelopment,
-    CustomDevelopment,
-    VersionList,
-    Archive,
-    Rollback,
-    WideTableTasks,
-    StreamTasks,
-    BatchTasks,
-    DataService,
+    FileDevelopment,
+    StreamDevelopment,
+    // 数据供应
+    DataQuery,
     DataSync,
+    DataSubscription,
+    // 运维监控
+    CollectionTaskMonitoring,
+    WideTableTaskMonitoring,
+    FileTaskMonitoring,
+    StreamTaskMonitoring,
 }
 
 #[component]
@@ -32,184 +37,189 @@ pub fn SidebarLeft() -> Element {
     let mut selected = use_signal(|| None as Option<SubMenu>);
 
     let submenu_of = |submenu: SubMenu| match submenu {
-        SubMenu::DatabaseIntegration | SubMenu::CustomIntegration => Some(MainMenu::DataIntegration),
-        SubMenu::WideTableDevelopment | SubMenu::CustomDevelopment => Some(MainMenu::DataDevelopment),
-        SubMenu::VersionList | SubMenu::Archive | SubMenu::Rollback => Some(MainMenu::VersionManagement),
-        SubMenu::WideTableTasks | SubMenu::StreamTasks | SubMenu::BatchTasks => Some(MainMenu::OpsMonitoring),
-        SubMenu::DataService | SubMenu::DataSync => Some(MainMenu::DataSupply),
+        SubMenu::DataSourceManagement | SubMenu::CollectionTasks => Some(MainMenu::DataCollection),
+        SubMenu::WideTableDevelopment | SubMenu::FileDevelopment | SubMenu::StreamDevelopment => Some(MainMenu::DataProcessing),
+        SubMenu::DataQuery | SubMenu::DataSync | SubMenu::DataSubscription => Some(MainMenu::DataSupply),
+        SubMenu::CollectionTaskMonitoring | SubMenu::WideTableTaskMonitoring | SubMenu::FileTaskMonitoring | SubMenu::StreamTaskMonitoring => Some(MainMenu::OpsMonitoring),
     };
 
     let render_submenu = |main: MainMenu| match main {
-        MainMenu::DataIntegration => {
-            let db_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                if selected() == Some(SubMenu::DatabaseIntegration) {
-                    class.push_str(" text-sky-500");
+        MainMenu::DataCollection => {
+            let source_class = {
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                if selected() == Some(SubMenu::DataSourceManagement) {
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                 }
                 class
             };
-            let custom_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                if selected() == Some(SubMenu::CustomIntegration) {
-                    class.push_str(" text-sky-500");
+            let tasks_class = {
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                if selected() == Some(SubMenu::CollectionTasks) {
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                 }
                 class
             };
             rsx! {
-                div { class: "pl-4 flex flex-col gap-1",
+                div { class: "pl-6 flex flex-col gap-2",
                     button {
-                        class: db_class,
-                        onclick: move |_| selected.set(Some(SubMenu::DatabaseIntegration)),
-                        "数据库集成"
+                        class: source_class,
+                        onclick: move |_| selected.set(Some(SubMenu::DataSourceManagement)),
+                        Icon { icon: HiDatabase, class: "w-4 h-4" }
+                        "数据源管理"
                     }
                     button {
-                        class: custom_class,
-                        onclick: move |_| selected.set(Some(SubMenu::CustomIntegration)),
-                        "自定义集成"
+                        class: tasks_class,
+                        onclick: move |_| selected.set(Some(SubMenu::CollectionTasks)),
+                        Icon { icon: FaDownload, class: "w-4 h-4" }
+                        "采集任务"
                     }
                 }
             }
         },
-        MainMenu::DataDevelopment => {
+        MainMenu::DataProcessing => {
             let wide_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
                 if selected() == Some(SubMenu::WideTableDevelopment) {
-                    class.push_str(" text-sky-500");
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                 }
                 class
             };
-            let custom_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                if selected() == Some(SubMenu::CustomDevelopment) {
-                    class.push_str(" text-sky-500");
-                }
-                class
-            };
-            rsx! {
-                div { class: "pl-4 flex flex-col gap-1",
-                    button {
-                        class: wide_class,
-                        onclick: move |_| selected.set(Some(SubMenu::WideTableDevelopment)),
-                        "宽表开发"
-                    }
-                    button {
-                        class: custom_class,
-                        onclick: move |_| selected.set(Some(SubMenu::CustomDevelopment)),
-                        "自定义开发"
-                    }
-                }
-            }
-        },
-        MainMenu::VersionManagement => {
-            let list_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                if selected() == Some(SubMenu::VersionList) {
-                    class.push_str(" text-sky-500");
-                }
-                class
-            };
-            let archive_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                if selected() == Some(SubMenu::Archive) {
-                    class.push_str(" text-sky-500");
-                }
-                class
-            };
-            let rollback_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                if selected() == Some(SubMenu::Rollback) {
-                    class.push_str(" text-sky-500");
-                }
-                class
-            };
-            rsx! {
-                div { class: "pl-4 flex flex-col gap-1",
-                    button {
-                        class: list_class,
-                        onclick: move |_| selected.set(Some(SubMenu::VersionList)),
-                        "版本列表"
-                    }
-                    button {
-                        class: archive_class,
-                        onclick: move |_| selected.set(Some(SubMenu::Archive)),
-                        "归档"
-                    }
-                    button {
-                        class: rollback_class,
-                        onclick: move |_| selected.set(Some(SubMenu::Rollback)),
-                        "回滚"
-                    }
-                }
-            }
-        },
-        MainMenu::OpsMonitoring => {
-            let wide_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                if selected() == Some(SubMenu::WideTableTasks) {
-                    class.push_str(" text-sky-500");
+            let file_class = {
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                if selected() == Some(SubMenu::FileDevelopment) {
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                 }
                 class
             };
             let stream_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                if selected() == Some(SubMenu::StreamTasks) {
-                    class.push_str(" text-sky-500");
-                }
-                class
-            };
-            let batch_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                if selected() == Some(SubMenu::BatchTasks) {
-                    class.push_str(" text-sky-500");
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                if selected() == Some(SubMenu::StreamDevelopment) {
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                 }
                 class
             };
             rsx! {
-                div { class: "pl-4 flex flex-col gap-1",
+                div { class: "pl-6 flex flex-col gap-2",
                     button {
                         class: wide_class,
-                        onclick: move |_| selected.set(Some(SubMenu::WideTableTasks)),
-                        "宽表任务列表"
+                        onclick: move |_| selected.set(Some(SubMenu::WideTableDevelopment)),
+                        Icon { icon: HiTable, class: "w-4 h-4" }
+                        "宽表开发"
+                    }
+                    button {
+                        class: file_class,
+                        onclick: move |_| selected.set(Some(SubMenu::FileDevelopment)),
+                        Icon { icon: FaFile, class: "w-4 h-4" }
+                        "文件开发"
                     }
                     button {
                         class: stream_class,
-                        onclick: move |_| selected.set(Some(SubMenu::StreamTasks)),
-                        "流任务列表"
-                    }
-                    button {
-                        class: batch_class,
-                        onclick: move |_| selected.set(Some(SubMenu::BatchTasks)),
-                        "批任务列表"
+                        onclick: move |_| selected.set(Some(SubMenu::StreamDevelopment)),
+                        Icon { icon: MdStream, class: "w-4 h-4" }
+                        "流开发"
                     }
                 }
             }
         },
         MainMenu::DataSupply => {
-            let service_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                if selected() == Some(SubMenu::DataService) {
-                    class.push_str(" text-sky-500");
+            let query_class = {
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                if selected() == Some(SubMenu::DataQuery) {
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                 }
                 class
             };
             let sync_class = {
-                let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
                 if selected() == Some(SubMenu::DataSync) {
-                    class.push_str(" text-sky-500");
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
+                }
+                class
+            };
+            let subscription_class = {
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                if selected() == Some(SubMenu::DataSubscription) {
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                 }
                 class
             };
             rsx! {
-                div { class: "pl-4 flex flex-col gap-1",
+                div { class: "pl-6 flex flex-col gap-2",
                     button {
-                        class: service_class,
-                        onclick: move |_| selected.set(Some(SubMenu::DataService)),
-                        "数据服务"
+                        class: query_class,
+                        onclick: move |_| selected.set(Some(SubMenu::DataQuery)),
+                        Icon { icon: HiSearch, class: "w-4 h-4" }
+                        "数据查询"
                     }
                     button {
                         class: sync_class,
                         onclick: move |_| selected.set(Some(SubMenu::DataSync)),
+                        Icon { icon: MdSync, class: "w-4 h-4" }
                         "数据同步"
+                    }
+                    button {
+                        class: subscription_class,
+                        onclick: move |_| selected.set(Some(SubMenu::DataSubscription)),
+                        Icon { icon: HiBell, class: "w-4 h-4" }
+                        "数据订阅"
+                    }
+                }
+            }
+        },
+        MainMenu::OpsMonitoring => {
+            let collection_class = {
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                if selected() == Some(SubMenu::CollectionTaskMonitoring) {
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
+                }
+                class
+            };
+            let wide_class = {
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                if selected() == Some(SubMenu::WideTableTaskMonitoring) {
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
+                }
+                class
+            };
+            let file_class = {
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                if selected() == Some(SubMenu::FileTaskMonitoring) {
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
+                }
+                class
+            };
+            let stream_class = {
+                let mut class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                if selected() == Some(SubMenu::StreamTaskMonitoring) {
+                    class = "btn btn-ghost text-sm font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
+                }
+                class
+            };
+            rsx! {
+                div { class: "pl-6 flex flex-col gap-2",
+                    button {
+                        class: collection_class,
+                        onclick: move |_| selected.set(Some(SubMenu::CollectionTaskMonitoring)),
+                        Icon { icon: HiEye, class: "w-4 h-4" }
+                        "采集任务监控"
+                    }
+                    button {
+                        class: wide_class,
+                        onclick: move |_| selected.set(Some(SubMenu::WideTableTaskMonitoring)),
+                        Icon { icon: HiTable, class: "w-4 h-4" }
+                        "宽表任务监控"
+                    }
+                    button {
+                        class: file_class,
+                        onclick: move |_| selected.set(Some(SubMenu::FileTaskMonitoring)),
+                        Icon { icon: FaFile, class: "w-4 h-4" }
+                        "文件任务监控"
+                    }
+                    button {
+                        class: stream_class,
+                        onclick: move |_| selected.set(Some(SubMenu::StreamTaskMonitoring)),
+                        Icon { icon: MdStream, class: "w-4 h-4" }
+                        "流任务监控"
                     }
                 }
             }
@@ -218,152 +228,116 @@ pub fn SidebarLeft() -> Element {
 
     rsx! {
         aside { 
-            class: "w-48 bg-base-200 flex flex-col p-4",
+            class: "w-56 bg-base-200 flex flex-col p-4",
             // 主页一级菜单按钮
             button {
-                class: "btn btn-ghost btn-sm flex items-center gap-2 text-sky-500 w-full justify-start",
-                // SVG 占位符 icon
-                svg { width: "16", height: "16", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg",
-                    path { d: "M3 12l9-9 9 9M4 10v10a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V10" }
-                }
+                class: "btn btn-ghost text-base font-medium flex items-center gap-3 text-primary w-full justify-start mb-4",
+                Icon { icon: HiHome, class: "w-5 h-5" }
                 span { "主页" }
             }
-            // 一级菜单
+            // 数据采集
             button {
                 class: {
-                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                    let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::DataIntegration));
-                    if is_selected || expanded() == Some(MainMenu::DataIntegration) {
-                        class.push_str(" text-sky-500");
+                    let mut class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                    let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::DataCollection));
+                    if is_selected || expanded() == Some(MainMenu::DataCollection) {
+                        class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                     }
                     class
                 },
                 onclick: move |_| expanded.set(
-                    if expanded() == Some(MainMenu::DataIntegration) { None } else { Some(MainMenu::DataIntegration) }
+                    if expanded() == Some(MainMenu::DataCollection) { None } else { Some(MainMenu::DataCollection) }
                 ),
-                // SVG 占位符 icon
-                svg { width: "16", height: "16", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg",
-                    path { d: "M4 12h16M12 4v16", stroke_linecap: "round", stroke_linejoin: "round" }
-                }
-                span { "数据集成" }
+                Icon { icon: HiCollection, class: "w-5 h-5" }
+                span { "数据采集" }
                 span {
-                    class: "text-gray-400 text-xs ml-auto",
-                    { if expanded() == Some(MainMenu::DataIntegration) {
-                        rsx!(svg { width: "12", height: "12", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", path { d: "M6 9l6 6 6-6", stroke_linecap: "round", stroke_linejoin: "round" } })
+                    class: "text-base-content/50 ml-auto",
+                    { if expanded() == Some(MainMenu::DataCollection) {
+                        rsx!(Icon { icon: HiChevronDown, class: "w-4 h-4" })
                     } else {
-                        rsx!(svg { width: "12", height: "12", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", path { d: "M9 6l6 6-6 6", stroke_linecap: "round", stroke_linejoin: "round" } })
+                        rsx!(Icon { icon: HiChevronRight, class: "w-4 h-4" })
                     }}
                 }
             }
-            { if expanded() == Some(MainMenu::DataIntegration) { render_submenu(MainMenu::DataIntegration) } else { rsx!{} } }
+            { if expanded() == Some(MainMenu::DataCollection) { render_submenu(MainMenu::DataCollection) } else { rsx!{} } }
 
+            // 数据加工
             button {
                 class: {
-                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                    let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::DataDevelopment));
-                    if is_selected || expanded() == Some(MainMenu::DataDevelopment) {
-                        class.push_str(" text-sky-500");
+                    let mut class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                    let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::DataProcessing));
+                    if is_selected || expanded() == Some(MainMenu::DataProcessing) {
+                        class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                     }
                     class
                 },
                 onclick: move |_| expanded.set(
-                    if expanded() == Some(MainMenu::DataDevelopment) { None } else { Some(MainMenu::DataDevelopment) }
+                    if expanded() == Some(MainMenu::DataProcessing) { None } else { Some(MainMenu::DataProcessing) }
                 ),
-                svg { width: "16", height: "16", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg",
-                    circle { cx: "12", cy: "12", r: "8", stroke_linecap: "round", stroke_linejoin: "round" }
-                }
-                span { "数据开发" }
+                Icon { icon: FaHammer, class: "w-5 h-5" }
+                span { "数据加工" }
                 span {
-                    class: "text-gray-400 text-xs ml-auto",
-                    { if expanded() == Some(MainMenu::DataDevelopment) {
-                        rsx!(svg { width: "12", height: "12", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", path { d: "M6 9l6 6 6-6", stroke_linecap: "round", stroke_linejoin: "round" } })
+                    class: "text-base-content/50 ml-auto",
+                    { if expanded() == Some(MainMenu::DataProcessing) {
+                        rsx!(Icon { icon: HiChevronDown, class: "w-4 h-4" })
                     } else {
-                        rsx!(svg { width: "12", height: "12", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", path { d: "M9 6l6 6-6 6", stroke_linecap: "round", stroke_linejoin: "round" } })
+                        rsx!(Icon { icon: HiChevronRight, class: "w-4 h-4" })
                     }}
                 }
             }
-            { if expanded() == Some(MainMenu::DataDevelopment) { render_submenu(MainMenu::DataDevelopment) } else { rsx!{} } }
+            { if expanded() == Some(MainMenu::DataProcessing) { render_submenu(MainMenu::DataProcessing) } else { rsx!{} } }
 
+            // 数据供应
             button {
                 class: {
-                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                    let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::VersionManagement));
-                    if is_selected || expanded() == Some(MainMenu::VersionManagement) {
-                        class.push_str(" text-sky-500");
-                    }
-                    class
-                },
-                onclick: move |_| expanded.set(
-                    if expanded() == Some(MainMenu::VersionManagement) { None } else { Some(MainMenu::VersionManagement) }
-                ),
-                svg { width: "16", height: "16", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg",
-                    rect { x: "4", y: "4", width: "16", height: "16", rx: "2", stroke_linecap: "round", stroke_linejoin: "round" }
-                }
-                span { "版本管理" }
-                span {
-                    class: "text-gray-400 text-xs ml-auto",
-                    { if expanded() == Some(MainMenu::VersionManagement) {
-                        rsx!(svg { width: "12", height: "12", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", path { d: "M6 9l6 6 6-6", stroke_linecap: "round", stroke_linejoin: "round" } })
-                    } else {
-                        rsx!(svg { width: "12", height: "12", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", path { d: "M9 6l6 6-6 6", stroke_linecap: "round", stroke_linejoin: "round" } })
-                    }}
-                }
-            }
-            { if expanded() == Some(MainMenu::VersionManagement) { render_submenu(MainMenu::VersionManagement) } else { rsx!{} } }
-
-            button {
-                class: {
-                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
-                    let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::OpsMonitoring));
-                    if is_selected || expanded() == Some(MainMenu::OpsMonitoring) {
-                        class.push_str(" text-sky-500");
-                    }
-                    class
-                },
-                onclick: move |_| expanded.set(
-                    if expanded() == Some(MainMenu::OpsMonitoring) { None } else { Some(MainMenu::OpsMonitoring) }
-                ),
-                svg { width: "16", height: "16", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg",
-                    polyline { points: "4 12 12 4 20 12", stroke_linecap: "round", stroke_linejoin: "round" }
-                }
-                span { "运维监控" }
-                span {
-                    class: "text-gray-400 text-xs ml-auto",
-                    { if expanded() == Some(MainMenu::OpsMonitoring) {
-                        rsx!(svg { width: "12", height: "12", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", path { d: "M6 9l6 6 6-6", stroke_linecap: "round", stroke_linejoin: "round" } })
-                    } else {
-                        rsx!(svg { width: "12", height: "12", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", path { d: "M9 6l6 6-6 6", stroke_linecap: "round", stroke_linejoin: "round" } })
-                    }}
-                }
-            }
-            { if expanded() == Some(MainMenu::OpsMonitoring) { render_submenu(MainMenu::OpsMonitoring) } else { rsx!{} } }
-
-            button {
-                class: {
-                    let mut class = "btn btn-ghost btn-sm flex items-center gap-2 w-full".to_string();
+                    let mut class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
                     let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::DataSupply));
                     if is_selected || expanded() == Some(MainMenu::DataSupply) {
-                        class.push_str(" text-sky-500");
+                        class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                     }
                     class
                 },
                 onclick: move |_| expanded.set(
                     if expanded() == Some(MainMenu::DataSupply) { None } else { Some(MainMenu::DataSupply) }
                 ),
-                svg { width: "16", height: "16", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg",
-                    path { d: "M12 4v16m8-8H4", stroke_linecap: "round", stroke_linejoin: "round" }
-                }
+                Icon { icon: HiShare, class: "w-5 h-5" }
                 span { "数据供应" }
                 span {
-                    class: "text-gray-400 text-xs ml-auto",
+                    class: "text-base-content/50 ml-auto",
                     { if expanded() == Some(MainMenu::DataSupply) {
-                        rsx!(svg { width: "12", height: "12", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", path { d: "M6 9l6 6 6-6", stroke_linecap: "round", stroke_linejoin: "round" } })
+                        rsx!(Icon { icon: HiChevronDown, class: "w-4 h-4" })
                     } else {
-                        rsx!(svg { width: "12", height: "12", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg", path { d: "M9 6l6 6-6 6", stroke_linecap: "round", stroke_linejoin: "round" } })
+                        rsx!(Icon { icon: HiChevronRight, class: "w-4 h-4" })
                     }}
                 }
             }
             { if expanded() == Some(MainMenu::DataSupply) { render_submenu(MainMenu::DataSupply) } else { rsx!{} } }
+
+            // 运维监控
+            button {
+                class: {
+                    let mut class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
+                    let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::OpsMonitoring));
+                    if is_selected || expanded() == Some(MainMenu::OpsMonitoring) {
+                        class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
+                    }
+                    class
+                },
+                onclick: move |_| expanded.set(
+                    if expanded() == Some(MainMenu::OpsMonitoring) { None } else { Some(MainMenu::OpsMonitoring) }
+                ),
+                Icon { icon: LdMonitorCheck, class: "w-5 h-5" }
+                span { "运维监控" }
+                span {
+                    class: "text-base-content/50 ml-auto",
+                    { if expanded() == Some(MainMenu::OpsMonitoring) {
+                        rsx!(Icon { icon: HiChevronDown, class: "w-4 h-4" })
+                    } else {
+                        rsx!(Icon { icon: HiChevronRight, class: "w-4 h-4" })
+                    }}
+                }
+            }
+            { if expanded() == Some(MainMenu::OpsMonitoring) { render_submenu(MainMenu::OpsMonitoring) } else { rsx!{} } }
         }
     }
 }
