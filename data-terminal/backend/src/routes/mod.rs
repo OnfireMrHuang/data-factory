@@ -1,7 +1,8 @@
+mod jwt;
 mod login;
 mod project;
 mod resource;
-mod jwt;
+mod datasource;
 
 use axum::{
     Router
@@ -54,7 +55,8 @@ fn api_routes_v1() -> Router {
     // JwtAuth
     let protected_routes = Router::new()
         .nest("/project", project::routes())
-        .nest("/resource", resource::routes());
+        .nest("/resource", resource::routes())
+        .nest("/datasource", datasource::routes());
 
     // 合并两组路由
     public_routes.merge(protected_routes)

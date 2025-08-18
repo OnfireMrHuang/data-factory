@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use dioxus::hooks::use_signal;
 use dioxus_free_icons::{icons::{hi_outline_icons::*, fa_solid_icons::*, 
-    md_content_icons::*, md_notification_icons::*, md_hardware_icons::*, ld_icons::*}, Icon};
+    md_content_icons::*, md_notification_icons::*, ld_icons::*}, Icon};
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum MainMenu {

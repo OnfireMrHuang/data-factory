@@ -2,6 +2,8 @@ use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 use super::project_panel::ProjectPanel;
 use crate::routes::Route;
+use dioxus_free_icons::{icons::{bs_icons::*, ld_icons::*}, Icon};
+
 
 // 定义菜单项结构
 #[derive(Clone, PartialEq)]
@@ -83,20 +85,11 @@ pub fn Navbar() -> Element {
             // 右侧按钮
             div { class: "flex gap-2 items-center",
                 button { class: "btn flex items-center gap-1",
-                    // AI 脑图标
-                    svg { width: "18", height: "18", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg",
-                        path { d: "M12 2C7 2 2 7 2 12s5 10 10 10 10-5 10-10S17 2 12 2z", stroke_linecap: "round", stroke_linejoin: "round" }
-                        path { d: "M8 15s1.5-2 4-2 4 2 4 2", stroke_linecap: "round", stroke_linejoin: "round" }
-                        circle { cx: "9", cy: "10", r: "1" }
-                        circle { cx: "15", cy: "10", r: "1" }
-                    }
+                    Icon { icon: LdBot, class: "w-5 h-5" }
                     "智能助手"
                 }
                 button { class: "btn flex items-center gap-1",
-                    // 锤子图标
-                    svg { width: "18", height: "18", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg",
-                        path { d: "M17 7l-1.5-1.5a2.121 2.121 0 0 0-3 0l-7.5 7.5a2.121 2.121 0 0 0 0 3l1.5 1.5a2.121 2.121 0 0 0 3 0l7.5-7.5a2.121 2.121 0 0 0 0-3z", stroke_linecap: "round", stroke_linejoin: "round" }
-                    }
+                    Icon { icon: BsTools, class: "w-5 h-5" }
                     "工具"
                 }
                 // 设置按钮和下拉菜单

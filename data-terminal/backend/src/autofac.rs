@@ -3,14 +3,18 @@ use once_cell::sync::Lazy;
 use shaku::{module, HasProvider};
 use crate::repositories::project::ProjectRepoImpl;
 use crate::repositories::resource::ResourceRepoImpl;
+use crate::repositories::datasource::DataSourceRepoImpl;
 use crate::services::project::ProjectServiceImpl;
 use crate::services::resource::ResourceServiceImpl;
-use crate::services::{ProjectService, ResourceService};
+use crate::services::datasource::DataSourceServiceImpl;
+use crate::services::{ProjectService, ResourceService, DataSourceService};
 
 module! {
     pub AutoFacModule {
         components = [],
-        providers = [ProjectRepoImpl, ProjectServiceImpl, ResourceRepoImpl, ResourceServiceImpl]
+        providers = [ProjectRepoImpl, ProjectServiceImpl, 
+        ResourceRepoImpl, ResourceServiceImpl, 
+        DataSourceRepoImpl, DataSourceServiceImpl]
     }
 }
 
@@ -65,6 +69,11 @@ impl AppState {
 
     /// 获取 ResourceService 实例
     pub fn get_resource_service(&self) -> Box<dyn ResourceService> {
+        self.module.provide().unwrap()
+    }
+
+    /// 获取 DataSourceService 实例
+    pub fn get_datasource_service(&self) -> Box<dyn DataSourceService> {
         self.module.provide().unwrap()
     }
 }

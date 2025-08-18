@@ -1033,9 +1033,6 @@
   .h-5 {
     height: calc(var(--spacing) * 5);
   }
-  .h-6 {
-    height: calc(var(--spacing) * 6);
-  }
   .h-8 {
     height: calc(var(--spacing) * 8);
   }
@@ -1071,9 +1068,6 @@
   }
   .w-5 {
     width: calc(var(--spacing) * 5);
-  }
-  .w-6 {
-    width: calc(var(--spacing) * 6);
   }
   .w-8 {
     width: calc(var(--spacing) * 8);
@@ -1273,9 +1267,6 @@
   .bg-red-100 {
     background-color: var(--color-red-100);
   }
-  .bg-sky-50 {
-    background-color: var(--color-sky-50);
-  }
   .bg-white {
     background-color: var(--color-white);
   }
@@ -1441,9 +1432,6 @@
   }
   .text-red-600 {
     color: var(--color-red-600);
-  }
-  .text-sky-500 {
-    color: var(--color-sky-500);
   }
   .text-white {
     color: var(--color-white);
