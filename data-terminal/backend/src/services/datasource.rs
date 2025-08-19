@@ -27,7 +27,7 @@ impl DataSourceService for DataSourceServiceImpl {
 
     async fn edit_datasource(&self, project_code: String, datasource: DataSourceCreateUpdate) -> Result<(), Error> {
         // 获取现有数据源以保留状态
-        let existing = self.repo.get_datasource(project_code, datasource.id.clone()).await?;
+        let existing = self.repo.get_datasource(project_code.clone(), datasource.id.clone()).await?;
         let mut updated_datasource = DataSource::from(datasource);
         updated_datasource.connection_status = existing.connection_status;
         updated_datasource.created_at = existing.created_at;
