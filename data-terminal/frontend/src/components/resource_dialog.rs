@@ -57,7 +57,7 @@ pub fn ResourceDialog(
         port: 3306,
         username: String::new(),
         password: String::new(),
-        databases: vec![],
+        databases: String::new(),
     });
     
     let mut queue_config = use_signal(|| QueueConfigForm {
@@ -256,6 +256,25 @@ pub fn ResourceDialog(
                                                 ..database_config()
                                             });
                                         }
+                                    }
+                                }
+                            }
+                        }
+                        div { class: "form-control",
+                            label { class: "label",
+                                span { class: "label-text font-medium", "数据库名称" }
+                            }
+                            input {
+                                class: "input input-bordered w-full",
+                                disabled: is_detail_mode,
+                                placeholder: "请输入数据库名称",
+                                value: "{database_config().databases}",
+                                oninput: move |event| {
+                                    if !is_detail_mode {
+                                        database_config.set(DatabaseConfigForm {
+                                            databases: event.value(),
+                                            ..database_config()
+                                        });
                                     }
                                 }
                             }

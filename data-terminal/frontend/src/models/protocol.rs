@@ -85,7 +85,7 @@ pub struct DatabaseConfigForm {
     pub port: u16,
     pub username: String,
     pub password: String,
-    pub databases: Vec<String>,
+    pub databases: String,
 }
 
 // 队列配置表单
