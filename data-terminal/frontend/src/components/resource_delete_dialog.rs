@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::models::protocol::Resource;
+use crate::models::resource::Resource;
 
 #[component]
 pub fn ResourceDeleteDialog(

@@ -1,9 +1,12 @@
 use dioxus::prelude::*;
-use crate::models::protocol::{
+use crate::models::resource::{
     Category, ResourceType, Resource,
+};
+use crate::models::config::{
     DatabaseConfigForm, QueueConfigForm, FileSystemConfigForm, 
     VectorDatabaseConfigForm, BatchComputeConfigForm, StreamComputeConfigForm
 };
+
 
 #[derive(Clone, PartialEq)]
 pub enum ResourceModalMode {

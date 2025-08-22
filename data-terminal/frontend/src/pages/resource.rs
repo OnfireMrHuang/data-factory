@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use dioxus_router::prelude::*;
-use crate::models::protocol::{Resource, Category, ResourceType, Status};
+use crate::models::resource::{Resource, Category, ResourceType, Status};
 use crate::components::{
     resource_dialog::{ResourceDialog, ResourceModalMode},
     resource_delete_dialog::ResourceDeleteDialog,
