@@ -6,3 +6,4 @@ pub mod sidebar_left;
 pub mod sidebar_right;
 pub mod resource_dialog;
 pub mod resource_delete_dialog;
+pub mod datasource_card;

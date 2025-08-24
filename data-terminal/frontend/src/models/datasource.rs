@@ -1,10 +1,20 @@
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 // 数据源分类枚举
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum DataSourceCategory {
     Database,
     Api,
+}
+
+impl fmt::Display for DataSourceCategory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DataSourceCategory::Database => write!(f, "Database"),
+            DataSourceCategory::Api => write!(f, "Api"),
+        }
+    }
 }
 
 // 数据源类型枚举
@@ -16,12 +26,33 @@ pub enum DataSourceType {
     SubscribeApi,
 }
 
+impl fmt::Display for DataSourceType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DataSourceType::Mysql => write!(f, "Mysql"),
+            DataSourceType::Postgres => write!(f, "Postgres"),
+            DataSourceType::QueryApi => write!(f, "QueryApi"),
+            DataSourceType::SubscribeApi => write!(f, "SubscribeApi"),
+        }
+    }
+}
+
 // 连接状态枚举
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ConnectionStatus {
     Connected,
     Disconnected,
     Error,
+}
+
+impl fmt::Display for ConnectionStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ConnectionStatus::Connected => write!(f, "Connected"),
+            ConnectionStatus::Disconnected => write!(f, "Disconnected"),
+            ConnectionStatus::Error => write!(f, "Error"),
+        }
+    }
 }
 
 // 数据源结构体

@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use dioxus::hooks::use_signal;
 use dioxus_free_icons::{icons::{hi_outline_icons::*, fa_solid_icons::*, 
     md_content_icons::*, md_notification_icons::*, ld_icons::*}, Icon};
+use crate::routes::Route;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum MainMenu {
@@ -35,6 +36,7 @@ enum SubMenu {
 pub fn SidebarLeft() -> Element {
     let mut expanded = use_signal(|| None as Option<MainMenu>);
     let mut selected = use_signal(|| None as Option<SubMenu>);
+    let navigator = use_navigator();
 
     let submenu_of = |submenu: SubMenu| match submenu {
         SubMenu::DataSourceManagement | SubMenu::CollectionTasks => Some(MainMenu::DataCollection),
@@ -63,7 +65,10 @@ pub fn SidebarLeft() -> Element {
                 div { class: "pl-6 flex flex-col gap-2",
                     button {
                         class: source_class,
-                        onclick: move |_| selected.set(Some(SubMenu::DataSourceManagement)),
+                        onclick: move |_| {
+                            selected.set(Some(SubMenu::DataSourceManagement));
+                            navigator.push(Route::DatasourcePage {});
+                        },
                         Icon { icon: HiDatabase, class: "w-4 h-4" }
                         "数据源管理"
                     }

@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 
-use crate::{pages::{catch_all::PageNotFound, home::Home, login::Login, resource::ResourcePage}};
+use crate::{pages::{catch_all::PageNotFound, home::Home, login::Login, resource::ResourcePage, datasource::DatasourcePage}};
 
 #[derive(Routable, Clone, PartialEq)]
 #[rustfmt::skip]
@@ -16,6 +16,8 @@ pub enum Route {
     #[route("/resource")]
     ResourcePage {},
 
+    #[route("/datasource")]
+    DatasourcePage {},
 
     #[route("/:..route")]
     PageNotFound { route: Vec<String> },
