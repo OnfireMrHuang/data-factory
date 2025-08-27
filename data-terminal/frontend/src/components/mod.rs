@@ -7,3 +7,7 @@ pub mod sidebar_right;
 pub mod resource_dialog;
 pub mod resource_delete_dialog;
 pub mod datasource_card;
+pub mod datasource_add_dialog;
+pub mod datasource_test_dialog;
+pub mod datasource_edit_dialog;
+pub mod datasource_delete_dialog;
