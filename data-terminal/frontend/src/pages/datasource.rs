@@ -164,9 +164,9 @@ pub fn DatasourcePage() -> Element {
             div { class: "p-6 space-y-6",
                 // 页面标题
                 div { class: "flex justify-between items-center",
-                    h1 { class: "text-2xl font-bold text-gray-800", "数据源管理" }
+                    h1 { class: "text-2xl font text-gray-800", "数据源管理" }
                     button {
-                        class: "btn btn-primary",
+                        class: "btn btn-info",
                         onclick: handle_add,
                         Icon { icon: HiPlus, class: "w-4 h-4 mr-2" }
                         "添加数据源"
@@ -179,11 +179,11 @@ pub fn DatasourcePage() -> Element {
                         div { class: "flex flex-wrap items-end gap-4",
                             // 数据源分类查找框
                             div { class: "form-control",
-                                label { class: "label", "数据源分类" }
                                 select {
                                     class: "select select-bordered w-full",
                                     value: "{category_filter}",
                                     onchange: move |e| category_filter.set(e.value().to_string()),
+                                    option { value: "", disabled: true, selected: category_filter().is_empty(), "数据源分类" }
                                     option { value: "", "全部分类" }
                                     option { value: "Database", "数据库" }
                                     option { value: "Api", "API" }
@@ -192,11 +192,11 @@ pub fn DatasourcePage() -> Element {
                             
                             // 数据源类型查找框
                             div { class: "form-control",
-                                label { class: "label", "数据源类型" }
                                 select {
                                     class: "select select-bordered w-full",
                                     value: "{type_filter}",
                                     onchange: move |e| type_filter.set(e.value().to_string()),
+                                    option { value: "", disabled: true, selected: type_filter().is_empty(), "数据源类型" }
                                     option { value: "", "全部类型" }
                                     option { value: "Mysql", "MySQL" }
                                     option { value: "Postgres", "PostgreSQL" }
@@ -207,11 +207,11 @@ pub fn DatasourcePage() -> Element {
                             
                             // 数据源状态搜索框
                             div { class: "form-control",
-                                label { class: "label", "连接状态" }
                                 select {
                                     class: "select select-bordered w-full",
                                     value: "{status_filter}",
                                     onchange: move |e| status_filter.set(e.value().to_string()),
+                                    option { value: "", disabled: true, selected: status_filter().is_empty(), "连接状态" }
                                     option { value: "", "全部状态" }
                                     option { value: "Connected", "已连接" }
                                     option { value: "Disconnected", "未连接" }
@@ -221,10 +221,9 @@ pub fn DatasourcePage() -> Element {
                             
                             // 数据源名称搜索框
                             div { class: "form-control",
-                                label { class: "label", "数据源名称" }
                                 input {
                                     class: "input input-bordered w-full",
-                                    placeholder: "输入数据源名称",
+                                    placeholder: "数据源名称",
                                     value: "{name_filter}",
                                     oninput: move |e| name_filter.set(e.value().to_string())
                                 }
@@ -232,18 +231,15 @@ pub fn DatasourcePage() -> Element {
                             
                             // 搜索按钮
                             div { class: "form-control",
-                                label { class: "label", "操作" }
                                 button {
-                                    class: "btn btn-primary w-full",
+                                    class: "btn btn-info w-full",
                                     onclick: handle_search,
-                                    Icon { icon: HiSearch, class: "w-4 h-4 mr-2" }
                                     "搜索"
                                 }
                             }
                         }
                     }
                 }
-                
                 // 数据源卡片列表
                 div { class: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6",
                     for datasource in filtered_datasources().iter() {

@@ -3,6 +3,7 @@ use dioxus::hooks::use_signal;
 use dioxus_free_icons::{icons::{hi_outline_icons::*, fa_solid_icons::*, 
     md_content_icons::*, md_notification_icons::*, ld_icons::*}, Icon};
 use crate::routes::Route;
+use web_sys::window;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum MainMenu {
@@ -32,18 +33,51 @@ enum SubMenu {
     StreamTaskMonitoring,
 }
 
+// 持久化展开状态到本地存储
+fn save_expanded_to_storage(expanded: Option<MainMenu>) {
+    if let Some(storage) = window().and_then(|w| w.local_storage().ok().flatten()) {
+        let value = match expanded {
+            Some(MainMenu::DataCollection) => "DataCollection",
+            Some(MainMenu::DataProcessing) => "DataProcessing",
+            Some(MainMenu::DataSupply) => "DataSupply",
+            Some(MainMenu::OpsMonitoring) => "OpsMonitoring",
+            None => "",
+        };
+        let _ = storage.set_item("sidebar_expanded", value);
+    }
+}
+
+fn load_expanded_from_storage() -> Option<MainMenu> {
+    if let Some(storage) = window().and_then(|w| w.local_storage().ok().flatten()) {
+        if let Ok(Some(v)) = storage.get_item("sidebar_expanded") {
+            return match v.as_str() {
+                "DataCollection" => Some(MainMenu::DataCollection),
+                "DataProcessing" => Some(MainMenu::DataProcessing),
+                "DataSupply" => Some(MainMenu::DataSupply),
+                "OpsMonitoring" => Some(MainMenu::OpsMonitoring),
+                _ => None,
+            };
+        }
+    }
+    None
+}
+
 #[component]
 pub fn SidebarLeft() -> Element {
     let mut expanded = use_signal(|| None as Option<MainMenu>);
     let mut selected = use_signal(|| None as Option<SubMenu>);
     let navigator = use_navigator();
 
-    let submenu_of = |submenu: SubMenu| match submenu {
-        SubMenu::DataSourceManagement | SubMenu::CollectionTasks => Some(MainMenu::DataCollection),
-        SubMenu::WideTableDevelopment | SubMenu::FileDevelopment | SubMenu::StreamDevelopment => Some(MainMenu::DataProcessing),
-        SubMenu::DataQuery | SubMenu::DataSync | SubMenu::DataSubscription => Some(MainMenu::DataSupply),
-        SubMenu::CollectionTaskMonitoring | SubMenu::WideTableTaskMonitoring | SubMenu::FileTaskMonitoring | SubMenu::StreamTaskMonitoring => Some(MainMenu::OpsMonitoring),
-    };
+    // 首次渲染时恢复展开状态
+    let mut did_init = use_signal(|| false);
+    if !did_init() {
+        if let Some(init) = load_expanded_from_storage() {
+            expanded.set(Some(init));
+        }
+        did_init.set(true);
+    }
+
+    // 计算所属主菜单的逻辑已不需要显式闭包（主菜单高亮只在无子菜单选中时生效）
 
     let render_submenu = |main: MainMenu| match main {
         MainMenu::DataCollection => {
@@ -237,6 +271,10 @@ pub fn SidebarLeft() -> Element {
             // 主页一级菜单按钮
             button {
                 class: "btn btn-ghost text-base font-medium flex items-center gap-3 text-primary w-full justify-start mb-4",
+                onclick: move |_| {
+                    selected.set(None);
+                    navigator.push(Route::Home {});
+                },
                 Icon { icon: HiHome, class: "w-5 h-5" }
                 span { "主页" }
             }
@@ -244,15 +282,18 @@ pub fn SidebarLeft() -> Element {
             button {
                 class: {
                     let mut class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
-                    let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::DataCollection));
-                    if is_selected || expanded() == Some(MainMenu::DataCollection) {
+                    let any_sub_selected = selected().is_some();
+                    if expanded() == Some(MainMenu::DataCollection) && !any_sub_selected {
                         class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                     }
                     class
                 },
-                onclick: move |_| expanded.set(
-                    if expanded() == Some(MainMenu::DataCollection) { None } else { Some(MainMenu::DataCollection) }
-                ),
+                onclick: move |_| {
+                    let new_state = if expanded() == Some(MainMenu::DataCollection) { None } else { Some(MainMenu::DataCollection) };
+                    expanded.set(new_state);
+                    selected.set(None);
+                    save_expanded_to_storage(new_state);
+                },
                 Icon { icon: HiCollection, class: "w-5 h-5" }
                 span { "数据采集" }
                 span {
@@ -270,15 +311,18 @@ pub fn SidebarLeft() -> Element {
             button {
                 class: {
                     let mut class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
-                    let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::DataProcessing));
-                    if is_selected || expanded() == Some(MainMenu::DataProcessing) {
+                    let any_sub_selected = selected().is_some();
+                    if expanded() == Some(MainMenu::DataProcessing) && !any_sub_selected {
                         class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                     }
                     class
                 },
-                onclick: move |_| expanded.set(
-                    if expanded() == Some(MainMenu::DataProcessing) { None } else { Some(MainMenu::DataProcessing) }
-                ),
+                onclick: move |_| {
+                    let new_state = if expanded() == Some(MainMenu::DataProcessing) { None } else { Some(MainMenu::DataProcessing) };
+                    expanded.set(new_state);
+                    selected.set(None);
+                    save_expanded_to_storage(new_state);
+                },
                 Icon { icon: FaHammer, class: "w-5 h-5" }
                 span { "数据加工" }
                 span {
@@ -296,15 +340,18 @@ pub fn SidebarLeft() -> Element {
             button {
                 class: {
                     let mut class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
-                    let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::DataSupply));
-                    if is_selected || expanded() == Some(MainMenu::DataSupply) {
+                    let any_sub_selected = selected().is_some();
+                    if expanded() == Some(MainMenu::DataSupply) && !any_sub_selected {
                         class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                     }
                     class
                 },
-                onclick: move |_| expanded.set(
-                    if expanded() == Some(MainMenu::DataSupply) { None } else { Some(MainMenu::DataSupply) }
-                ),
+                onclick: move |_| {
+                    let new_state = if expanded() == Some(MainMenu::DataSupply) { None } else { Some(MainMenu::DataSupply) };
+                    expanded.set(new_state);
+                    selected.set(None);
+                    save_expanded_to_storage(new_state);
+                },
                 Icon { icon: HiShare, class: "w-5 h-5" }
                 span { "数据供应" }
                 span {
@@ -322,15 +369,18 @@ pub fn SidebarLeft() -> Element {
             button {
                 class: {
                     let mut class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-base-content/70 hover:text-base-content".to_string();
-                    let is_selected = selected().map_or(false, |s| submenu_of(s) == Some(MainMenu::OpsMonitoring));
-                    if is_selected || expanded() == Some(MainMenu::OpsMonitoring) {
+                    let any_sub_selected = selected().is_some();
+                    if expanded() == Some(MainMenu::OpsMonitoring) && !any_sub_selected {
                         class = "btn btn-ghost text-base font-medium flex items-center gap-3 w-full justify-start text-primary bg-primary/10".to_string();
                     }
                     class
                 },
-                onclick: move |_| expanded.set(
-                    if expanded() == Some(MainMenu::OpsMonitoring) { None } else { Some(MainMenu::OpsMonitoring) }
-                ),
+                onclick: move |_| {
+                    let new_state = if expanded() == Some(MainMenu::OpsMonitoring) { None } else { Some(MainMenu::OpsMonitoring) };
+                    expanded.set(new_state);
+                    selected.set(None);
+                    save_expanded_to_storage(new_state);
+                },
                 Icon { icon: LdMonitorCheck, class: "w-5 h-5" }
                 span { "运维监控" }
                 span {

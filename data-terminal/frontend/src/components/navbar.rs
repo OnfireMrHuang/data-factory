@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use dioxus_router::prelude::*;
 use super::project_panel::ProjectPanel;
 use crate::routes::Route;
 use dioxus_free_icons::{icons::{bs_icons::*, ld_icons::*}, Icon};
@@ -54,7 +53,7 @@ pub fn Navbar() -> Element {
     };
     
     // 处理设置按钮点击
-    let mut handle_settings_click = move |_| {
+    let handle_settings_click = move |_| {
         let current = *is_dropdown_open.read();
         is_dropdown_open.set(!current);
     };
@@ -65,25 +64,11 @@ pub fn Navbar() -> Element {
     };
 
     rsx! {
-        nav { class: "flex items-center justify-between h-16 px-4 bg-base-300",
-            // 左侧项目选择器
+        nav { class: "flex items-center h-16 px-4 bg-base-300",
+            // 左侧项目选择器（靠左）
             ProjectPanel {}
-            // 中间 input
-            div { class: "flex-1 flex justify-start",
-                div { class: "relative w-1/5 mx-4",
-                    svg { class: "absolute left-2 top-1/2 -translate-y-1/2 text-gray-400", width: "18", height: "18", fill: "none", stroke: "currentColor", stroke_width: "2", view_box: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg",
-                        circle { cx: "11", cy: "11", r: "8" }
-                        line { x1: "21", y1: "21", x2: "16.65", y2: "16.65" }
-                    }
-                    input {
-                        class: "w-full pl-8 pr-2 py-1 bg-base-200 border-none shadow-none text-base-content rounded focus:outline-none focus:ring-0",
-                        r#type: "text",
-                        placeholder: "搜索..."
-                    }
-                }
-            }
-            // 右侧按钮
-            div { class: "flex gap-2 items-center",
+            // 右侧按钮（靠右）
+            div { class: "ml-auto flex gap-2 items-center",
                 button { class: "btn flex items-center gap-1",
                     Icon { icon: LdBot, class: "w-5 h-5" }
                     "智能助手"

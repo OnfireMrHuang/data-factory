@@ -37,3 +37,8 @@ To run for a different platform, use the `--platform platform` flag. E.g.
 dx serve --platform desktop
 ```
 
+### svg compression
+
+```bash
+svgo -o assets/icons/icon.svg assets/icons/icon.svg
+```

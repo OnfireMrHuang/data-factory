@@ -8,28 +8,30 @@ fn get_datasource_icon(datasource_type: &DataSourceType) -> Element {
     match datasource_type {
         DataSourceType::Mysql => rsx! {
             img { 
-                src: "/assets/resource/mysql.svg", 
-                class: "w-8 h-8",
+                src: asset!("/assets/resource/mysql.svg"), 
+                class: "w-16 h-16",
                 alt: "MySQL"
             }
         },
         DataSourceType::Postgres => rsx! {
             img { 
-                src: "/assets/resource/postgres.svg", 
-                class: "w-8 h-8",
+                src: asset!("/assets/resource/postgres.svg"), 
+                class: "w-16 h-16",
                 alt: "PostgreSQL"
             }
         },
         DataSourceType::QueryApi => rsx! {
-            Icon { 
-                icon: HiGlobe,
-                class: "w-8 h-8 text-blue-500"
+            img { 
+                src: asset!("/assets/datasource/query-api.svg"), 
+                class: "w-16 h-16",
+                alt: "Query API"
             }
         },
         DataSourceType::SubscribeApi => rsx! {
-            Icon { 
-                icon: HiBell,
-                class: "w-8 h-8 text-green-500"
+            img { 
+                src: asset!("/assets/datasource/subscribe-api.svg"), 
+                class: "w-16 h-16",
+                alt: "Subscribe API"
             }
         },
     }

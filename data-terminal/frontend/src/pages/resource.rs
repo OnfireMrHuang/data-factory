@@ -177,7 +177,7 @@ pub fn ResourcePage() -> Element {
                 }
                 div { class: "flex items-center space-x-4",
                     button {
-                        class: "bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2",
+                        class: "btn btn-info",
                         onclick: handle_add_resource,
                         span { "➕" }
                         span { "新增资源" }
