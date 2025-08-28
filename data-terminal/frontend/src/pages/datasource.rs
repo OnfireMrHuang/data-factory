@@ -1,12 +1,6 @@
 use dioxus::prelude::*;
 use crate::components::framework::Framework;
 use crate::components::datasource_card::DatasourceCard;
-use crate::components::{
-    datasource_add_dialog::AddDatasourceDialog,
-    datasource_test_dialog::TestDatasourceDialog,
-    datasource_edit_dialog::EditDatasourceDialog,
-    datasource_delete_dialog::DeleteDatasourceDialog,
-};
 use crate::models::datasource::*;
 use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 
@@ -280,71 +274,6 @@ pub fn DatasourcePage() -> Element {
                         }
                     }
                 }
-            }
-        }
-        // 对话框：添加
-        AddDatasourceDialog {
-            open: show_add(),
-            on_close: move |_| show_add.set(false),
-            on_submit: move |form: DataSourceFormData| {
-                // 简单追加到本地列表
-                let mut list = datasources();
-                let new = DataSource{
-                    id: format!("{}", list.len() + 1),
-                    name: form.name,
-                    description: form.description,
-                    category: form.category,
-                    datasource_type: form.datasource_type,
-                    connection_config: form.connection_config,
-                    connection_status: ConnectionStatus::Disconnected,
-                    created_at: "2024-01-22T00:00:00Z".to_string(),
-                    updated_at: "2024-01-22T00:00:00Z".to_string(),
-                };
-                list.push(new);
-                datasources.set(list);
-                show_add.set(false);
-            }
-        }
-        // 对话框：测试
-        TestDatasourceDialog {
-            open: show_test(),
-            datasource: selected_ds(),
-            on_close: move |_| { show_test.set(false); selected_ds.set(None); },
-            on_test: move |id: String| {
-                log::info!("开始测试连接: {}", id);
-            }
-        }
-        // 对话框：编辑
-        EditDatasourceDialog {
-            open: show_edit(),
-            datasource: selected_ds(),
-            on_close: move |_| { show_edit.set(false); selected_ds.set(None); },
-            on_submit: move |upd: DataSourceCreateUpdate| {
-                let mut list = datasources();
-                if let Some(item) = list.iter_mut().find(|d| d.id == upd.id) {
-                    item.name = upd.name;
-                    item.description = upd.description;
-                    item.category = upd.category;
-                    item.datasource_type = upd.datasource_type;
-                    item.connection_config = upd.connection_config;
-                    item.updated_at = "2024-01-22T00:00:00Z".to_string();
-                }
-                datasources.set(list);
-                show_edit.set(false);
-                selected_ds.set(None);
-            }
-        }
-        // 对话框：删除
-        DeleteDatasourceDialog {
-            open: show_delete(),
-            datasource: selected_ds(),
-            on_close: move |_| { show_delete.set(false); selected_ds.set(None); },
-            on_confirm: move |id: String| {
-                let mut list = datasources();
-                list.retain(|d| d.id != id);
-                datasources.set(list);
-                show_delete.set(false);
-                selected_ds.set(None);
             }
         }
     }
