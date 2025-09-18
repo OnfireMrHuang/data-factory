@@ -5,7 +5,8 @@
       "mcp__wonderwhy-er-desktop-commander__read_multiple_files",
       "mcp__wonderwhy-er-desktop-commander__start_search",
       "mcp__wonderwhy-er-desktop-commander__get_more_search_results",
-      "mcp__wonderwhy-er-desktop-commander__read_file"
+      "mcp__wonderwhy-er-desktop-commander__read_file",
+      "mcp__wonderwhy-er-desktop-commander__write_file"
     ],
     "deny": [],
     "ask": []
