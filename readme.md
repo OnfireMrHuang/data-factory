@@ -21,7 +21,7 @@ Data-factory是一个数据管理服务，它提供了一个统一的数据仓�
 
 <div align="center">
 
-![data-factory](./documents/diagrams/out/src/data-factory/data-factory.png)
+![data-factory](./reference/diagrams/out/src/data-factory/data-factory.png)
 
 </div>
 
@@ -35,10 +35,10 @@ TODO!!!
 
 数据引擎标准ETL的数据链路支持
 
-![data-engine-standard](./documents/diagrams/out/src/data-engine-standard/data-engine-standard.png)
+![data-engine-standard](./reference/diagrams/out/src/data-engine-standard/data-engine-standard.png)
 
 数据引擎定制化ETL的数据链路支持
-![data-engine-custom](./documents/diagrams/out/src/data-engine-custom/data-engine-custom.png)
+![data-engine-custom](./reference/diagrams/out/src/data-engine-custom/data-engine-custom.png)
 
 </div>
 
@@ -50,7 +50,7 @@ TODO!!!
 
 ### 📮 installation and deployment
 
-See how to install and deploy 🔗[Installation and deployment](./documents/installation-and-deployment/) 
+See how to install and deploy 🔗[Installation and deployment](./devops/installation-and-deployment/) 
 
 
 
