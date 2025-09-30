@@ -1,6 +1,8 @@
 use dioxus::prelude::*;
 use crate::components::framework::Framework;
 use crate::components::datasource_card::DatasourceCard;
+use crate::components::datasource_type_dialog::DataSourceTypeDialog;
+use crate::components::mysql_config_page::{MysqlConfigPage, MysqlConfig};
 use crate::models::datasource::*;
 use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 
@@ -92,11 +94,15 @@ fn get_mock_datasources() -> Vec<DataSource> {
 pub fn DatasourcePage() -> Element {
     let mut datasources = use_signal(|| get_mock_datasources());
     let mut selected_ds = use_signal(|| None as Option<DataSource>);
-    let mut show_add = use_signal(|| false);
     let mut show_test = use_signal(|| false);
     let mut show_edit = use_signal(|| false);
     let mut show_delete = use_signal(|| false);
-    
+
+    // New dialog states
+    let mut show_type_dialog = use_signal(|| false);
+    let mut show_config_page = use_signal(|| false);
+    let mut selected_type = use_signal(|| None as Option<DataSourceType>);
+
     // 搜索状态
     let mut category_filter = use_signal(String::new);
     let mut type_filter = use_signal(String::new);
@@ -163,10 +169,63 @@ pub fn DatasourcePage() -> Element {
             show_delete.set(true);
         }
     };
-    
-    // 添加数据源
+
+    // 添加数据源 - Updated to show type dialog
     let handle_add = move |_| {
-        show_add.set(true);
+        show_type_dialog.set(true);
+    };
+
+    // Handle datasource type selection
+    let handle_type_select = move |ds_type: DataSourceType| {
+        selected_type.set(Some(ds_type));
+        show_type_dialog.set(false);
+        show_config_page.set(true);
+    };
+
+    // Handle MySQL config save
+    let handle_config_save = move |config: MysqlConfig| {
+        // Create new datasource from config
+        let new_ds = DataSource {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: config.name,
+            description: config.description,
+            category: DataSourceCategory::Database,
+            datasource_type: DataSourceType::Mysql,
+            connection_config: serde_json::json!({
+                "host": config.host,
+                "port": config.port,
+                "username": config.username,
+                "password": config.password,
+                "database": config.database
+            }),
+            connection_status: ConnectionStatus::Disconnected,
+            created_at: chrono::Utc::now().to_rfc3339(),
+            updated_at: chrono::Utc::now().to_rfc3339(),
+        };
+
+        let mut current_datasources = datasources();
+        current_datasources.push(new_ds);
+        datasources.set(current_datasources);
+        show_config_page.set(false);
+
+        log::info!("MySQL datasource saved successfully");
+    };
+
+    // Handle MySQL connection test
+    let handle_test_mysql = move |config: MysqlConfig| {
+        log::info!("Testing MySQL connection: {}@{}:{}/{}",
+            config.username, config.host, config.port, config.database);
+        // TODO: Implement actual connection test via backend API
+    };
+
+    // Handle config cancel
+    let handle_config_cancel = move |_| {
+        show_config_page.set(false);
+    };
+
+    // Handle type dialog close
+    let handle_type_close = move |_| {
+        show_type_dialog.set(false);
     };
 
     rsx! {
@@ -274,6 +333,21 @@ pub fn DatasourcePage() -> Element {
                         }
                     }
                 }
+            }
+
+            // Datasource Type Selection Dialog
+            DataSourceTypeDialog {
+                show: show_type_dialog,
+                on_select: handle_type_select,
+                on_close: handle_type_close,
+            }
+
+            // MySQL Configuration Page
+            MysqlConfigPage {
+                show: show_config_page,
+                on_save: handle_config_save,
+                on_cancel: handle_config_cancel,
+                on_test_connection: handle_test_mysql,
             }
         }
     }
