@@ -101,7 +101,7 @@ pub fn SidebarLeft() -> Element {
                         class: source_class,
                         onclick: move |_| {
                             selected.set(Some(SubMenu::DataSourceManagement));
-                            navigator.push(Route::DatasourcePage {});
+                            navigator.push(Route::DatasourceOverViewPage {});
                         },
                         Icon { icon: HiDatabase, class: "w-4 h-4" }
                         "数据源管理"

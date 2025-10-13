@@ -1,8 +1,7 @@
 use dioxus::prelude::*;
-use crate::components::framework::Framework;
 use crate::components::datasource_card::DatasourceCard;
 use crate::components::datasource_type_dialog::DataSourceTypeDialog;
-use crate::components::mysql_config_page::{MysqlConfigPage, MysqlConfig};
+use crate::pages::datasource_mysql_config::{DatasourceMysqlConfig, MysqlConfig};
 use crate::models::datasource::*;
 use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 
@@ -91,7 +90,7 @@ fn get_mock_datasources() -> Vec<DataSource> {
 }
 
 #[component]
-pub fn DatasourcePage() -> Element {
+pub fn DatasourceOverViewPage() -> Element {
     let mut datasources = use_signal(|| get_mock_datasources());
     let mut selected_ds = use_signal(|| None as Option<DataSource>);
     let mut show_test = use_signal(|| false);
@@ -218,10 +217,10 @@ pub fn DatasourcePage() -> Element {
         // TODO: Implement actual connection test via backend API
     };
 
-    // Handle config cancel
-    let handle_config_cancel = move |_| {
-        show_config_page.set(false);
-    };
+    // // Handle config cancel
+    // let handle_config_cancel = move |_| {
+    //     show_config_page.set(false);
+    // };
 
     // Handle type dialog close
     let handle_type_close = move |_| {
@@ -229,7 +228,6 @@ pub fn DatasourcePage() -> Element {
     };
 
     rsx! {
-        Framework {
             div { class: "p-6 space-y-6",
                 // 页面标题
                 div { class: "flex justify-between items-center",
@@ -341,14 +339,5 @@ pub fn DatasourcePage() -> Element {
                 on_select: handle_type_select,
                 on_close: handle_type_close,
             }
-
-            // MySQL Configuration Page
-            MysqlConfigPage {
-                show: show_config_page,
-                on_save: handle_config_save,
-                on_cancel: handle_config_cancel,
-                on_test_connection: handle_test_mysql,
-            }
-        }
     }
 }
