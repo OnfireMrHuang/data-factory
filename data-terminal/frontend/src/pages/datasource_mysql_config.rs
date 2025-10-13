@@ -26,41 +26,41 @@ impl Default for MysqlConfig {
     }
 }
 
+// Shared validation function
+fn validate_config(cfg: &MysqlConfig) -> Vec<String> {
+    let mut errors = Vec::new();
+
+    if cfg.name.trim().is_empty() {
+        errors.push("数据源名称不能为空".to_string());
+    }
+    if cfg.host.trim().is_empty() {
+        errors.push("主机地址不能为空".to_string());
+    }
+    if cfg.port == 0 || cfg.port > 65535 {
+        errors.push("端口必须在1-65535之间".to_string());
+    }
+    if cfg.username.trim().is_empty() {
+        errors.push("用户名不能为空".to_string());
+    }
+    if cfg.password.trim().is_empty() {
+        errors.push("密码不能为空".to_string());
+    }
+    if cfg.database.trim().is_empty() {
+        errors.push("数据库名称不能为空".to_string());
+    }
+
+    errors
+}
+
 #[component]
-pub fn DatasourceMysqlConfig() -> Element {
+pub fn DatasourceMysqlAdd() -> Element {
     let mut config = use_signal(MysqlConfig::default);
     let mut validation_errors = use_signal(|| Vec::<String>::new());
 
-    // Validation function
-    let validate_form = move || -> Vec<String> {
-        let mut errors = Vec::new();
-        let cfg = config();
-
-        if cfg.name.trim().is_empty() {
-            errors.push("数据源名称不能为空".to_string());
-        }
-        if cfg.host.trim().is_empty() {
-            errors.push("主机地址不能为空".to_string());
-        }
-        if cfg.port == 0 || cfg.port > 65535 {
-            errors.push("端口必须在1-65535之间".to_string());
-        }
-        if cfg.username.trim().is_empty() {
-            errors.push("用户名不能为空".to_string());
-        }
-        if cfg.password.trim().is_empty() {
-            errors.push("密码不能为空".to_string());
-        }
-        if cfg.database.trim().is_empty() {
-            errors.push("数据库名称不能为空".to_string());
-        }
-
-        errors
-    };
-
     let handle_save = move |_| {
-        let errors = validate_form();
+        let errors = validate_config(&config());
         if errors.is_empty() {
+            // TODO: Save new datasource
             config.set(MysqlConfig::default());
             validation_errors.set(Vec::new());
         } else {
@@ -69,15 +69,16 @@ pub fn DatasourceMysqlConfig() -> Element {
     };
 
     let handle_test = move |_| {
-        let errors = validate_form();
+        let errors = validate_config(&config());
         if errors.is_empty() {
+            // TODO: Test connection
             validation_errors.set(Vec::new());
         } else {
             validation_errors.set(errors);
         }
     };
 
-    let is_form_valid = validate_form().is_empty();
+    let is_form_valid = validate_config(&config()).is_empty();
 
     rsx! {
         div { class: "w-full max-w-5xl mx-auto p-6",
@@ -87,11 +88,10 @@ pub fn DatasourceMysqlConfig() -> Element {
                 div { class: "text-sm breadcrumbs",
                     ul {
                         li { a { "数据源管理" } }
-                        li { a { "添加数据源" } }
-                        li { "MySQL配置" }
+                        li { "添加MySQL数据源" }
                     }
                 }
-                h3 { class: "text-2xl font-bold mt-2", "MySQL数据源配置" }
+                h3 { class: "text-2xl font-bold mt-2", "添加MySQL数据源" }
             }
 
             // Validation Errors Display

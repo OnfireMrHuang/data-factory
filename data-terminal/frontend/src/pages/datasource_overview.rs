@@ -1,7 +1,8 @@
 use dioxus::prelude::*;
+use crate::routes::Route;
 use crate::components::datasource_card::DatasourceCard;
 use crate::components::datasource_type_dialog::DataSourceTypeDialog;
-use crate::pages::datasource_mysql_config::{DatasourceMysqlConfig, MysqlConfig};
+use crate::pages::datasource_mysql_config::{MysqlConfig};
 use crate::models::datasource::*;
 use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 
@@ -91,6 +92,9 @@ fn get_mock_datasources() -> Vec<DataSource> {
 
 #[component]
 pub fn DatasourceOverViewPage() -> Element {
+
+    let navigator = use_navigator();
+
     let mut datasources = use_signal(|| get_mock_datasources());
     let mut selected_ds = use_signal(|| None as Option<DataSource>);
     let mut show_test = use_signal(|| false);
@@ -99,7 +103,6 @@ pub fn DatasourceOverViewPage() -> Element {
 
     // New dialog states
     let mut show_type_dialog = use_signal(|| false);
-    let mut show_config_page = use_signal(|| false);
     let mut selected_type = use_signal(|| None as Option<DataSourceType>);
 
     // 搜索状态
@@ -178,36 +181,7 @@ pub fn DatasourceOverViewPage() -> Element {
     let handle_type_select = move |ds_type: DataSourceType| {
         selected_type.set(Some(ds_type));
         show_type_dialog.set(false);
-        show_config_page.set(true);
-    };
-
-    // Handle MySQL config save
-    let handle_config_save = move |config: MysqlConfig| {
-        // Create new datasource from config
-        let new_ds = DataSource {
-            id: uuid::Uuid::new_v4().to_string(),
-            name: config.name,
-            description: config.description,
-            category: DataSourceCategory::Database,
-            datasource_type: DataSourceType::Mysql,
-            connection_config: serde_json::json!({
-                "host": config.host,
-                "port": config.port,
-                "username": config.username,
-                "password": config.password,
-                "database": config.database
-            }),
-            connection_status: ConnectionStatus::Disconnected,
-            created_at: chrono::Utc::now().to_rfc3339(),
-            updated_at: chrono::Utc::now().to_rfc3339(),
-        };
-
-        let mut current_datasources = datasources();
-        current_datasources.push(new_ds);
-        datasources.set(current_datasources);
-        show_config_page.set(false);
-
-        log::info!("MySQL datasource saved successfully");
+        navigator.push(Route::DatasourceMysqlAdd{});
     };
 
     // Handle MySQL connection test
@@ -217,10 +191,6 @@ pub fn DatasourceOverViewPage() -> Element {
         // TODO: Implement actual connection test via backend API
     };
 
-    // // Handle config cancel
-    // let handle_config_cancel = move |_| {
-    //     show_config_page.set(false);
-    // };
 
     // Handle type dialog close
     let handle_type_close = move |_| {

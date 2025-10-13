@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 
 use crate::components::{navbar::Navbar, sidebar_left::SidebarLeft, sidebar_right::SidebarRight};
-use crate::{pages::{catch_all::PageNotFound, home::Home, login::Login, resource::ResourcePage, datasource_overview::DatasourceOverViewPage, datasource_mysql_config::DatasourceMysqlConfig}};
+use crate::{pages::{catch_all::PageNotFound, home::Home, login::Login, resource::ResourcePage, datasource_overview::DatasourceOverViewPage, datasource_mysql_config::DatasourceMysqlAdd}};
 
 #[derive(Routable, Clone, PartialEq)]
 #[rustfmt::skip]
@@ -18,8 +18,11 @@ pub enum Route {
         #[nest("/datasource")]
             #[route("/")]
             DatasourceOverViewPage {},
-            #[route("/mysql/config")]
-            DatasourceMysqlConfig {},
+            #[nest("/mysql")]
+                #[route("/add")]
+                DatasourceMysqlAdd {},
+                // #[route("/edit/:id")]
+            #[end_nest]    
         #[end_nest]
     #[end_layout]
 
