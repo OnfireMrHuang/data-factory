@@ -8,6 +8,7 @@ pub fn routes() -> Router {
     Router::new()
         .route("/add", post(add_datasource))
         .route("/update", post(update_datasource))
+        .route("/ping", post(ping_datasource))
         .route("/list", get(list_datasource))
         .route("/{id}", get(detail_datasource))
         .route("/{id}", delete(delete_datasource))
@@ -60,6 +61,19 @@ async fn update_datasource(
         Err(e) => (StatusCode::OK, Json(Response::error(e.to_string()))),
     }
 }
+
+#[debug_handler]
+async fn ping_datasource(
+    claims: Claims,
+    Json(datasource): Json<DataSourceCreateUpdate>,
+) -> (StatusCode, Json<Response<String>>) {
+    let result = autofac::get_global_app_state_ref().get_datasource_service().ping_datasource(claims.project, datasource).await;
+    match result {
+        Ok(_) => (StatusCode::OK, Json(Response::success("".to_string()))),
+        Err(e) => (StatusCode::OK, Json(Response::error(e.to_string()))),
+    }
+}
+
 
 #[debug_handler]
 async fn detail_datasource(

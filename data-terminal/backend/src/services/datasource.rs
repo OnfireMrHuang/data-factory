@@ -1,11 +1,13 @@
 use crate::repositories::{DataSourceRepo};
 use crate::models::{Error};
 use crate::models::web::PageQuery;
-use crate::models::datasource::{DataSource, DataSourceReadOnly, DataSourceCreateUpdate};
+use crate::models::datasource::{DataSource, DataSourceReadOnly, DataSourceCreateUpdate, DataSourceType};
 use shaku::Provider;
 use async_trait::async_trait;
 use super::DataSourceService;
 use chrono;
+use uuid::Uuid;
+use sqlx::mysql::MySqlPoolOptions;
 
 #[derive(Provider)]
 #[shaku(interface = DataSourceService)]
@@ -17,7 +19,8 @@ pub struct DataSourceServiceImpl {
 #[async_trait]
 impl DataSourceService for DataSourceServiceImpl {
     async fn add_datasource(&self, project_code: String, datasource: DataSourceCreateUpdate) -> Result<String, Error> {
-        let datasource = DataSource::from(datasource);
+        let mut datasource = DataSource::from(datasource);
+        datasource.id = Uuid::new_v4().to_string();
         let result = self.repo.add_datasource(project_code, datasource).await;
         match result {
             Ok(id) => Ok(id),
@@ -37,6 +40,16 @@ impl DataSourceService for DataSourceServiceImpl {
         match result {
             Ok(_) => Ok(()),
             Err(e) => Err(e),
+        }
+    }
+
+    async fn ping_datasource(&self, project_code: String, datasource: DataSourceCreateUpdate) -> Result<(), Error> {
+        let datasource = DataSource::from(datasource);
+        match datasource.datasource_type {
+            DataSourceType::Mysql => Ok(()), // TODO: 添加 MySQL 数据源的 ping 功能
+            _ => {
+                return Err(Error::NotImplemented);
+            }
         }
     }
 

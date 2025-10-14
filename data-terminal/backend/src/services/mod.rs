@@ -31,6 +31,7 @@ pub trait ResourceService: Send {
 pub trait DataSourceService: Send {
     async fn add_datasource(&self, project_code: String, datasource: DataSourceCreateUpdate) -> Result<String, Error>;
     async fn edit_datasource(&self, project_code: String, datasource: DataSourceCreateUpdate) -> Result<(), Error>;
+    async fn ping_datasource(&self, project_code: String, datasource: DataSourceCreateUpdate) -> Result<(), Error>;
     async fn del_datasource(&self, project_code: String, id: String) -> Result<(), Error>;
     async fn get_datasource(&self, project_code: String, id: String) -> Result<DataSourceReadOnly, Error>;
     async fn list_datasource(&self, project_code: String, params: PageQuery) -> Result<Vec<DataSourceReadOnly>, Error>;

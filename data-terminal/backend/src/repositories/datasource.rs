@@ -16,7 +16,7 @@ impl DataSourceRepo for DataSourceRepoImpl {
     async fn add_datasource(&self, project_code: String, datasource: DataSource) -> Result<String, Error> {
         datasource.validate()?;
 
-        let pool = get_project_db(project_code);
+        let pool = get_project_db(project_code).await?;
         let id = datasource.id.clone();
         let name = datasource.name.clone();
         let description = datasource.description.clone();
@@ -49,7 +49,7 @@ impl DataSourceRepo for DataSourceRepoImpl {
     async fn edit_datasource(&self, project_code: String, datasource: DataSource) -> Result<(), Error> {
         datasource.validate()?;
 
-        let pool = get_project_db(project_code);
+        let pool = get_project_db(project_code).await?;
         let id = datasource.id.clone();
         let name = datasource.name.clone();
         let description = datasource.description.clone();
@@ -78,7 +78,7 @@ impl DataSourceRepo for DataSourceRepoImpl {
     }
 
     async fn del_datasource(&self, project_code: String, id: String) -> Result<(), Error> {
-        let pool = get_project_db(project_code);
+        let pool = get_project_db(project_code).await?;
 
         let sql = "DELETE FROM df_c_datasource WHERE id = ?";
         let _ = pool.execute(sqlx::query(sql).bind(&id)).await?;
@@ -87,7 +87,7 @@ impl DataSourceRepo for DataSourceRepoImpl {
     }
 
     async fn get_datasource(&self, project_code: String, id: String) -> Result<DataSource, Error> {
-        let pool = get_project_db(project_code);
+        let pool = get_project_db(project_code).await?;
         let sql = "SELECT * FROM df_c_datasource WHERE id = ?";
         let result = sqlx::query_as::<_, DataSource>(sql)
             .bind(&id)
@@ -98,7 +98,7 @@ impl DataSourceRepo for DataSourceRepoImpl {
     }
 
     async fn list_datasource(&self, project_code: String, params: PageQuery) -> Result<Vec<DataSource>, Error> {
-        let pool = get_project_db(project_code);
+        let pool = get_project_db(project_code).await?;
         let keyword = params.keyword.unwrap_or_default();
         let page = params.page.unwrap_or(1);
         let page_size = params.page_size.unwrap_or(10);
@@ -115,7 +115,7 @@ impl DataSourceRepo for DataSourceRepoImpl {
     }
 
     async fn list_datasource_by_project(&self, project_code: String, params: PageQuery) -> Result<Vec<DataSource>, Error> {
-        let pool = get_project_db(project_code);
+        let pool = get_project_db(project_code).await?;
         let keyword = params.keyword.unwrap_or_default();
         let page = params.page.unwrap_or(1);
         let page_size = params.page_size.unwrap_or(10);

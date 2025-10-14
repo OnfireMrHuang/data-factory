@@ -1,5 +1,11 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
+use crate::utils::{
+    cookie,
+    request::{HttpRequest, RequestBuilder},
+};
+use crate::models::datasource::*;
+use crate::models::protocol::ApiResponse;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MysqlConfig {
@@ -58,24 +64,109 @@ pub fn DatasourceMysqlAdd() -> Element {
     let mut validation_errors = use_signal(|| Vec::<String>::new());
 
     let handle_save = move |_| {
+        // 先组件进行配置校验
         let errors = validate_config(&config());
-        if errors.is_empty() {
-            // TODO: Save new datasource
-            config.set(MysqlConfig::default());
-            validation_errors.set(Vec::new());
-        } else {
+        if !errors.is_empty() { 
             validation_errors.set(errors);
+            return;
         }
+        spawn(async move {
+            // 请求后端进行校验配置
+            let client = crate::utils::request::create_client("http://localhost:3000");
+            let req_config = RequestBuilder::new()
+                        .header("Content-Type", "application/json")
+                        .header("Cookie", &cookie::get_browser_cookies())
+                        .build();
+            let mysql_config = DataSourceCreateUpdate{
+                id: String::new(),
+                name: config().name,
+                description: config().description,
+                category: DataSourceCategory::Database,
+                datasource_type: DataSourceType::Mysql,
+                connection_config: serde_json::to_value(config()).unwrap(),
+            };
+            let response = client
+                                .post("/api/v1/datasource/add", Some(req_config), Some(mysql_config))
+                                .await;
+            match response {
+                Ok(result) => {
+                    match serde_json::from_str::<ApiResponse<String>>(&result) {
+                        Ok(result) => {
+                            if result.result {
+                                validation_errors.set(Vec::new());
+                            } else {
+                                let mut errs = errors.clone();
+                                errs.push(result.msg);
+                                validation_errors.set(errs);
+                            }
+                        },
+                        Err(e) => {
+                            let mut errs = errors.clone();
+                            errs.push(e.to_string());
+                            validation_errors.set(errs);
+                        }
+                    }
+                },
+                Err(e) => {
+                    let mut errs = errors.clone();
+                    errs.push(e.to_string());
+                    validation_errors.set(errs);
+                }
+            }
+        });
     };
 
     let handle_test = move |_| {
+        // 先组件进行配置校验
         let errors = validate_config(&config());
-        if errors.is_empty() {
-            // TODO: Test connection
-            validation_errors.set(Vec::new());
-        } else {
+        if !errors.is_empty() { 
             validation_errors.set(errors);
+            return;
         }
+        spawn(async move {
+            // 请求后端进行校验配置
+            let client = crate::utils::request::create_client("http://localhost:3000");
+            let req_config = RequestBuilder::new()
+                        .header("Content-Type", "application/json")
+                        .header("Cookie", &cookie::get_browser_cookies())
+                        .build();
+            let mysql_config = DataSourceCreateUpdate{
+                id: String::new(),
+                name: config().name,
+                description: config().description,
+                category: DataSourceCategory::Database,
+                datasource_type: DataSourceType::Mysql,
+                connection_config: serde_json::to_value(config()).unwrap(),
+            };
+            let response = client
+                                .post("/api/v1/datasource/ping", Some(req_config), Some(mysql_config))
+                                .await;
+            match response {
+                Ok(result) => {
+                    match serde_json::from_str::<ApiResponse<String>>(&result) {
+                        Ok(result) => {
+                            if result.result {
+                                validation_errors.set(Vec::new());
+                            } else {
+                                let mut errs = errors.clone();
+                                errs.push(result.msg);
+                                validation_errors.set(errs);
+                            }
+                        },
+                        Err(e) => {
+                            let mut errs = errors.clone();
+                            errs.push(e.to_string());
+                            validation_errors.set(errs);
+                        }
+                    }
+                },
+                Err(e) => {
+                    let mut errs = errors.clone();
+                    errs.push(e.to_string());
+                    validation_errors.set(errs);
+                }
+            }
+        });
     };
 
     let is_form_valid = validate_config(&config()).is_empty();
@@ -89,18 +180,6 @@ pub fn DatasourceMysqlAdd() -> Element {
                     ul {
                         li { a { "数据源管理" } }
                         li { "添加MySQL数据源" }
-                    }
-                }
-                h3 { class: "text-2xl font-bold mt-2", "添加MySQL数据源" }
-            }
-
-            // Validation Errors Display
-            if !validation_errors().is_empty() {
-                div { class: "alert alert-error mb-4",
-                    ul {
-                        for error in validation_errors().iter() {
-                            li { "{error}" }
-                        }
                     }
                 }
             }
@@ -277,20 +356,36 @@ pub fn DatasourceMysqlAdd() -> Element {
                 }
             }
 
-            // Action Buttons
+            // Error Display and Action Buttons (fixed position layout)
             div {
-                class: "flex justify-end gap-4 mt-6",
-                button {
-                    class: "btn btn-info",
-                    disabled: !is_form_valid,
-                    onclick: handle_test,
-                    "测试连接"
+                class: "flex items-start justify-between mt-6",
+
+                // Validation Errors (left side, max 50% width)
+                div { class: "w-1/2 flex-shrink-0",
+                    if !validation_errors().is_empty() {
+                        ul { class: "list-disc list-inside space-y-1",
+                            for error in validation_errors().iter() {
+                                li { class: "text-error", "{error}" }
+                            }
+                        }
+                    }
                 }
-                button {
-                    class: "btn btn-primary",
-                    disabled: !is_form_valid,
-                    onclick: handle_save,
-                    "保存"
+
+                // Action Buttons (right side)
+                div {
+                    class: "flex gap-4 flex-shrink-0",
+                    button {
+                        class: "btn btn-info",
+                        disabled: !is_form_valid,
+                        onclick: handle_test,
+                        "测试连接"
+                    }
+                    button {
+                        class: "btn btn-primary",
+                        disabled: !is_form_valid,
+                        onclick: handle_save,
+                        "保存"
+                    }
                 }
             }
         }
