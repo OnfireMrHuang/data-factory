@@ -4,6 +4,7 @@ use crate::utils::{
     cookie,
     request::{HttpRequest, RequestBuilder},
 };
+use crate::routes::Route;
 use crate::models::datasource::*;
 use crate::models::protocol::ApiResponse;
 
@@ -62,6 +63,7 @@ fn validate_config(cfg: &MysqlConfig) -> Vec<String> {
 pub fn DatasourceMysqlAdd() -> Element {
     let mut config = use_signal(MysqlConfig::default);
     let mut validation_errors = use_signal(|| Vec::<String>::new());
+    let navigator = use_navigator();
 
     let handle_save = move |_| {
         // 先组件进行配置校验
@@ -93,7 +95,7 @@ pub fn DatasourceMysqlAdd() -> Element {
                     match serde_json::from_str::<ApiResponse<String>>(&result) {
                         Ok(result) => {
                             if result.result {
-                                validation_errors.set(Vec::new());
+                                navigator.push(Route::DatasourceOverViewPage{}); // 跳转到数据源列表页
                             } else {
                                 let mut errs = errors.clone();
                                 errs.push(result.msg);
@@ -178,7 +180,12 @@ pub fn DatasourceMysqlAdd() -> Element {
             div { class: "mb-6",
                 div { class: "text-sm breadcrumbs",
                     ul {
-                        li { a { "数据源管理" } }
+                        li {
+                            Link {
+                                to: Route::DatasourceOverViewPage{},
+                                "数据源管理"
+                            }
+                        }
                         li { "添加MySQL数据源" }
                     }
                 }

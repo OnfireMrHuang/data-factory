@@ -4,7 +4,7 @@ use sqlx::FromRow;
 use crate::models::Validator;
 use crate::models::Error;
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
 #[strum(serialize_all = "snake_case")]
 #[sqlx(rename_all = "snake_case")]
 pub enum DataSourceCategory {
@@ -18,7 +18,18 @@ impl Default for DataSourceCategory {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
+impl From<String> for DataSourceCategory {
+    fn from(s: String) -> Self {
+        match s.to_lowercase().as_str() {
+            "database" => Self::Database,
+            "api" => Self::Api,
+            _ => Self::default(),
+        }
+    }
+}
+
+
+#[derive(Debug, Serialize, Deserialize, Clone,  PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
 #[strum(serialize_all = "snake_case")]
 #[sqlx(rename_all = "snake_case")]
 pub enum DataSourceType {
@@ -34,7 +45,21 @@ impl Default for DataSourceType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
+impl From<String> for DataSourceType {
+    fn from(s: String) -> Self {
+        match s.to_lowercase().as_str() {
+            "mysql" => Self::Mysql,
+            "postgres" => Self::Postgres,
+            "query_api" => Self::QueryApi,
+            "subscribe_api" => Self::SubscribeApi,
+            _ => Self::default(),
+        }
+    }
+}
+
+
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
 #[strum(serialize_all = "snake_case")]
 #[sqlx(rename_all = "snake_case")]
 pub enum ConnectionStatus {
@@ -49,9 +74,20 @@ impl Default for ConnectionStatus {
     }
 }
 
+impl From<String> for ConnectionStatus {
+    fn from(s: String) -> Self {
+        match s.to_lowercase().as_str() {
+            "connected" => Self::Connected,
+            "disconnected" => Self::Disconnected,
+            "error" => Self::Error,
+            _ => Self::default(),
+        }
+    }
+}
+
 
 // 内部使用的完整 DataSource 模型
-#[derive(Debug, Serialize, Deserialize, FromRow, Default, Clone)]
+#[derive( Debug, Serialize, Deserialize, FromRow, Default, Clone)]
 pub struct DataSource {
     pub id: String,
     pub name: String,

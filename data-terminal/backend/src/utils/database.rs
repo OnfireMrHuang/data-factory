@@ -35,9 +35,10 @@ async fn connect_db_and_return(database: String) -> Result<MySqlPool, sqlx::Erro
 }
 
 // 获取全局配置库
-pub fn get_config_db() -> MySqlPool {
+pub async fn get_config_db() -> Result<MySqlPool, sqlx::Error> {
     let db = &Setting::get().database;
-    DB_POOL_MAP.read().unwrap()[&db.database].clone()
+    let pool = DB_POOL_MAP.read().await[&db.database].clone();
+    Ok(pool)
 }
 
 // 获取项目数据库
@@ -48,17 +49,17 @@ pub async fn get_project_db(mut code: String) -> Result<MySqlPool, sqlx::Error> 
 
 
     let db_prefix = &Setting::get().database.prefix;
-    let db_name = format!("{}_{}", db_prefix, code);
+    let db_name = format!("{}{}", db_prefix, code);
 
     // First, check if pool exists, otherwise spawn blocking and await connection creation
     {
-        let db_pool_map = DB_POOL_MAP.read().unwrap();
+        let db_pool_map = DB_POOL_MAP.read().await;
         if let Some(pool) = db_pool_map.get(&db_name) {
             return Ok(pool.clone());
         }
     }
 
-    let mut db_pool_map = DB_POOL_MAP.write().unwrap();
+    let mut db_pool_map = DB_POOL_MAP.write().await;
     if let Some(pool) = db_pool_map.get(&db_name) {
         return Ok(pool.clone());
     }

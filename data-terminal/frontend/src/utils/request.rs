@@ -327,7 +327,7 @@ impl RequestBuilder {
         self
     }
 
-    pub fn query_param(mut self, key: &str, value: &str) -> Self {
+    pub fn query_param<T: std::fmt::Display>(mut self, key: &str, value: T) -> Self {
         if self.config.query_params.is_none() {
             self.config.query_params = Some(HashMap::new());
         }

@@ -99,18 +99,13 @@ impl DataSourceRepo for DataSourceRepoImpl {
 
     async fn list_datasource(&self, project_code: String, params: PageQuery) -> Result<Vec<DataSource>, Error> {
         let pool = get_project_db(project_code).await?;
-        let keyword = params.keyword.unwrap_or_default();
-        let page = params.page.unwrap_or(1);
-        let page_size = params.page_size.unwrap_or(10);
-        let offset = (page - 1) * page_size;
-        let sql = "SELECT * FROM df_c_datasource WHERE name LIKE ? LIMIT ? OFFSET ?";
+        // let page = params.page.unwrap_or(1);
+        // let page_size = params.page_size.unwrap_or(10);
+        // let offset = (page - 1) * page_size;
+        let sql = "SELECT * FROM df_c_datasource";
         let rows = sqlx::query_as::<_, DataSource>(sql)
-            .bind(format!("%{}%", keyword))
-            .bind(page_size as i64)
-            .bind(offset as i64)
             .fetch_all(&pool)
             .await?;
-
         Ok(rows)
     }
 

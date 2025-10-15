@@ -73,7 +73,10 @@ impl DataSourceService for DataSourceServiceImpl {
         let result = self.repo.list_datasource(project_code, params).await;
         match result {
             Ok(datasources) => Ok(datasources.into_iter().map(DataSourceReadOnly::from).collect()),
-            Err(e) => Err(e),
+            Err(e) => {
+                println!("Error: {:?}", e);
+                return Err(e);
+            },
         }
     }
 }

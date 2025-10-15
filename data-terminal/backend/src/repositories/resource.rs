@@ -16,7 +16,7 @@ impl ResourceRepo for ResourceRepoImpl {
     async fn add_resource(&self, resource: Resource) -> Result<String, Error> {
         resource.validate()?;
 
-        let pool = get_config_db();
+        let pool = get_config_db().await?;
         let id = resource.id.clone();
         let name = resource.name.clone();
         let description = resource.description.clone();
@@ -49,7 +49,7 @@ impl ResourceRepo for ResourceRepoImpl {
     async fn edit_resource(&self, resource: Resource) -> Result<(), Error> {
         resource.validate()?;
 
-        let pool = get_config_db();
+        let pool = get_config_db().await?;
         let id = resource.id.clone();
         let name = resource.name.clone();
         let description = resource.description.clone();
@@ -78,7 +78,7 @@ impl ResourceRepo for ResourceRepoImpl {
     }
 
     async fn del_resource(&self, id: String) -> Result<(), Error> {
-        let pool = get_config_db();
+        let pool = get_config_db().await?;
 
         let sql = "DELETE FROM df_c_resource WHERE id = ?";
         let _ = pool.execute(sqlx::query(sql).bind(&id)).await?;
@@ -87,7 +87,7 @@ impl ResourceRepo for ResourceRepoImpl {
     }
 
     async fn get_resource(&self, id: String) -> Result<Resource, Error> {
-        let pool = get_config_db();
+        let pool = get_config_db().await?;
         let sql = "SELECT * FROM df_c_resource WHERE id = ?";
         let result = sqlx::query_as::<_, Resource>(sql)
             .bind(&id)
@@ -98,7 +98,7 @@ impl ResourceRepo for ResourceRepoImpl {
     }
 
     async fn list_resource(&self, params: PageQuery) -> Result<Vec<Resource>, Error> {
-        let pool = get_config_db();
+        let pool = get_config_db().await?;
         let keyword = params.keyword.unwrap_or_default();
         let page = params.page.unwrap_or(1);
         let page_size = params.page_size.unwrap_or(10);

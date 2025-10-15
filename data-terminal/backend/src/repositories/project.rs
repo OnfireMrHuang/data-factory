@@ -16,7 +16,7 @@ impl ProjectRepo for ProjectRepoImpl {
     async fn add_project(&self, project: Project) -> Result<String, Error> {
         project.validate()?;
 
-        let pool = get_config_db();
+        let pool = get_config_db().await?;
         let code = project.code.clone();
         let name = project.name.clone();
         let description = project.description.clone();
@@ -43,7 +43,7 @@ impl ProjectRepo for ProjectRepoImpl {
     async fn edit_project(&self, project: Project) -> Result<(), Error> {
         project.validate()?;
 
-        let pool = get_config_db();
+        let pool = get_config_db().await?;
         let code = project.code.clone();
         let name = project.name.clone();
         let description = project.description.clone();
@@ -65,7 +65,7 @@ impl ProjectRepo for ProjectRepoImpl {
     }
 
     async fn del_project(&self, code: String) -> Result<(), Error> {
-        let pool = get_config_db();
+        let pool = get_config_db().await?;
 
         let sql = "DELETE FROM df_c_project WHERE code = ?";
         let _ = pool.execute(sqlx::query(sql).bind(&code)).await?;
@@ -74,7 +74,7 @@ impl ProjectRepo for ProjectRepoImpl {
     }
 
     async fn get_project(&self, code: String) -> Result<Project, Error> {
-        let pool = get_config_db();
+        let pool = get_config_db().await?;
         let sql = "SELECT * FROM df_c_project WHERE code = ?";
         let result = sqlx::query_as::<_, Project>(sql)
             .bind(&code)
@@ -85,7 +85,7 @@ impl ProjectRepo for ProjectRepoImpl {
     }
 
     async fn list_project(&self, params: PageQuery) -> Result<Vec<Project>, Error> {
-        let pool = get_config_db();
+        let pool = get_config_db().await?;
         let keyword = params.keyword.unwrap_or_default();
         let page = params.page.unwrap_or(1);
         let page_size = params.page_size.unwrap_or(10);
