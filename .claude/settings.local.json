@@ -9,7 +9,8 @@
       "mcp__wonderwhy-er-desktop-commander__write_file",
       "Bash(md-tree:*)",
       "Bash(cargo check:*)",
-      "Bash(cargo test:*)"
+      "Bash(cargo test:*)",
+      "mcp__exa__get_code_context_exa"
     ],
     "deny": [],
     "ask": []

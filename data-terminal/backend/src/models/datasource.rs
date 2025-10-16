@@ -1,12 +1,15 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-
 use crate::models::Validator;
 use crate::models::Error;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
-#[strum(serialize_all = "snake_case")]
-#[sqlx(rename_all = "snake_case")]
+// Import the macro - with #[macro_export], macros are exported to the crate root
+use crate::impl_sqlx_for_string_enum;
+
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum DataSourceCategory {
     Database,
     Api,
@@ -18,20 +21,12 @@ impl Default for DataSourceCategory {
     }
 }
 
-impl From<String> for DataSourceCategory {
-    fn from(s: String) -> Self {
-        match s.to_lowercase().as_str() {
-            "database" => Self::Database,
-            "api" => Self::Api,
-            _ => Self::default(),
-        }
-    }
-}
+impl_sqlx_for_string_enum!(DataSourceCategory);
 
 
-#[derive(Debug, Serialize, Deserialize, Clone,  PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
-#[strum(serialize_all = "snake_case")]
-#[sqlx(rename_all = "snake_case")]
+#[derive(Debug, Serialize, Deserialize, Clone,  PartialEq, Eq, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum DataSourceType {
     Mysql,
     Postgres,
@@ -45,23 +40,13 @@ impl Default for DataSourceType {
     }
 }
 
-impl From<String> for DataSourceType {
-    fn from(s: String) -> Self {
-        match s.to_lowercase().as_str() {
-            "mysql" => Self::Mysql,
-            "postgres" => Self::Postgres,
-            "query_api" => Self::QueryApi,
-            "subscribe_api" => Self::SubscribeApi,
-            _ => Self::default(),
-        }
-    }
-}
+impl_sqlx_for_string_enum!(DataSourceType);
 
 
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
-#[strum(serialize_all = "snake_case")]
-#[sqlx(rename_all = "snake_case")]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum ConnectionStatus {
     Connected,
     Disconnected,
@@ -74,17 +59,7 @@ impl Default for ConnectionStatus {
     }
 }
 
-impl From<String> for ConnectionStatus {
-    fn from(s: String) -> Self {
-        match s.to_lowercase().as_str() {
-            "connected" => Self::Connected,
-            "disconnected" => Self::Disconnected,
-            "error" => Self::Error,
-            _ => Self::default(),
-        }
-    }
-}
-
+impl_sqlx_for_string_enum!(ConnectionStatus);
 
 // 内部使用的完整 DataSource 模型
 #[derive( Debug, Serialize, Deserialize, FromRow, Default, Clone)]
