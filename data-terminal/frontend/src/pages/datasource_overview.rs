@@ -9,6 +9,7 @@ use crate::utils::request::HttpRequest;
 use crate::utils::{cookie, request::RequestBuilder};
 use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 use dioxus_toast::{Icon, ToastInfo, ToastManager};
+use tracing::info;
 
 #[component]
 pub fn DatasourceOverViewPage() -> Element {
@@ -33,35 +34,32 @@ pub fn DatasourceOverViewPage() -> Element {
     let mut name_filter = use_signal(String::new);
     
     // 过滤后的数据源
-    let filtered_datasources = use_signal(|| {
+    let filtered_datasources = use_memo(move || {
         let mut result = datasources().clone();
-        
+
         if !category_filter().is_empty() {
             result.retain(|ds| {
                 ds.category.to_string() == category_filter()
             });
         }
-        
+
         if !type_filter().is_empty() {
             result.retain(|ds| {
                 ds.datasource_type.to_string() == type_filter()
             });
         }
-        
+
         if !status_filter().is_empty() {
             result.retain(|ds| {
                 ds.connection_status.to_string() == status_filter()
             });
         }
-        
+
         if !name_filter().is_empty() {
             result.retain(|ds| {
                 ds.name.to_lowercase().contains(&name_filter().to_lowercase())
             });
         }
-
-        log::info!("Filtered datasources: {:?}", result);
-        
         result
     });
 
@@ -80,13 +78,16 @@ pub fn DatasourceOverViewPage() -> Element {
             let response = client.get("/api/v1/datasource/list", Some(req_config)).await;
             match response {
                 Ok(response_text) => {
+                    info!("Received response: {}", response_text);
                     let result = serde_json::from_str::<ApiResponse<Vec<DataSource>>>(&response_text);
                     match result {
                         Ok(api_response) => {
+                            info!("API response success: {}, data count: {}", 
+                                api_response.result, api_response.data.len());
                             if api_response.result {
                                 datasources.set(api_response.data);
                             } else {
-                                error_msg.set(api_response.msg.clone());                   
+                                error_msg.set(api_response.msg.clone());
                             }
                         }
                         Err(e) => {
@@ -95,6 +96,7 @@ pub fn DatasourceOverViewPage() -> Element {
                     }
                 }
                 Err(e) => {
+                    tracing::error!("Request failed: {}", e);
                     error_msg.set(e.to_string());
                 }
             }
@@ -110,7 +112,7 @@ pub fn DatasourceOverViewPage() -> Element {
     // 搜索处理函数
     let handle_search = move |_| {
         // 搜索逻辑已在use_signal中处理
-        log::info!("执行搜索操作");
+        info!("执行搜索操作");
     };
     
     // 测试连接
@@ -151,7 +153,7 @@ pub fn DatasourceOverViewPage() -> Element {
 
     // Handle MySQL connection test
     let handle_test_mysql = move |config: MysqlConfig| {
-        log::info!("Testing MySQL connection: {}@{}:{}/{}",
+        info!("Testing MySQL connection: {}@{}:{}/{}",
             config.username, config.host, config.port, config.database);
         // TODO: Implement actual connection test via backend API
     };
@@ -176,9 +178,9 @@ pub fn DatasourceOverViewPage() -> Element {
                 }
                 
                 // 搜索栏
-                div { class: "card bg-base-100 shadow-sm",
+                div { class: "card bg-base-100 shadow-sm w-full",
                     div { class: "card-body",
-                        div { class: "flex flex-wrap items-end gap-4",
+                        div { class: "flex items-end gap-4 justify-end w-full",
                             // 数据源分类查找框
                             div { class: "form-control",
                                 select {
@@ -191,7 +193,7 @@ pub fn DatasourceOverViewPage() -> Element {
                                     option { value: "Api", "API" }
                                 }
                             }
-                            
+
                             // 数据源类型查找框
                             div { class: "form-control",
                                 select {
@@ -206,7 +208,7 @@ pub fn DatasourceOverViewPage() -> Element {
                                     option { value: "SubscribeApi", "订阅API" }
                                 }
                             }
-                            
+
                             // 数据源状态搜索框
                             div { class: "form-control",
                                 select {
@@ -220,7 +222,7 @@ pub fn DatasourceOverViewPage() -> Element {
                                     option { value: "Error", "连接错误" }
                                 }
                             }
-                            
+
                             // 数据源名称搜索框
                             div { class: "form-control",
                                 input {
@@ -230,11 +232,11 @@ pub fn DatasourceOverViewPage() -> Element {
                                     oninput: move |e| name_filter.set(e.value().to_string())
                                 }
                             }
-                            
+
                             // 搜索按钮
                             div { class: "form-control",
                                 button {
-                                    class: "btn btn-info w-full",
+                                    class: "btn btn-info",
                                     onclick: handle_search,
                                     "搜索"
                                 }

@@ -10,7 +10,10 @@ use dioxus::logger::tracing::{Level};
 
 
 fn main() {
+    // Initialize logger with INFO level for web console output
     dioxus::logger::init(Level::INFO).expect("logger failed to init");
+
+    tracing::info!("Application starting...");
 
     dioxus::launch(app);
 }
