@@ -31,8 +31,6 @@ pub fn DatasourceOverViewPage() -> Element {
     let mut type_filter = use_signal(String::new);
     let mut status_filter = use_signal(String::new);
     let mut name_filter = use_signal(String::new);
-
-    let mut toast = use_signal(|| ToastManager::default()); // 表示错误弹窗
     
     // 过滤后的数据源
     let filtered_datasources = use_signal(|| {
@@ -61,6 +59,8 @@ pub fn DatasourceOverViewPage() -> Element {
                 ds.name.to_lowercase().contains(&name_filter().to_lowercase())
             });
         }
+
+        log::info!("Filtered datasources: {:?}", result);
         
         result
     });
