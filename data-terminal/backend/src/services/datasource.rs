@@ -31,15 +31,22 @@ impl DataSourceService for DataSourceServiceImpl {
     async fn edit_datasource(&self, project_code: String, datasource: DataSourceCreateUpdate) -> Result<(), Error> {
         // 获取现有数据源以保留状态
         let existing = self.repo.get_datasource(project_code.clone(), datasource.id.clone()).await?;
+        // 如果不存在则返回错误
+        if existing.id.is_empty() {
+            return Err(Error::NotFound);
+        }
         let mut updated_datasource = DataSource::from(datasource);
         updated_datasource.connection_status = existing.connection_status;
         updated_datasource.created_at = existing.created_at;
-        updated_datasource.updated_at = chrono::Utc::now();
         
         let result = self.repo.edit_datasource(project_code, updated_datasource).await;
         match result {
             Ok(_) => Ok(()),
-            Err(e) => Err(e),
+            Err(e) => {
+                // 打印错误详情
+                println!("Error: {:?}", e);
+                Err(e)
+            },
         }
     }
 

@@ -25,11 +25,14 @@ pub async fn config_db_init() {
 async fn connect_db_and_return(database: String) -> Result<MySqlPool, sqlx::Error> {
     let db = &Setting::get().database;
     let url = format!(
-        "mysql://{}:{}@{}:{}/{}",
+        "mysql://{}:{}@{}:{}/{}?charset=utf8mb4&collation=utf8mb4_unicode_ci",
         db.user, db.password, db.host, db.port, database
     );
     Ok(MySqlPoolOptions::new()
         .max_connections(10)
+        .acquire_timeout(std::time::Duration::from_secs(30))
+        .idle_timeout(Some(std::time::Duration::from_secs(600)))
+        .max_lifetime(Some(std::time::Duration::from_secs(1800)))
         .connect(&url)
         .await?)
 }
@@ -42,10 +45,10 @@ pub async fn get_config_db() -> Result<MySqlPool, sqlx::Error> {
 }
 
 // 获取项目数据库
-pub async fn get_project_db(mut code: String) -> Result<MySqlPool, sqlx::Error> {
+pub async fn get_project_db(_code: String) -> Result<MySqlPool, sqlx::Error> {
 
     // 先写死使用模版库
-    code = "template".to_string();
+    let code = "template".to_string();
 
 
     let db_prefix = &Setting::get().database.prefix;

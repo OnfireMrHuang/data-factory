@@ -97,6 +97,12 @@ impl Validator for DataSource {
         if self.description.len() > 255 {
             return Err(Error::InvalidValue("description length must be less than 255 characters".to_string()));
         }
+        
+        // 验证 JSON 数据格式
+        if let Err(e) = serde_json::to_string(&self.connection_config) {
+            return Err(Error::InvalidValue(format!("Invalid JSON format in connection_config: {}", e)));
+        }
+        
         Ok(())
     }
 }

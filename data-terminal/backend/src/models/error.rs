@@ -50,6 +50,10 @@ pub enum Error {
 
     #[error("invalid value: {0}")]
     InvalidValue(String),
+
+    #[error("invalid json format: {0}")]
+    JsonSerializationError(String),
+    
 }
 
 impl PartialEq for Error {
