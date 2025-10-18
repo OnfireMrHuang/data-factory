@@ -29,8 +29,9 @@ macro_rules! impl_sqlx_for_string_enum {
                 &self,
                 buf: &mut Vec<u8>,
             ) -> Result<sqlx::encode::IsNull, Box<dyn std::error::Error + Send + Sync>> {
-                buf.extend_from_slice(self.to_string().as_bytes());
-                Ok(sqlx::encode::IsNull::No)
+                // Delegate to String encoding to ensure proper MySQL protocol formatting
+                let s = self.to_string();
+                <String as sqlx::Encode<sqlx::MySql>>::encode_by_ref(&s, buf)
             }
         }
     };

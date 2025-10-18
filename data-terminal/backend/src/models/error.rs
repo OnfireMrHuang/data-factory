@@ -53,7 +53,9 @@ pub enum Error {
 
     #[error("invalid json format: {0}")]
     JsonSerializationError(String),
-    
+
+    #[error("internal error: {0}")]
+    InternalError(String)
 }
 
 impl PartialEq for Error {

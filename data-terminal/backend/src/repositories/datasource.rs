@@ -36,7 +36,7 @@ impl DataSourceRepo for DataSourceRepoImpl {
                     .bind(&description)
                     .bind(&datasource_category)
                     .bind(&datasource_type)
-                    .bind(&connection_config)
+                    .bind(sqlx::types::Json(&connection_config))
                     .bind(&connection_status)
                     .bind(&created_at)
                     .bind(&updated_at)
@@ -67,7 +67,7 @@ impl DataSourceRepo for DataSourceRepoImpl {
                     .bind(&description)
                     .bind(&datasource_category)
                     .bind(&datasource_type)
-                    .bind(&connection_config)
+                    .bind(sqlx::types::Json(&connection_config))
                     .bind(&connection_status)
                     .bind(&updated_at)
                     .bind(&id),

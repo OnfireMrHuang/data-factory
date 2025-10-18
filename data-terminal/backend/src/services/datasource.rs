@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use crate::repositories::{DataSourceRepo};
 use crate::models::{Error};
 use crate::models::web::PageQuery;
@@ -40,14 +42,7 @@ impl DataSourceService for DataSourceServiceImpl {
         updated_datasource.created_at = existing.created_at;
         
         let result = self.repo.edit_datasource(project_code, updated_datasource).await;
-        match result {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                // 打印错误详情
-                println!("Error: {:?}", e);
-                Err(e)
-            },
-        }
+        result.map_err(|e| Error::InternalError(format!("Failed to edit datasource: {:?}", e)))
     }
 
     async fn ping_datasource(&self, project_code: String, datasource: DataSourceCreateUpdate) -> Result<(), Error> {

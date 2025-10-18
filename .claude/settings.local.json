@@ -10,7 +10,8 @@
       "Bash(md-tree:*)",
       "Bash(cargo check:*)",
       "Bash(cargo test:*)",
-      "mcp__exa__get_code_context_exa"
+      "mcp__exa__get_code_context_exa",
+      "mcp__data-factory-api__read_project_oas_we9z9r"
     ],
     "deny": [],
     "ask": []
