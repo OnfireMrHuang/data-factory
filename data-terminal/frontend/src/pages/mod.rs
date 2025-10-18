@@ -4,3 +4,6 @@ pub mod catch_all;
 pub mod resource;
 pub mod datasource_overview;
 pub mod datasource_mysql_config;
+pub mod datasource_postgres_config;
+pub mod datasource_queryapi_config;
+pub mod datasource_subscribeapi_config;

@@ -1337,6 +1337,9 @@
   .h-24 {
     height: calc(var(--spacing) * 24);
   }
+  .h-48 {
+    height: calc(var(--spacing) * 48);
+  }
   .h-64 {
     height: calc(var(--spacing) * 64);
   }
@@ -1417,9 +1420,6 @@
   }
   .rotate-180 {
     rotate: 180deg;
-  }
-  .cursor-not-allowed {
-    cursor: not-allowed;
   }
   .cursor-pointer {
     cursor: pointer;
@@ -1636,11 +1636,6 @@
   .p-6 {
     padding: calc(var(--spacing) * 6);
   }
-  .badge-sm {
-    --size: calc(var(--size-selector, 0.25rem) * 5);
-    font-size: 0.75rem;
-    padding-inline: calc(0.25rem * 2.5 - var(--border));
-  }
   .px-2 {
     padding-inline: calc(var(--spacing) * 2);
   }
@@ -1670,6 +1665,9 @@
   }
   .text-left {
     text-align: left;
+  }
+  .font-mono {
+    font-family: var(--font-mono);
   }
   .text-2xl {
     font-size: var(--text-2xl);
@@ -1765,6 +1763,9 @@
   .text-green-600 {
     color: var(--color-green-600);
   }
+  .text-info {
+    color: var(--color-info);
+  }
   .text-primary {
     color: var(--color-primary);
   }
@@ -1782,9 +1783,6 @@
   }
   .lowercase {
     text-transform: lowercase;
-  }
-  .opacity-50 {
-    opacity: 50%;
   }
   .shadow {
     --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
@@ -1878,10 +1876,6 @@
   .badge-error {
     --badge-color: var(--color-error);
     --badge-fg: var(--color-error-content);
-  }
-  .badge-neutral {
-    --badge-color: var(--color-neutral);
-    --badge-fg: var(--color-neutral-content);
   }
   .badge-success {
     --badge-color: var(--color-success);

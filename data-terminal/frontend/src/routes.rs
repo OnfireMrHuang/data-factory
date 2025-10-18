@@ -2,7 +2,17 @@ use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 
 use crate::components::{navbar::Navbar, sidebar_left::SidebarLeft, sidebar_right::SidebarRight};
-use crate::{pages::{catch_all::PageNotFound, home::Home, login::Login, resource::ResourcePage, datasource_overview::DatasourceOverViewPage, datasource_mysql_config::{DatasourceMysqlAdd, DatasourceMysqlEdit}}};
+use crate::{pages::{
+    catch_all::PageNotFound,
+    home::Home,
+    login::Login,
+    resource::ResourcePage,
+    datasource_overview::DatasourceOverViewPage,
+    datasource_mysql_config::{DatasourceMysqlAdd, DatasourceMysqlEdit},
+    datasource_postgres_config::{DatasourcePostgresAdd, DatasourcePostgresEdit},
+    datasource_queryapi_config::{DatasourceQueryApiAdd, DatasourceQueryApiEdit},
+    datasource_subscribeapi_config::{DatasourceSubscribeApiAdd, DatasourceSubscribeApiEdit}
+}};
 
 #[derive(Routable, Clone, PartialEq)]
 #[rustfmt::skip]
@@ -23,6 +33,24 @@ pub enum Route {
                 DatasourceMysqlAdd {},
                 #[route("/edit/:id")]
                 DatasourceMysqlEdit { id: String },
+            #[end_nest]
+            #[nest("/postgres")]
+                #[route("/add")]
+                DatasourcePostgresAdd {},
+                #[route("/edit/:id")]
+                DatasourcePostgresEdit { id: String },
+            #[end_nest]
+            #[nest("/queryapi")]
+                #[route("/add")]
+                DatasourceQueryApiAdd {},
+                #[route("/edit/:id")]
+                DatasourceQueryApiEdit { id: String },
+            #[end_nest]
+            #[nest("/subscribeapi")]
+                #[route("/add")]
+                DatasourceSubscribeApiAdd {},
+                #[route("/edit/:id")]
+                DatasourceSubscribeApiEdit { id: String },
             #[end_nest]
         #[end_nest]
     #[end_layout]

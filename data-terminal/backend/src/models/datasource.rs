@@ -117,8 +117,8 @@ pub struct DataSourceReadOnly {
     pub datasource_type: DataSourceType,
     pub connection_config: serde_json::Value,
     pub connection_status: ConnectionStatus,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 // 用于创建和更新的 DataSource 模型（不包含 status 和 connection_status 字段）
@@ -158,8 +158,8 @@ impl From<DataSource> for DataSourceReadOnly {
             datasource_type: datasource.datasource_type,
             connection_config: datasource.connection_config,
             connection_status: datasource.connection_status,
-            created_at: datasource.created_at,
-            updated_at: datasource.updated_at,
+            created_at: datasource.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            updated_at: datasource.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
         }
     }
 }

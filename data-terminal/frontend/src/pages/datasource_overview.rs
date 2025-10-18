@@ -112,8 +112,14 @@ pub fn DatasourceOverViewPage() -> Element {
     };
     
     // 编辑数据源
-    let handle_edit = move |id: String| {
-        navigator.push(Route::DatasourceMysqlEdit { id });
+    let handle_edit = move |(id, ds_type): (String, DataSourceType)| {
+        let route = match ds_type {
+            DataSourceType::Mysql => Route::DatasourceMysqlEdit { id },
+            DataSourceType::Postgres => Route::DatasourcePostgresEdit { id },
+            DataSourceType::QueryApi => Route::DatasourceQueryApiEdit { id },
+            DataSourceType::SubscribeApi => Route::DatasourceSubscribeApiEdit { id },
+        };
+        navigator.push(route);
     };
     
     // 删除数据源
@@ -188,9 +194,15 @@ pub fn DatasourceOverViewPage() -> Element {
 
     // Handle datasource type selection
     let handle_type_select = move |ds_type: DataSourceType| {
-        selected_type.set(Some(ds_type));
+        selected_type.set(Some(ds_type.clone()));
         show_type_dialog.set(false);
-        navigator.push(Route::DatasourceMysqlAdd{});
+        let route = match ds_type {
+            DataSourceType::Mysql => Route::DatasourceMysqlAdd{},
+            DataSourceType::Postgres => Route::DatasourcePostgresAdd{},
+            DataSourceType::QueryApi => Route::DatasourceQueryApiAdd{},
+            DataSourceType::SubscribeApi => Route::DatasourceSubscribeApiAdd{},
+        };
+        navigator.push(route);
     };
 
 

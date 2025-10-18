@@ -42,9 +42,12 @@ pub fn DataSourceTypeDialog(
                         }
                     }
 
-                    // PostgreSQL Card - Coming Soon
+                    // PostgreSQL Card - Enabled
                     div {
-                        class: "card bg-base-100 shadow opacity-50 cursor-not-allowed",
+                        class: "card bg-base-100 shadow hover:shadow-lg transition cursor-pointer",
+                        onclick: move |_| {
+                            on_select.call(DataSourceType::Postgres);
+                        },
                         div { class: "card-body items-center text-center",
                             img {
                                 src: asset!("/assets/resource/postgres.svg"),
@@ -55,39 +58,42 @@ pub fn DataSourceTypeDialog(
                             p { class: "text-sm text-base-content/70",
                                 "高级关系型数据库"
                             }
-                            div { class: "badge badge-neutral badge-sm mt-2", "即将支持" }
                         }
                     }
 
-                    // Kafka Card - Coming Soon
+                    // Query API Card - Enabled
                     div {
-                        class: "card bg-base-100 shadow opacity-50 cursor-not-allowed",
+                        class: "card bg-base-100 shadow hover:shadow-lg transition cursor-pointer",
+                        onclick: move |_| {
+                            on_select.call(DataSourceType::QueryApi);
+                        },
                         div { class: "card-body items-center text-center",
                             Icon {
                                 icon: HiDatabase,
-                                class: "w-16 h-16 mb-4 text-base-content/50"
+                                class: "w-16 h-16 mb-4"
                             }
-                            h4 { class: "card-title text-lg", "Kafka" }
+                            h4 { class: "card-title text-lg", "Query API" }
                             p { class: "text-sm text-base-content/70",
-                                "分布式消息队列"
+                                "查询型API接口"
                             }
-                            div { class: "badge badge-neutral badge-sm mt-2", "即将支持" }
                         }
                     }
 
-                    // HDFS Card - Coming Soon
+                    // Subscribe API Card - Enabled
                     div {
-                        class: "card bg-base-100 shadow opacity-50 cursor-not-allowed",
+                        class: "card bg-base-100 shadow hover:shadow-lg transition cursor-pointer",
+                        onclick: move |_| {
+                            on_select.call(DataSourceType::SubscribeApi);
+                        },
                         div { class: "card-body items-center text-center",
                             Icon {
                                 icon: HiFolder,
-                                class: "w-16 h-16 mb-4 text-base-content/50"
+                                class: "w-16 h-16 mb-4"
                             }
-                            h4 { class: "card-title text-lg", "HDFS" }
+                            h4 { class: "card-title text-lg", "Subscribe API" }
                             p { class: "text-sm text-base-content/70",
-                                "分布式文件系统"
+                                "订阅型API接口"
                             }
-                            div { class: "badge badge-neutral badge-sm mt-2", "即将支持" }
                         }
                     }
                 }

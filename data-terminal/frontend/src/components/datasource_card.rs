@@ -82,10 +82,11 @@ fn get_connection_status_icon(status: &ConnectionStatus) -> Element {
 #[component]
 pub fn DatasourceCard(
     datasource: DataSource,
-    on_edit: EventHandler<String>,
+    on_edit: EventHandler<(String, DataSourceType)>,
     on_delete: EventHandler<String>,
 ) -> Element {
     let id = Arc::new(datasource.id.clone());
+    let ds_type = datasource.datasource_type.clone();
     let mut show_menu = use_signal(|| false);
     
     rsx! {
@@ -114,7 +115,8 @@ pub fn DatasourceCard(
                                             class: "btn btn-ghost btn-sm w-full justify-start",
                                             onclick: {
                                                 let id = Arc::clone(&id);
-                                                move |_| on_edit.call((*id).clone())
+                                                let ds_type = ds_type.clone();
+                                                move |_| on_edit.call(((*id).clone(), ds_type.clone()))
                                             },
                                             Icon { icon: HiPencil, class: "w-4 h-4 mr-2" }
                                             "编辑"
