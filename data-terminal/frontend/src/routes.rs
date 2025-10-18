@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 
 use crate::components::{navbar::Navbar, sidebar_left::SidebarLeft, sidebar_right::SidebarRight};
-use crate::{pages::{catch_all::PageNotFound, home::Home, login::Login, resource::ResourcePage, datasource_overview::DatasourceOverViewPage, datasource_mysql_config::DatasourceMysqlAdd}};
+use crate::{pages::{catch_all::PageNotFound, home::Home, login::Login, resource::ResourcePage, datasource_overview::DatasourceOverViewPage, datasource_mysql_config::{DatasourceMysqlAdd, DatasourceMysqlEdit}}};
 
 #[derive(Routable, Clone, PartialEq)]
 #[rustfmt::skip]
@@ -21,8 +21,9 @@ pub enum Route {
             #[nest("/mysql")]
                 #[route("/add")]
                 DatasourceMysqlAdd {},
-                // #[route("/edit/:id")]
-            #[end_nest]    
+                #[route("/edit/:id")]
+                DatasourceMysqlEdit { id: String },
+            #[end_nest]
         #[end_nest]
     #[end_layout]
 
@@ -40,7 +41,9 @@ pub fn Framework() -> Element {
             Navbar {}
             div { class: "flex flex-1",
                 SidebarLeft {}
-                Outlet::<Route> {}
+                div { class: "flex-1 overflow-auto",
+                    Outlet::<Route> {}
+                }
                 SidebarRight {}
             }
         }

@@ -2,13 +2,11 @@ use dioxus::prelude::*;
 use crate::routes::Route;
 use crate::components::datasource_card::DatasourceCard;
 use crate::components::datasource_type_dialog::DataSourceTypeDialog;
-use crate::pages::datasource_mysql_config::{MysqlConfig};
+use crate::components::datasource_delete_dialog::DatasourceDeleteDialog;
 use crate::models::{datasource::*, protocol::*};
-use crate::utils::error;
 use crate::utils::request::HttpRequest;
 use crate::utils::{cookie, request::RequestBuilder};
 use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
-use dioxus_toast::{Icon, ToastInfo, ToastManager};
 use tracing::info;
 
 #[component]
@@ -16,11 +14,9 @@ pub fn DatasourceOverViewPage() -> Element {
 
     let navigator = use_navigator();
 
-    let datasources = use_signal(|| Vec::<DataSource>::new());
+    let mut datasources = use_signal(|| Vec::<DataSource>::new());
     let mut error_msg = use_signal(|| String::new());
     let mut selected_ds = use_signal(|| None as Option<DataSource>);
-    let mut show_test = use_signal(|| false);
-    let mut show_edit = use_signal(|| false);
     let mut show_delete = use_signal(|| false);
 
     // New dialog states
@@ -115,20 +111,9 @@ pub fn DatasourceOverViewPage() -> Element {
         info!("执行搜索操作");
     };
     
-    // 测试连接
-    let handle_test_connection = move |id: String| {
-        if let Some(ds) = datasources().iter().find(|d| d.id == id).cloned() {
-            selected_ds.set(Some(ds));
-            show_test.set(true);
-        }
-    };
-    
     // 编辑数据源
     let handle_edit = move |id: String| {
-        if let Some(ds) = datasources().iter().find(|d| d.id == id).cloned() {
-            selected_ds.set(Some(ds));
-            show_edit.set(true);
-        }
+        navigator.push(Route::DatasourceMysqlEdit { id });
     };
     
     // 删除数据源
@@ -137,6 +122,63 @@ pub fn DatasourceOverViewPage() -> Element {
             selected_ds.set(Some(ds));
             show_delete.set(true);
         }
+    };
+
+    // 确认删除数据源
+    let handle_confirm_delete = move |ds: DataSource| {
+        show_delete.set(false);
+        let id = ds.id.clone();
+        spawn(async move {
+            let client = crate::utils::request::create_client("http://localhost:3000");
+            let req_config = RequestBuilder::new()
+                .header("Content-Type", "application/json")
+                .header("Cookie", &cookie::get_browser_cookies())
+                .build();
+
+            let response = client.delete(&format!("/api/v1/datasource/{}", id), Some(req_config)).await;
+            match response {
+                Ok(response_text) => {
+                    match serde_json::from_str::<ApiResponse<String>>(&response_text) {
+                        Ok(api_response) => {
+                            if api_response.result {
+                                info!("数据源删除成功: {}", id);
+                                // Refresh datasource list
+                                let client = crate::utils::request::create_client("http://localhost:3000");
+                                let req_config = RequestBuilder::new()
+                                    .header("Content-Type", "application/json")
+                                    .header("Cookie", &cookie::get_browser_cookies())
+                                    .query_param("page", 1)
+                                    .query_param("page_size", 100)
+                                    .build();
+                                let response = client.get("/api/v1/datasource/list", Some(req_config)).await;
+                                if let Ok(response_text) = response {
+                                    if let Ok(result) = serde_json::from_str::<ApiResponse<Vec<DataSource>>>(&response_text) {
+                                        if result.result {
+                                            datasources.set(result.data);
+                                        }
+                                    }
+                                }
+                            } else {
+                                error_msg.set(api_response.msg);
+                            }
+                        }
+                        Err(e) => {
+                            error_msg.set(e.to_string());
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Delete request failed: {}", e);
+                    error_msg.set(e.to_string());
+                }
+            }
+        });
+    };
+
+    // 取消删除
+    let handle_cancel_delete = move |_| {
+        show_delete.set(false);
+        selected_ds.set(None);
     };
 
     // 添加数据源 - Updated to show type dialog
@@ -151,13 +193,6 @@ pub fn DatasourceOverViewPage() -> Element {
         navigator.push(Route::DatasourceMysqlAdd{});
     };
 
-    // Handle MySQL connection test
-    let handle_test_mysql = move |config: MysqlConfig| {
-        info!("Testing MySQL connection: {}@{}:{}/{}",
-            config.username, config.host, config.port, config.database);
-        // TODO: Implement actual connection test via backend API
-    };
-
 
     // Handle type dialog close
     let handle_type_close = move |_| {
@@ -169,8 +204,9 @@ pub fn DatasourceOverViewPage() -> Element {
                 // 页面标题
                 div { class: "flex justify-between items-center",
                     h1 { class: "text-2xl font text-gray-800", "数据源管理" }
+                    div { class: "flex-1" } // 占位撑开
                     button {
-                        class: "btn btn-info",
+                        class: "btn btn-info ml-auto",
                         onclick: handle_add,
                         Icon { icon: HiPlus, class: "w-4 h-4 mr-2" }
                         "添加数据源"
@@ -261,7 +297,6 @@ pub fn DatasourceOverViewPage() -> Element {
                         for datasource in filtered_datasources().iter() {
                             DatasourceCard {
                                 datasource: datasource.clone(),
-                                on_test_connection: handle_test_connection,
                                 on_edit: handle_edit,
                                 on_delete: handle_delete,
                             }
@@ -275,6 +310,17 @@ pub fn DatasourceOverViewPage() -> Element {
                 show: show_type_dialog,
                 on_select: handle_type_select,
                 on_close: handle_type_close,
+            }
+
+            // Delete Confirmation Dialog
+            if show_delete() {
+                if let Some(ds) = selected_ds() {
+                    DatasourceDeleteDialog {
+                        datasource: ds,
+                        on_confirm: handle_confirm_delete,
+                        on_cancel: handle_cancel_delete,
+                    }
+                }
             }
     }
 }

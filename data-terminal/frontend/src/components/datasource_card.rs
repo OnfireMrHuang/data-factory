@@ -82,7 +82,6 @@ fn get_connection_status_icon(status: &ConnectionStatus) -> Element {
 #[component]
 pub fn DatasourceCard(
     datasource: DataSource,
-    on_test_connection: EventHandler<String>,
     on_edit: EventHandler<String>,
     on_delete: EventHandler<String>,
 ) -> Element {
@@ -110,17 +109,6 @@ pub fn DatasourceCard(
                         {if show_menu() {
                             rsx! {
                                 ul { class: "absolute right-0 top-full mt-1 menu p-2 shadow bg-base-100 rounded-box w-52 z-10",
-                                    li {
-                                        button {
-                                            class: "btn btn-ghost btn-sm w-full justify-start",
-                                            onclick: {
-                                                let id = Arc::clone(&id);
-                                                move |_| on_test_connection.call((*id).clone())
-                                            },
-                                            Icon { icon: HiLightningBolt, class: "w-4 h-4 mr-2" }
-                                            "测试连接"
-                                        }
-                                    }
                                     li {
                                         button {
                                             class: "btn btn-ghost btn-sm w-full justify-start",
