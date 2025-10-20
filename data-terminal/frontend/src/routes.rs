@@ -11,7 +11,7 @@ use crate::{pages::{
     datasource_mysql_config::{DatasourceMysqlAdd, DatasourceMysqlEdit},
     datasource_postgres_config::{DatasourcePostgresAdd, DatasourcePostgresEdit},
     datasource_queryapi_config::{DatasourceQueryApiAdd, DatasourceQueryApiEdit},
-    datasource_subscribeapi_config::{DatasourceSubscribeApiAdd, DatasourceSubscribeApiEdit}
+    datasource_subscribeapi_config::{DatasourceSubscribeApiAdd, DatasourceSubscribeApiEdit, DatasourceSubscribeApiTokenManagement}
 }};
 
 #[derive(Routable, Clone, PartialEq)]
@@ -51,6 +51,8 @@ pub enum Route {
                 DatasourceSubscribeApiAdd {},
                 #[route("/edit/:id")]
                 DatasourceSubscribeApiEdit { id: String },
+                #[route("/tokens/:id")]
+                DatasourceSubscribeApiTokenManagement { id: String },
             #[end_nest]
         #[end_nest]
     #[end_layout]
