@@ -1920,9 +1920,6 @@
   .text-green-600 {
     color: var(--color-green-600);
   }
-  .text-info {
-    color: var(--color-info);
-  }
   .text-primary {
     color: var(--color-primary);
   }

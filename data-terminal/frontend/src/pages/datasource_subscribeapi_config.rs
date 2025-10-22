@@ -456,52 +456,6 @@ pub fn DatasourceSubscribeApiEdit(id: String) -> Element {
                                     }
                                 }
                             }
-
-                            // Webhook URL and Timeout
-                            div { class: "grid grid-cols-1 md:grid-cols-2 gap-4",
-                                div { class: "form-control",
-                                    label { class: "label",
-                                        span { class: "label-text font-medium", "Webhook回调URL" }
-                                    }
-                                    input {
-                                        class: "input input-bordered w-full",
-                                        r#type: "text",
-                                        placeholder: "https://your-domain.com/webhook",
-                                        value: "{config().webhook_url}",
-                                        oninput: move |e| {
-                                            config.set(SubscribeApiConfig {
-                                                webhook_url: e.value(),
-                                                ..config()
-                                            });
-                                        }
-                                    }
-                                    label { class: "label",
-                                        span { class: "label-text-alt", "用于接收订阅推送的回调地址" }
-                                    }
-                                }
-
-                                div { class: "form-control",
-                                    label { class: "label",
-                                        span { class: "label-text font-medium",
-                                            "超时时间(秒)"
-                                            span { class: "text-error ml-1", "*" }
-                                        }
-                                    }
-                                    input {
-                                        class: "input input-bordered w-full",
-                                        r#type: "number",
-                                        value: "{config().timeout_seconds}",
-                                        oninput: move |e| {
-                                            if let Ok(timeout) = e.value().parse::<u32>() {
-                                                config.set(SubscribeApiConfig {
-                                                    timeout_seconds: timeout,
-                                                    ..config()
-                                                });
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -1152,52 +1106,6 @@ pub fn DatasourceSubscribeApiAdd() -> Element {
                                                 path: e.value(),
                                                 ..config()
                                             });
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Webhook URL and Timeout
-                            div { class: "grid grid-cols-1 md:grid-cols-2 gap-4",
-                                div { class: "form-control",
-                                    label { class: "label",
-                                        span { class: "label-text font-medium", "Webhook回调URL" }
-                                    }
-                                    input {
-                                        class: "input input-bordered w-full",
-                                        r#type: "text",
-                                        placeholder: "https://your-domain.com/webhook",
-                                        value: "{config().webhook_url}",
-                                        oninput: move |e| {
-                                            config.set(SubscribeApiConfig {
-                                                webhook_url: e.value(),
-                                                ..config()
-                                            });
-                                        }
-                                    }
-                                    label { class: "label",
-                                        span { class: "label-text-alt", "用于接收订阅推送的回调地址" }
-                                    }
-                                }
-
-                                div { class: "form-control",
-                                    label { class: "label",
-                                        span { class: "label-text font-medium",
-                                            "超时时间(秒)"
-                                            span { class: "text-error ml-1", "*" }
-                                        }
-                                    }
-                                    input {
-                                        class: "input input-bordered w-full",
-                                        r#type: "number",
-                                        value: "{config().timeout_seconds}",
-                                        oninput: move |e| {
-                                            if let Ok(timeout) = e.value().parse::<u32>() {
-                                                config.set(SubscribeApiConfig {
-                                                    timeout_seconds: timeout,
-                                                    ..config()
-                                                });
-                                            }
                                         }
                                     }
                                 }
@@ -1859,20 +1767,6 @@ pub fn DatasourceSubscribeApiTokenManagement(id: String) -> Element {
                                                         }
                                                         button {
                                                             class: "btn btn-xs btn-ghost",
-                                                            onclick: {
-                                                                let token_str = token.token.clone();
-                                                                move |_| {
-                                                                    #[cfg(target_arch = "wasm32")]
-                                                                    {
-                                                                        use web_sys::window;
-                                                                        if let Some(window) = window() {
-                                                                            if let Some(navigator) = window.navigator().clipboard() {
-                                                                                let _ = navigator.write_text(&token_str);
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            },
                                                             "复制"
                                                         }
                                                     }
