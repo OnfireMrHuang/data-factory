@@ -1,0 +1,590 @@
+openapi: 3.0.3
+info:
+  title: Data Engine Integration API
+  description: |
+    Expected API contract for data-engine module.
+    This specification documents the endpoints that data-terminal expects
+    data-engine to implement for collection task execution and monitoring.
+
+    **Note**: This is a contract definition from data-terminal's perspective.
+    The data-engine team should implement these endpoints or provide an
+    alternative API specification.
+  version: 1.0.0
+  contact:
+    name: Data Factory Team
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local data-engine development server
+  - url: https://data-engine.datafactory.example.com/api/v1
+    description: Production data-engine server
+
+tags:
+  - name: Pipeline Tasks
+    description: Task submission and lifecycle management
+  - name: Task Monitoring
+    description: Task execution status and logs
+
+paths:
+  /pipeline/tasks:
+    post:
+      tags:
+        - Pipeline Tasks
+      summary: Submit collection task for execution
+      description: |
+        Submit a collection task configuration to data-engine for scheduling
+        and execution. data-engine should register the task, validate the
+        configuration, and begin execution based on the task type.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitTaskRequest'
+      responses:
+        '201':
+          description: Task successfully submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitTaskResponse'
+        '400':
+          description: Invalid task configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      tags:
+        - Pipeline Tasks
+      summary: List all pipeline tasks
+      description: |
+        Retrieve a list of all tasks registered in data-engine.
+        Useful for monitoring and debugging.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed, cancelled]
+          description: Filter by task execution status
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TaskInfo'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /pipeline/tasks/{execution_id}:
+    get:
+      tags:
+        - Pipeline Tasks
+      summary: Get task execution details
+      description: Retrieve detailed information about a specific task execution
+      parameters:
+        - $ref: '#/components/parameters/ExecutionId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskExecutionDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Pipeline Tasks
+      summary: Cancel task execution
+      description: |
+        Request cancellation of a running task. data-engine should gracefully
+        stop the task and clean up resources.
+      parameters:
+        - $ref: '#/components/parameters/ExecutionId'
+      responses:
+        '200':
+          description: Task cancellation initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  execution_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [cancelling]
+        '400':
+          description: Task cannot be cancelled (already completed/failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /pipeline/tasks/{execution_id}/status:
+    get:
+      tags:
+        - Task Monitoring
+      summary: Get task execution status
+      description: |
+        Quick endpoint for checking task status without full details.
+        Used for polling task progress in UI.
+      parameters:
+        - $ref: '#/components/parameters/ExecutionId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /pipeline/tasks/{execution_id}/logs:
+    get:
+      tags:
+        - Task Monitoring
+      summary: Get task execution logs
+      description: |
+        Retrieve execution logs for debugging and monitoring.
+        Supports pagination and log level filtering.
+      parameters:
+        - $ref: '#/components/parameters/ExecutionId'
+        - name: level
+          in: query
+          schema:
+            type: string
+            enum: [debug, info, warn, error]
+          description: Filter logs by level
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LogEntry'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /pipeline/tasks/{execution_id}/metrics:
+    get:
+      tags:
+        - Task Monitoring
+      summary: Get task execution metrics
+      description: |
+        Retrieve performance metrics for a task execution
+        (records processed, throughput, error rate, etc.)
+      parameters:
+        - $ref: '#/components/parameters/ExecutionId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskMetrics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    ExecutionId:
+      name: execution_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Task execution ID returned when task was submitted
+
+  schemas:
+    SubmitTaskRequest:
+      type: object
+      required:
+        - task_type
+        - task_config
+        - submitted_by
+      properties:
+        task_type:
+          type: string
+          enum: [collection]
+          description: Type of pipeline task (currently only 'collection')
+        task_name:
+          type: string
+          description: User-friendly task name
+        task_config:
+          $ref: '#/components/schemas/CollectionTaskConfig'
+        submitted_by:
+          type: string
+          description: User ID or service account that submitted the task
+
+    CollectionTaskConfig:
+      type: object
+      required:
+        - task_id
+        - category
+        - collect_type
+        - datasource
+        - resource
+        - rule
+      properties:
+        task_id:
+          type: string
+          format: uuid
+          description: data-terminal collection task ID (for reference)
+        category:
+          type: string
+          enum: [database, api, crawler]
+        collect_type:
+          type: string
+          enum: [full, incremental]
+        datasource:
+          $ref: '#/components/schemas/DatasourceConfig'
+        resource:
+          $ref: '#/components/schemas/ResourceConfig'
+        rule:
+          type: object
+          description: |
+            Collection rule configuration (mode-specific).
+            See data-terminal collection-api.yaml for detailed schema.
+
+    DatasourceConfig:
+      type: object
+      required:
+        - id
+        - type
+        - connection
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [mysql, postgres, query_api, subscribe_api]
+        connection:
+          type: object
+          description: Connection details (host, port, credentials, etc.)
+
+    ResourceConfig:
+      type: object
+      required:
+        - id
+        - type
+        - connection
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [relational_database, file_system, queue]
+        connection:
+          type: object
+          description: Connection details for target resource
+
+    SubmitTaskResponse:
+      type: object
+      required:
+        - execution_id
+        - status
+        - submitted_at
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+          description: Unique ID for this task execution
+        status:
+          type: string
+          enum: [pending, running]
+        submitted_at:
+          type: string
+          format: date-time
+
+    TaskInfo:
+      type: object
+      required:
+        - execution_id
+        - task_type
+        - task_name
+        - status
+        - submitted_at
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        task_type:
+          type: string
+          enum: [collection]
+        task_name:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        submitted_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    TaskExecutionDetails:
+      type: object
+      required:
+        - execution_id
+        - task_type
+        - task_name
+        - task_config
+        - status
+        - submitted_at
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        task_type:
+          type: string
+          enum: [collection]
+        task_name:
+          type: string
+        task_config:
+          $ref: '#/components/schemas/CollectionTaskConfig'
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        submitted_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        error:
+          type: object
+          nullable: true
+          properties:
+            error_code:
+              type: string
+            error_message:
+              type: string
+            stacktrace:
+              type: string
+
+    TaskStatus:
+      type: object
+      required:
+        - execution_id
+        - status
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        progress_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+          nullable: true
+        current_step:
+          type: string
+          nullable: true
+          description: Human-readable description of current step
+
+    LogEntry:
+      type: object
+      required:
+        - timestamp
+        - level
+        - message
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        level:
+          type: string
+          enum: [debug, info, warn, error]
+        message:
+          type: string
+        context:
+          type: object
+          description: Additional structured context
+
+    TaskMetrics:
+      type: object
+      required:
+        - execution_id
+        - records_processed
+        - throughput_per_second
+        - error_count
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        records_processed:
+          type: integer
+          minimum: 0
+        records_failed:
+          type: integer
+          minimum: 0
+        throughput_per_second:
+          type: number
+          minimum: 0
+        error_count:
+          type: integer
+          minimum: 0
+        duration_seconds:
+          type: number
+          minimum: 0
+          nullable: true
+        last_updated_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        limit:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token issued by shared authentication service.
+        data-terminal and data-engine should use the same JWT issuer
+        for inter-module authentication.
+
+security:
+  - BearerAuth: []

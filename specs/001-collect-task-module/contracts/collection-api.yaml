@@ -1,0 +1,944 @@
+openapi: 3.0.3
+info:
+  title: Collection Task API
+  description: |
+    REST API for managing data collection tasks in Data Factory.
+    This API enables users to configure, manage, and apply collection tasks
+    that transfer data from datasources to resources.
+  version: 1.0.0
+  contact:
+    name: Data Factory Team
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+  - url: https://api.datafactory.example.com/api/v1
+    description: Production server
+
+tags:
+  - name: Collection Tasks
+    description: CRUD operations for collection tasks
+  - name: Metadata
+    description: Datasource and resource metadata queries
+
+paths:
+  /collections:
+    get:
+      tags:
+        - Collection Tasks
+      summary: List all collection tasks
+      description: Retrieve a paginated list of collection tasks with optional filtering
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Items per page
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, saved, applied, running, failed]
+          description: Filter by task status
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [database, api, crawler]
+          description: Filter by datasource category
+        - name: collect_type
+          in: query
+          schema:
+            type: string
+            enum: [full, incremental]
+          description: Filter by collection type
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CollectTaskResponse'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Collection Tasks
+      summary: Create a new collection task
+      description: Create a new collection task configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCollectTaskRequest'
+      responses:
+        '201':
+          description: Collection task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectTaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collections/{id}:
+    get:
+      tags:
+        - Collection Tasks
+      summary: Get collection task by ID
+      description: Retrieve a specific collection task configuration
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectTaskResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Collection Tasks
+      summary: Update collection task
+      description: |
+        Update a collection task configuration.
+        Only tasks with status 'draft' or 'saved' can be updated.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCollectTaskRequest'
+      responses:
+        '200':
+          description: Collection task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectTaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Task cannot be edited (status is 'applied' or 'running')
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags:
+        - Collection Tasks
+      summary: Delete collection task
+      description: |
+        Delete a collection task.
+        Only tasks with status 'draft' or 'saved' can be deleted.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '204':
+          description: Collection task deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Task cannot be deleted (status is 'applied' or 'running')
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collections/{id}/apply:
+    post:
+      tags:
+        - Collection Tasks
+      summary: Apply collection task to data pipeline
+      description: |
+        Submit the collection task to data-engine for execution.
+        Changes task status from 'saved' to 'applied'.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Task successfully applied to pipeline
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                    format: uuid
+                  execution_id:
+                    type: string
+                    format: uuid
+                    description: Data-engine task execution ID
+                  status:
+                    type: string
+                    enum: [applied]
+        '400':
+          description: Task cannot be applied (invalid status or configuration)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /datasources/{id}/tables:
+    get:
+      tags:
+        - Metadata
+      summary: Get tables from database datasource
+      description: |
+        Retrieve table metadata from a database datasource (MySQL/PostgreSQL).
+        Used for configuring full collection tasks.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Datasource ID
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tables:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TableMetadata'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /datasources/{id}/tables/{tableName}/fields:
+    get:
+      tags:
+        - Metadata
+      summary: Get fields from a specific table
+      description: Retrieve field metadata for a specific table in a database datasource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Datasource ID
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Table name
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fields:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FieldMetadata'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collections/generate-schema:
+    post:
+      tags:
+        - Metadata
+      summary: Generate target table schema
+      description: |
+        Auto-generate target table schema from source table/field mapping.
+        Performs type mapping based on datasource and resource types.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - datasource_id
+                - resource_id
+                - selected_tables
+              properties:
+                datasource_id:
+                  type: string
+                  format: uuid
+                resource_id:
+                  type: string
+                  format: uuid
+                selected_tables:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TableSelection'
+      responses:
+        '200':
+          description: Schema generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateSchemaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    TaskId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Collection task ID
+
+  schemas:
+    CollectTaskResponse:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - category
+        - collect_type
+        - datasource
+        - resource
+        - rule
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 64
+        description:
+          type: string
+          maxLength: 255
+        category:
+          type: string
+          enum: [database, api, crawler]
+        collect_type:
+          type: string
+          enum: [full, incremental]
+        datasource:
+          $ref: '#/components/schemas/DatasourceInfo'
+        resource:
+          $ref: '#/components/schemas/ResourceInfo'
+        rule:
+          oneOf:
+            - $ref: '#/components/schemas/FullDatabaseRule'
+            - $ref: '#/components/schemas/FullApiRule'
+            - $ref: '#/components/schemas/IncrementalDatabaseRule'
+            - $ref: '#/components/schemas/IncrementalApiRule'
+        status:
+          type: string
+          enum: [draft, saved, applied, running, failed]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        applied_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateCollectTaskRequest:
+      type: object
+      required:
+        - name
+        - category
+        - collect_type
+        - datasource_id
+        - resource_id
+        - rule
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        description:
+          type: string
+          maxLength: 255
+        category:
+          type: string
+          enum: [database, api, crawler]
+        collect_type:
+          type: string
+          enum: [full, incremental]
+        datasource_id:
+          type: string
+          format: uuid
+        resource_id:
+          type: string
+          format: uuid
+        rule:
+          oneOf:
+            - $ref: '#/components/schemas/FullDatabaseRule'
+            - $ref: '#/components/schemas/FullApiRule'
+            - $ref: '#/components/schemas/IncrementalDatabaseRule'
+            - $ref: '#/components/schemas/IncrementalApiRule'
+
+    UpdateCollectTaskRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        description:
+          type: string
+          maxLength: 255
+        rule:
+          oneOf:
+            - $ref: '#/components/schemas/FullDatabaseRule'
+            - $ref: '#/components/schemas/FullApiRule'
+            - $ref: '#/components/schemas/IncrementalDatabaseRule'
+            - $ref: '#/components/schemas/IncrementalApiRule'
+
+    DatasourceInfo:
+      type: object
+      required:
+        - id
+        - name
+        - datasource_type
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        datasource_type:
+          type: string
+          enum: [mysql, postgres, query_api, subscribe_api]
+
+    ResourceInfo:
+      type: object
+      required:
+        - id
+        - name
+        - resource_type
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        resource_type:
+          type: string
+          enum: [relational_database, file_system, queue]
+
+    FullDatabaseRule:
+      type: object
+      required:
+        - type
+        - selected_tables
+        - target_schema
+      properties:
+        type:
+          type: string
+          enum: [full_database]
+        selected_tables:
+          type: array
+          items:
+            $ref: '#/components/schemas/TableSelection'
+        transformation_sql:
+          type: string
+          nullable: true
+        target_schema:
+          $ref: '#/components/schemas/TableSchema'
+
+    FullApiRule:
+      type: object
+      required:
+        - type
+        - schedule
+        - target
+      properties:
+        type:
+          type: string
+          enum: [full_api]
+        schedule:
+          $ref: '#/components/schemas/ApiQuerySchedule'
+        cursor_strategy:
+          $ref: '#/components/schemas/CursorUpdateStrategy'
+          nullable: true
+        transformation_json:
+          type: string
+          nullable: true
+        target:
+          $ref: '#/components/schemas/TargetConfig'
+
+    IncrementalDatabaseRule:
+      type: object
+      required:
+        - type
+        - cdc_config
+        - topic_config
+      properties:
+        type:
+          type: string
+          enum: [incremental_database]
+        cdc_config:
+          $ref: '#/components/schemas/CdcConfig'
+        filter_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterRule'
+        message_transformations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldTransformation'
+        topic_config:
+          $ref: '#/components/schemas/TopicConfig'
+
+    IncrementalApiRule:
+      type: object
+      required:
+        - type
+        - topic_config
+      properties:
+        type:
+          type: string
+          enum: [incremental_api]
+        filter_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterRule'
+        message_transformations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldTransformation'
+        topic_config:
+          $ref: '#/components/schemas/TopicConfig'
+
+    TableSelection:
+      type: object
+      required:
+        - table_name
+      properties:
+        table_name:
+          type: string
+        selected_fields:
+          type: array
+          items:
+            type: string
+          description: Empty array means all fields
+
+    TableSchema:
+      type: object
+      required:
+        - table_name
+        - fields
+      properties:
+        table_name:
+          type: string
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldSchema'
+
+    FieldSchema:
+      type: object
+      required:
+        - field_name
+        - field_type
+        - nullable
+        - primary_key
+        - auto_increment
+      properties:
+        field_name:
+          type: string
+        field_type:
+          type: string
+        nullable:
+          type: boolean
+        default_value:
+          type: string
+          nullable: true
+        primary_key:
+          type: boolean
+        auto_increment:
+          type: boolean
+
+    ApiQuerySchedule:
+      type: object
+      properties:
+        interval_seconds:
+          type: integer
+          minimum: 1
+        cron_expression:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+          nullable: true
+
+    CursorUpdateStrategy:
+      type: object
+      required:
+        - strategy_type
+        - field_path
+      properties:
+        strategy_type:
+          type: string
+          enum: [offset, timestamp, token]
+        field_path:
+          type: string
+
+    TargetConfig:
+      oneOf:
+        - type: object
+          required:
+            - target_type
+            - table_name
+            - schema
+          properties:
+            target_type:
+              type: string
+              enum: [table]
+            table_name:
+              type: string
+            schema:
+              $ref: '#/components/schemas/TableSchema'
+        - type: object
+          required:
+            - target_type
+            - file_path
+            - file_format
+          properties:
+            target_type:
+              type: string
+              enum: [file]
+            file_path:
+              type: string
+            file_format:
+              type: string
+              enum: [json, csv, parquet]
+
+    CdcConfig:
+      type: object
+      required:
+        - source_tables
+        - operations
+        - snapshot_mode
+      properties:
+        source_tables:
+          type: array
+          items:
+            type: string
+        operations:
+          type: array
+          items:
+            type: string
+            enum: [insert, update, delete]
+        snapshot_mode:
+          type: string
+          enum: [initial, never, always]
+
+    TopicConfig:
+      type: object
+      required:
+        - topic_name
+        - message_schema
+      properties:
+        topic_name:
+          type: string
+        message_schema:
+          $ref: '#/components/schemas/MessageSchema'
+
+    MessageSchema:
+      type: object
+      required:
+        - fields
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageField'
+
+    MessageField:
+      type: object
+      required:
+        - field_name
+        - field_type
+        - required
+      properties:
+        field_name:
+          type: string
+        field_type:
+          type: string
+          enum: [string, number, boolean, object, array]
+        required:
+          type: boolean
+
+    FilterRule:
+      type: object
+      required:
+        - field
+        - operator
+        - value
+      properties:
+        field:
+          type: string
+        operator:
+          type: string
+          enum:
+            - equals
+            - not_equals
+            - in
+            - not_in
+            - greater_than
+            - less_than
+            - greater_or_equal
+            - less_or_equal
+            - contains
+            - starts_with
+            - ends_with
+            - is_null
+            - is_not_null
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: array
+            - type: object
+
+    FieldTransformation:
+      oneOf:
+        - type: object
+          required:
+            - type
+            - field
+            - value
+          properties:
+            type:
+              type: string
+              enum: [add_field]
+            field:
+              type: string
+            value:
+              type: string
+        - type: object
+          required:
+            - type
+            - from
+            - to
+          properties:
+            type:
+              type: string
+              enum: [rename_field]
+            from:
+              type: string
+            to:
+              type: string
+        - type: object
+          required:
+            - type
+            - field
+            - expression
+          properties:
+            type:
+              type: string
+              enum: [computed_field]
+            field:
+              type: string
+            expression:
+              type: string
+        - type: object
+          required:
+            - type
+            - field
+          properties:
+            type:
+              type: string
+              enum: [remove_field]
+            field:
+              type: string
+
+    TableMetadata:
+      type: object
+      required:
+        - table_name
+        - table_comment
+        - fields
+      properties:
+        table_name:
+          type: string
+        table_comment:
+          type: string
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldMetadata'
+
+    FieldMetadata:
+      type: object
+      required:
+        - field_name
+        - field_type
+        - nullable
+        - primary_key
+      properties:
+        field_name:
+          type: string
+        field_type:
+          type: string
+        nullable:
+          type: boolean
+        default_value:
+          type: string
+          nullable: true
+        primary_key:
+          type: boolean
+
+    GenerateSchemaResponse:
+      type: object
+      required:
+        - target_schema
+      properties:
+        target_schema:
+          $ref: '#/components/schemas/TableSchema'
+
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        limit:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []
