@@ -18,25 +18,12 @@ create table if not exists df_c_datasource
     primary key (id)
 ) comment '数据源表' engine = InnoDB;
 
--- 资源表
-create table if not exists df_c_resource
-(
-    id            char(36) not null comment '主键',
-    name          varchar(64) not null comment '资源名称',
-    description   varchar(255) default '' comment '资源描述',
-    resource_type enum('relational_database', 'file_system', 'queue') not null comment '资源类型',
-    connection_config json not null comment '资源配置，存储连接信息等',
-    status        enum('active', 'inactive') not null default 'active' comment '资源状态',
-    created_at    timestamp not null default current_timestamp comment '创建时间',
-    updated_at    timestamp not null default current_timestamp on update current_timestamp comment '更新时间',
-    primary key (id)
-) comment '资源表' engine = InnoDB;
-
 
 
 create table if not exists df_c_collection
 (
     id            char(36) not null comment '主键',
+    code          char(36) not null comment '任务编码',
     name          varchar(64) not null comment '采集任务名称',
     description   varchar(255) default '' comment '采集任务描述',
     category      enum('database', 'api', 'crawler') not null comment '采集分类',
@@ -44,7 +31,7 @@ create table if not exists df_c_collection
     datasource_id char(36) not null comment 'source: 数据源ID',
     resource_id   char(36) not null comment 'sink: 资源ID',
     rule          json not null comment '采集规则',
-    status        enum('draft', 'saved', 'applied', 'running', 'failed') not null default 'draft' comment '任务状态',
+    stage         enum('draft', 'applied') not null default 'draft' comment '开发阶段',
     created_at    timestamp not null default current_timestamp comment '创建时间',
     updated_at    timestamp not null default current_timestamp on update current_timestamp comment '更新时间',
     applied_at    timestamp null comment '应用到数据引擎的时间',

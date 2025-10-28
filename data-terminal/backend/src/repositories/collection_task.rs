@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use shaku::Interface;
-use sqlx::{MySql, Pool};
+use sqlx::{query, MySql, Pool};
 
-use crate::models::collection::{CollectTask, CollectionCategory, CollectType, TaskStatus};
+use crate::models::collection::{CollectTask, CollectType, CollectionCategory, TaskStage};
 
 /// Collection repository trait for data access operations
 #[async_trait]
@@ -10,18 +10,19 @@ pub trait CollectionRepository: Interface {
     async fn create(&self, task: &CollectTask) -> Result<CollectTask, sqlx::Error>;
     async fn find_by_id(&self, id: &str) -> Result<Option<CollectTask>, sqlx::Error>;
     async fn update(&self, task: &CollectTask) -> Result<CollectTask, sqlx::Error>;
-    async fn delete(&self, id: &str) -> Result<(), sqlx::Error>;
+    async fn delete_task(&self, code: &str) -> Result<(), sqlx::Error>;
+    async fn delete_by_code(&self, code: &str, stage: TaskStage) -> Result<(), sqlx::Error>;
     async fn find_all(
         &self,
         page: i64,
         limit: i64,
-        status: Option<TaskStatus>,
+        stage: Option<TaskStage>,
         category: Option<CollectionCategory>,
         collect_type: Option<CollectType>,
     ) -> Result<Vec<CollectTask>, sqlx::Error>;
     async fn count_all(
         &self,
-        status: Option<TaskStatus>,
+        stage: Option<TaskStage>,
         category: Option<CollectionCategory>,
         collect_type: Option<CollectType>,
     ) -> Result<i64, sqlx::Error>;
@@ -33,8 +34,20 @@ pub struct CollectionRepositoryImpl {
     pool: Pool<MySql>,
 }
 
+impl<M: shaku::Module> shaku::Component<M> for CollectionRepositoryImpl {
+    type Interface = dyn CollectionRepository;
+    type Parameters = ();
+
+    fn build(
+        _context: &mut shaku::ModuleBuildContext<M>,
+        _params: Self::Parameters,
+    ) -> Box<Self::Interface> {
+        panic!("CollectionRepositoryImpl must be initialized with a Pool<MySql> parameter. Use module.resolve_with_args instead.");
+    }
+}
+
 impl CollectionRepositoryImpl {
-    pub fn new(pool: Pool<MySql>) -> Self {
+    pub fn new_with_pool(pool: Pool<MySql>) -> Self {
         Self { pool }
     }
 }
@@ -42,25 +55,25 @@ impl CollectionRepositoryImpl {
 #[async_trait]
 impl CollectionRepository for CollectionRepositoryImpl {
     async fn create(&self, task: &CollectTask) -> Result<CollectTask, sqlx::Error> {
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO df_c_collection
-            (id, name, description, category, collect_type, datasource_id, resource_id, rule, status, created_at, updated_at, applied_at)
+            (id, name, description, category, collect_type, datasource_id, resource_id, rule, stage, created_at, updated_at, applied_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#,
-            task.id,
-            task.name,
-            task.description,
-            task.category,
-            task.collect_type,
-            task.datasource_id,
-            task.resource_id,
-            serde_json::to_value(&task.rule).unwrap(),
-            task.status,
-            task.created_at,
-            task.updated_at,
-            task.applied_at
+            "#
         )
+        .bind(&task.id)
+        .bind(&task.name)
+        .bind(&task.description)
+        .bind(&task.category)
+        .bind(&task.collect_type)
+        .bind(&task.datasource_id)
+        .bind(&task.resource_id)
+        .bind(serde_json::to_value(&task.rule).unwrap())
+        .bind(&task.stage)
+        .bind(&task.created_at)
+        .bind(&task.updated_at)
+        .bind(&task.applied_at)
         .execute(&self.pool)
         .await?;
 
@@ -68,27 +81,26 @@ impl CollectionRepository for CollectionRepositoryImpl {
     }
 
     async fn find_by_id(&self, id: &str) -> Result<Option<CollectTask>, sqlx::Error> {
-        let result = sqlx::query_as!(
-            CollectTask,
+        let result = sqlx::query_as::<_, CollectTask>(
             r#"
             SELECT
                 id,
                 name,
                 description,
-                category as "category: _",
-                collect_type as "collect_type: _",
+                category,
+                collect_type,
                 datasource_id,
                 resource_id,
-                rule as "rule: _",
-                status as "status: _",
+                rule,
+                stage,
                 created_at,
                 updated_at,
                 applied_at
             FROM df_c_collection
             WHERE id = ?
-            "#,
-            id
+            "#
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await?;
 
@@ -96,34 +108,44 @@ impl CollectionRepository for CollectionRepositoryImpl {
     }
 
     async fn update(&self, task: &CollectTask) -> Result<CollectTask, sqlx::Error> {
-        sqlx::query!(
+        sqlx::query(
             r#"
             UPDATE df_c_collection
-            SET name = ?, description = ?, rule = ?, status = ?, updated_at = ?, applied_at = ?
+            SET name = ?, description = ?, rule = ?, stage = ?, updated_at = ?, applied_at = ?
             WHERE id = ?
-            "#,
-            task.name,
-            task.description,
-            serde_json::to_value(&task.rule).unwrap(),
-            task.status,
-            task.updated_at,
-            task.applied_at,
-            task.id
+            "#
         )
+        .bind(&task.name)
+        .bind(&task.description)
+        .bind(serde_json::to_value(&task.rule).unwrap())
+        .bind(&task.stage)
+        .bind(&task.updated_at)
+        .bind(&task.applied_at)
+        .bind(&task.id)
         .execute(&self.pool)
         .await?;
 
         Ok(task.clone())
     }
 
-    async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
-        sqlx::query!(
+    async fn delete_task(&self, code: &str) -> Result<(), sqlx::Error> {
+       sqlx::query(
+        r#"
+            DELETE FROM df_c_collection
+            WHERE code = ?
+        "#
+       ).bind(code).execute(&self.pool).await?;
+
+        Ok(())
+    }
+
+    async fn delete_by_code(&self, code: &str, stage: TaskStage) -> Result<(), sqlx::Error> {
+        sqlx::query(
             r#"
             DELETE FROM df_c_collection
-            WHERE id = ?
-            "#,
-            id
-        )
+            WHERE id = ? AND stage = ?
+            "#
+        ).bind(code).bind(stage)
         .execute(&self.pool)
         .await?;
 
@@ -134,7 +156,7 @@ impl CollectionRepository for CollectionRepositoryImpl {
         &self,
         page: i64,
         limit: i64,
-        status: Option<TaskStatus>,
+        stage: Option<TaskStage>,
         category: Option<CollectionCategory>,
         collect_type: Option<CollectType>,
     ) -> Result<Vec<CollectTask>, sqlx::Error> {
@@ -145,7 +167,7 @@ impl CollectionRepository for CollectionRepositoryImpl {
             "SELECT id, name, description, category, collect_type, datasource_id, resource_id, rule, status, created_at, updated_at, applied_at FROM df_c_collection WHERE 1=1"
         );
 
-        if status.is_some() {
+        if stage.is_some() {
             query.push_str(" AND status = ?");
         }
         if category.is_some() {
@@ -160,7 +182,7 @@ impl CollectionRepository for CollectionRepositoryImpl {
         // Use query builder for dynamic parameters
         let mut query_builder = sqlx::query_as::<_, CollectTask>(&query);
 
-        if let Some(s) = status {
+        if let Some(s) = stage {
             query_builder = query_builder.bind(s);
         }
         if let Some(c) = category {
@@ -179,13 +201,13 @@ impl CollectionRepository for CollectionRepositoryImpl {
 
     async fn count_all(
         &self,
-        status: Option<TaskStatus>,
+        stage: Option<TaskStage>,
         category: Option<CollectionCategory>,
         collect_type: Option<CollectType>,
     ) -> Result<i64, sqlx::Error> {
         let mut query = String::from("SELECT COUNT(*) as count FROM df_c_collection WHERE 1=1");
 
-        if status.is_some() {
+        if stage.is_some() {
             query.push_str(" AND status = ?");
         }
         if category.is_some() {
@@ -197,7 +219,7 @@ impl CollectionRepository for CollectionRepositoryImpl {
 
         let mut query_builder = sqlx::query_scalar::<_, i64>(&query);
 
-        if let Some(s) = status {
+        if let Some(s) = stage {
             query_builder = query_builder.bind(s);
         }
         if let Some(c) = category {
@@ -213,14 +235,3 @@ impl CollectionRepository for CollectionRepositoryImpl {
     }
 }
 
-impl shaku::Component for CollectionRepositoryImpl {
-    type Interface = dyn CollectionRepository;
-    type Parameters = Pool<MySql>;
-
-    fn build(
-        _context: &mut shaku::ModuleBuildContext<Self>,
-        params: Self::Parameters,
-    ) -> Box<Self::Interface> {
-        Box::new(Self::new(params))
-    }
-}

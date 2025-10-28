@@ -17,13 +17,11 @@ pub fn routes() -> Router {
     Router::new()
         .route("/", get(list_collection_tasks))
         .route("/", post(create_collection_task))
-        .route("/:id", get(get_collection_task))
-        .route("/:id", put(update_collection_task))
-        .route("/:id", delete(delete_collection_task))
-        .route("/:id/apply", post(apply_collection_task))
+        .route("/{id}", get(get_collection_task))
+        .route("/{id}", post(update_collection_task))
+        .route("/{id}", delete(delete_collection_task))
+        .route("/{id}/apply", post(apply_collection_task))
         .route("/generate-schema", post(generate_schema))
-        // Note: Datasource routes should be under /datasources, not /collections
-        // These are placeholders - actual implementation in datasource routes
 }
 
 /// Query parameters for list endpoint
@@ -31,7 +29,7 @@ pub fn routes() -> Router {
 pub struct ListQuery {
     pub page: Option<i64>,
     pub limit: Option<i64>,
-    pub status: Option<TaskStatus>,
+    pub stage: Option<TaskStage>,
     pub category: Option<CollectionCategory>,
     pub collect_type: Option<CollectType>,
 }
@@ -141,7 +139,7 @@ pub async fn list_collection_tasks(
     let limit = query.limit.unwrap_or(20).min(100);
 
     let (tasks, total) = service
-        .list_tasks(page, limit, query.status, query.category, query.collect_type)
+        .list_tasks(page, limit, query.stage, query.category, query.collect_type)
         .await?;
 
     let response = PaginatedResponse {

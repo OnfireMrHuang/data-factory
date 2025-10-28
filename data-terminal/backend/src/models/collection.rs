@@ -6,6 +6,7 @@ use sqlx::FromRow;
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CollectTask {
     pub id: String,
+    pub code: String, 
     pub name: String,
     pub description: String,
     pub category: CollectionCategory,
@@ -14,7 +15,7 @@ pub struct CollectTask {
     pub resource_id: String,
     #[sqlx(json)]
     pub rule: CollectionRule,
-    pub status: TaskStatus,
+    pub stage: TaskStage,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub applied_at: Option<DateTime<Utc>>,
@@ -43,12 +44,9 @@ pub enum CollectType {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
-pub enum TaskStatus {
+pub enum TaskStage {
     Draft,      // User is configuring
-    Saved,      // Configuration saved but not applied
     Applied,    // Submitted to data-engine
-    Running,    // Actively executing in pipeline
-    Failed,     // Execution failed
 }
 
 /// Collection rule variants (mode-specific configuration stored as JSON)
@@ -286,6 +284,7 @@ pub struct UpdateCollectTaskRequest {
 #[derive(Debug, Serialize)]
 pub struct CollectTaskResponse {
     pub id: String,
+    pub code: String,
     pub name: String,
     pub description: String,
     pub category: CollectionCategory,
@@ -293,7 +292,7 @@ pub struct CollectTaskResponse {
     pub datasource: DatasourceInfo,
     pub resource: ResourceInfo,
     pub rule: CollectionRule,
-    pub status: TaskStatus,
+    pub stage: TaskStage,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub applied_at: Option<DateTime<Utc>>,

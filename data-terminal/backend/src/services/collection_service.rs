@@ -5,7 +5,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::models::collection::*;
-use crate::repositories::collection_repository::CollectionRepository;
+use crate::repositories::collection_task::CollectionRepository;
 
 /// Collection service trait for business logic
 #[async_trait]
@@ -29,7 +29,7 @@ pub trait CollectionService: Interface {
         &self,
         page: i64,
         limit: i64,
-        status: Option<TaskStatus>,
+        stage: Option<TaskStage>,
         category: Option<CollectionCategory>,
         collect_type: Option<CollectType>,
     ) -> Result<(Vec<CollectTask>, i64), ServiceError>;
@@ -123,6 +123,7 @@ impl CollectionService for CollectionServiceImpl {
     ) -> Result<CollectTask, ServiceError> {
         // Generate UUID for new task
         let id = Uuid::new_v4().to_string();
+        let code = Uuid::new_v4().to_string();
         let now = Utc::now();
 
         // Validate compatibility with comprehensive rule checking
@@ -130,6 +131,7 @@ impl CollectionService for CollectionServiceImpl {
 
         let task = CollectTask {
             id,
+            code,
             name: request.name,
             description: request.description.unwrap_or_default(),
             category: request.category,
@@ -137,7 +139,7 @@ impl CollectionService for CollectionServiceImpl {
             datasource_id: request.datasource_id,
             resource_id: request.resource_id,
             rule: request.rule,
-            status: TaskStatus::Draft,
+            stage: TaskStage::Draft,
             created_at: now,
             updated_at: now,
             applied_at: None,
@@ -164,8 +166,8 @@ impl CollectionService for CollectionServiceImpl {
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
             .ok_or(ServiceError::NotFound(format!("Task {} not found", id)))?;
 
-        // Only allow updates for Draft or Saved tasks
-        if !matches!(task.status, TaskStatus::Draft | TaskStatus::Saved) {
+        // Only allow updates for Draft 
+        if !matches!(task.stage, TaskStage::Draft) {
             return Err(ServiceError::InvalidOperation(
                 "Cannot update task that is applied or running".to_string()
             ));
@@ -183,7 +185,6 @@ impl CollectionService for CollectionServiceImpl {
         }
 
         task.updated_at = Utc::now();
-        task.status = TaskStatus::Saved;
 
         let updated = self.repository.update(&task).await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
@@ -197,14 +198,8 @@ impl CollectionService for CollectionServiceImpl {
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
             .ok_or(ServiceError::NotFound(format!("Task {} not found", id)))?;
 
-        // Only allow deletion for Draft or Saved tasks
-        if !matches!(task.status, TaskStatus::Draft | TaskStatus::Saved) {
-            return Err(ServiceError::InvalidOperation(
-                "Cannot delete task that is applied or running".to_string()
-            ));
-        }
-
-        self.repository.delete(id).await
+        // delete draft task and applied task
+        self.repository.delete_task(&task.code).await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))
     }
 
@@ -212,14 +207,14 @@ impl CollectionService for CollectionServiceImpl {
         &self,
         page: i64,
         limit: i64,
-        status: Option<TaskStatus>,
+        stage: Option<TaskStage>,
         category: Option<CollectionCategory>,
         collect_type: Option<CollectType>,
     ) -> Result<(Vec<CollectTask>, i64), ServiceError> {
-        let tasks = self.repository.find_all(page, limit, status.clone(), category.clone(), collect_type.clone()).await
+        let tasks = self.repository.find_all(page, limit, stage.clone(), category.clone(), collect_type.clone()).await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
-        let total = self.repository.count_all(status, category, collect_type).await
+        let total = self.repository.count_all(stage, category, collect_type).await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
         Ok((tasks, total))
@@ -231,26 +226,17 @@ impl CollectionService for CollectionServiceImpl {
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
             .ok_or(ServiceError::NotFound(format!("Task {} not found", id)))?;
 
-        // Only allow applying Saved tasks
-        if !matches!(task.status, TaskStatus::Saved) {
-            return Err(ServiceError::InvalidOperation(
-                "Can only apply tasks with Saved status".to_string()
-            ));
-        }
-
-        // TODO: Call data-engine API via DataEngineClient
-        // For MVP, we'll just update the status locally
-        // Full integration:
-        // let client = DataEngineClient::new("http://localhost:8080".to_string());
-        // let config = CollectionTaskConfig { ... };
-        // let response = client.submit_task(config).await?;
-        // task.execution_id = Some(response.execution_id);
-
-        task.status = TaskStatus::Applied;
+        // attampt to delete existing applied task
+        self.repository.delete_by_code(&task.code, task.stage).await
+            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+        
+        // create applied task
+        task.id = Uuid::new_v4().to_string(); // recreate id
+        task.stage = TaskStage::Applied; // 
         task.applied_at = Some(Utc::now());
         task.updated_at = Utc::now();
 
-        let updated = self.repository.update(&task).await
+        let updated = self.repository.create(&task).await
             .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
 
         Ok(updated)
@@ -349,17 +335,17 @@ impl CollectionServiceImpl {
     }
 }
 
-impl shaku::Component for CollectionServiceImpl {
-    type Interface = dyn CollectionService;
-    type Parameters = Arc<dyn CollectionRepository>;
+// impl<M: shaku::Module> shaku::Component<M> for CollectionServiceImpl {
+//     type Interface = dyn CollectionService;
+//     type Parameters = Box<dyn CollectionRepository>;
 
-    fn build(
-        _context: &mut shaku::ModuleBuildContext<Self>,
-        params: Self::Parameters,
-    ) -> Box<Self::Interface> {
-        Box::new(Self::new(params))
-    }
-}
+//     fn build(
+//         _context: &mut shaku::ModuleBuildContext<M>,
+//         params: Self::Parameters,
+//     ) -> Box<Self::Interface> {
+//         Box::new(Self::new(params))
+//     }
+// }
 
 /// Service error types
 #[derive(Debug, thiserror::Error)]

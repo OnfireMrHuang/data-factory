@@ -11,6 +11,23 @@ use super::DataSourceService;
 use chrono;
 use uuid::Uuid;
 use sqlx::mysql::MySqlPoolOptions;
+use sqlx::Row;
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct TableInfo {
+    table_name: String,
+    table_comment: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct FieldInfo {
+    field_name: String,
+    field_type: String,
+    nullable: String,
+    default_value: Option<String>,
+    column_key: String,
+}
 
 #[derive(Provider)]
 #[shaku(interface = DataSourceService)]
@@ -85,123 +102,130 @@ impl DataSourceService for DataSourceServiceImpl {
 
     /// Get tables from a database datasource (MySQL/PostgreSQL)
     async fn get_datasource_tables(&self, project_code: String, datasource_id: String) -> Result<Vec<TableMetadata>, Error> {
-        // Fetch datasource configuration
-        let datasource = self.repo.get_datasource(project_code, datasource_id).await?;
+        // // Fetch datasource configuration
+        // let datasource = self.repo.get_datasource(project_code, datasource_id).await?;
 
-        // Parse connection config to get database details
-        let conn_config: serde_json::Value = serde_json::from_str(&datasource.connection_config.to_string())
-            .map_err(|_| Error::InternalError("Invalid connection config".to_string()))?;
+        // // Parse connection config to get database details
+        // let conn_config: serde_json::Value = serde_json::from_str(&datasource.connection_config.to_string())
+        //     .map_err(|_| Error::InternalError("Invalid connection config".to_string()))?;
 
-        let host = conn_config["host"].as_str().unwrap_or("localhost");
-        let port = conn_config["port"].as_u64().unwrap_or(3306) as u16;
-        let user = conn_config["user"].as_str().unwrap_or("root");
-        let password = conn_config["password"].as_str().unwrap_or("");
-        let database = conn_config["database"].as_str().unwrap_or("");
+        // let host = conn_config["host"].as_str().unwrap_or("localhost");
+        // let port = conn_config["port"]
+        //     .as_u64()
+        //     .ok_or_else(|| Error::InternalError("Missing or invalid port in connection config".to_string()))? as u16;
+        // let user = conn_config["user"]
+        //     .as_str()
+        //     .ok_or_else(|| Error::InternalError("Missing or invalid user in connection config".to_string()))?;
+        // let password = conn_config["password"]
+        //     .as_str()
+        //     .unwrap_or(""); // Allow empty password
+        // let database = conn_config["database"]
+        //     .as_str()
+        //     .ok_or_else(|| Error::InternalError("Missing or invalid database in connection config".to_string()))?;
 
-        // Build connection string
-        let connection_url = format!(
-            "mysql://{}:{}@{}:{}/{}",
-            user, password, host, port, database
-        );
+        // // Build connection string
+        // let connection_url = format!(
+        //     "mysql://{}:{}@{}:{}/{}",
+        //     user, password, host, port, database
+        // );
 
-        // Connect to the datasource
-        let pool = MySqlPoolOptions::new()
-            .max_connections(1)
-            .connect(&connection_url)
-            .await
-            .map_err(|e| Error::InternalError(format!("Failed to connect to datasource: {}", e)))?;
+        // // Connect to the datasource
+        // let pool = MySqlPoolOptions::new()
+        //     .max_connections(1)
+        //     .connect(&connection_url)
+        //     .await
+        //     .map_err(|e| Error::InternalError(format!("Failed to connect to datasource: {}", e)))?;
 
-        // Query INFORMATION_SCHEMA for tables
-        let tables = sqlx::query!(
-            r#"
-            SELECT
-                TABLE_NAME as table_name,
-                TABLE_COMMENT as table_comment
-            FROM INFORMATION_SCHEMA.TABLES
-            WHERE TABLE_SCHEMA = ?
-            AND TABLE_TYPE = 'BASE TABLE'
-            ORDER BY TABLE_NAME
-            "#,
-            database
-        )
-        .fetch_all(&pool)
-        .await
-        .map_err(|e| Error::InternalError(format!("Failed to query tables: {}", e)))?;
+        // // Query INFORMATION_SCHEMA for tables
+        // let tables = sqlx::query_as::<_, TableInfo>(
+        //     r#"
+        //     SELECT
+        //         TABLE_NAME as table_name,
+        //         TABLE_COMMENT as table_comment
+        //     FROM INFORMATION_SCHEMA.TABLES
+        //     WHERE TABLE_SCHEMA = ?
+        //     AND TABLE_TYPE = 'BASE TABLE'
+        //     ORDER BY TABLE_NAME
+        //     "#
+        // )
+        // .bind(database)
+        // .fetch_all(&pool)
+        // .await
+        // .map_err(|e| Error::InternalError(format!("Failed to query tables: {}", e)))?;
 
-        // For each table, fetch its fields
+        // // For each table, fetch its fields
         let mut result = Vec::new();
-        for table in tables {
-            let table_name = table.table_name;
-            let fields = self.get_table_fields(String::new(), datasource.id.clone(), table_name.clone()).await?;
+        // for table in tables {
+        //     let fields = self.get_table_fields(String::new(), datasource.id.clone(), table.table_name.clone()).await?;
 
-            result.push(TableMetadata {
-                table_name,
-                table_comment: table.table_comment.unwrap_or_default(),
-                fields,
-            });
-        }
+        //     result.push(TableMetadata {
+        //         table_name: table.table_name,
+        //         table_comment: table.table_comment.unwrap_or_default(),
+        //         fields,
+        //     });
+        // }
 
         Ok(result)
     }
 
     /// Get fields from a specific table in a database datasource
     async fn get_table_fields(&self, _project_code: String, datasource_id: String, table_name: String) -> Result<Vec<FieldMetadata>, Error> {
-        // Fetch datasource configuration
-        let datasource = self.repo.get_datasource(String::new(), datasource_id).await?;
+        // // Fetch datasource configuration
+        // let datasource = self.repo.get_datasource(String::new(), datasource_id).await?;
 
-        // Parse connection config
-        let conn_config: serde_json::Value = serde_json::from_str(&datasource.connection_config.to_string())
-            .map_err(|_| Error::InternalError("Invalid connection config".to_string()))?;
+        // // Parse connection config
+        // let conn_config: serde_json::Value = serde_json::from_str(&datasource.connection_config.to_string())
+        //     .map_err(|_| Error::InternalError("Invalid connection config".to_string()))?;
 
-        let host = conn_config["host"].as_str().unwrap_or("localhost");
-        let port = conn_config["port"].as_u64().unwrap_or(3306) as u16;
-        let user = conn_config["user"].as_str().unwrap_or("root");
-        let password = conn_config["password"].as_str().unwrap_or("");
-        let database = conn_config["database"].as_str().unwrap_or("");
+        // let host = conn_config["host"].as_str().unwrap_or("localhost");
+        // let port = conn_config["port"].as_u64().unwrap_or(3306) as u16;
+        // let user = conn_config["user"].as_str().unwrap_or("root");
+        // let password = conn_config["password"].as_str().unwrap_or("");
+        // let database = conn_config["database"].as_str().unwrap_or("");
 
-        let connection_url = format!(
-            "mysql://{}:{}@{}:{}/{}",
-            user, password, host, port, database
-        );
+        // let connection_url = format!(
+        //     "mysql://{}:{}@{}:{}/{}",
+        //     user, password, host, port, database
+        // );
 
-        let pool = MySqlPoolOptions::new()
-            .max_connections(1)
-            .connect(&connection_url)
-            .await
-            .map_err(|e| Error::InternalError(format!("Failed to connect: {}", e)))?;
+        // let pool = MySqlPoolOptions::new()
+        //     .max_connections(1)
+        //     .connect(&connection_url)
+        //     .await
+        //     .map_err(|e| Error::InternalError(format!("Failed to connect: {}", e)))?;
 
-        // Query INFORMATION_SCHEMA.COLUMNS
-        let fields = sqlx::query!(
-            r#"
-            SELECT
-                COLUMN_NAME as field_name,
-                COLUMN_TYPE as field_type,
-                IS_NULLABLE as nullable,
-                COLUMN_DEFAULT as default_value,
-                COLUMN_KEY as column_key
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = ?
-            AND TABLE_NAME = ?
-            ORDER BY ORDINAL_POSITION
-            "#,
-            database,
-            table_name
-        )
-        .fetch_all(&pool)
-        .await
-        .map_err(|e| Error::InternalError(format!("Failed to query fields: {}", e)))?;
+        // // Query INFORMATION_SCHEMA.COLUMNS
+        // let fields = sqlx::query_as::<_, FieldInfo>(
+        //     r#"
+        //     SELECT
+        //         COLUMN_NAME as field_name,
+        //         COLUMN_TYPE as field_type,
+        //         IS_NULLABLE as nullable,
+        //         COLUMN_DEFAULT as default_value,
+        //         COLUMN_KEY as column_key
+        //     FROM INFORMATION_SCHEMA.COLUMNS
+        //     WHERE TABLE_SCHEMA = ?
+        //     AND TABLE_NAME = ?
+        //     ORDER BY ORDINAL_POSITION
+        //     "#
+        // )
+        // .bind(database)
+        // .bind(table_name)
+        // .fetch_all(&pool)
+        // .await
+        // .map_err(|e| Error::InternalError(format!("Failed to query fields: {}", e)))?;
 
-        let result = fields
-            .into_iter()
-            .map(|field| FieldMetadata {
-                field_name: field.field_name,
-                field_type: field.field_type,
-                nullable: field.nullable == "YES",
-                default_value: field.default_value,
-                primary_key: field.column_key == "PRI",
-            })
-            .collect();
+        // let result = fields
+        //     .into_iter()
+        //     .map(|field| FieldMetadata {
+        //         field_name: field.field_name,
+        //         field_type: field.field_type,
+        //         nullable: field.nullable == "YES",
+        //         default_value: field.default_value,
+        //         primary_key: field.column_key == "PRI",
+        //     })
+        //     .collect();
 
-        Ok(result)
+        Ok(Vec::new())
     }
 }
