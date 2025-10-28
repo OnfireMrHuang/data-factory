@@ -39,7 +39,7 @@ async-trait = "0.1"
 thiserror = "2.0.12"
 regex = "1.11.1"
 uuid = { version = "1.11", features = ["v4"] }
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1" }
 js-sys = "0.3.81"
 

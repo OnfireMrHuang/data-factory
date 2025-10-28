@@ -14,7 +14,15 @@
       "mcp__data-factory-api__read_project_oas_we9z9r",
       "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
       "Bash(.specify/scripts/bash/setup-plan.sh:*)",
-      "Bash(.specify/scripts/bash/update-agent-context.sh:*)"
+      "Bash(.specify/scripts/bash/update-agent-context.sh:*)",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(if [ -d \"/Users/huangwenwu/workspace/data-factory/specs/001-collect-task-module/checklists\" ])",
+      "Bash(then find /Users/huangwenwu/workspace/data-factory/specs/001-collect-task-module/checklists -type f -name \"*.md\")",
+      "Bash(else echo \"NO_CHECKLISTS\")",
+      "Bash(fi)",
+      "Bash(git rev-parse:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(mysql:*)"
     ],
     "deny": [],
     "ask": []

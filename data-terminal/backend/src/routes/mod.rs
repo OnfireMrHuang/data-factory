@@ -3,6 +3,7 @@ mod login;
 mod project;
 mod resource;
 mod datasource;
+mod collection;
 
 use axum::{
     Router
@@ -56,7 +57,8 @@ fn api_routes_v1() -> Router {
     let protected_routes = Router::new()
         .nest("/project", project::routes())
         .nest("/resource", resource::routes())
-        .nest("/datasource", datasource::routes());
+        .nest("/datasource", datasource::routes())
+        .nest("/collections", collection::routes());
 
     // 合并两组路由
     public_routes.merge(protected_routes)

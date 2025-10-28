@@ -4,9 +4,13 @@ use shaku::{module, HasProvider};
 use crate::repositories::project::ProjectRepoImpl;
 use crate::repositories::resource::ResourceRepoImpl;
 use crate::repositories::datasource::DataSourceRepoImpl;
+// TODO: Add collection repository when implementing routes (T036-T043)
+// use crate::repositories::collection_repository::CollectionRepositoryImpl;
 use crate::services::project::ProjectServiceImpl;
 use crate::services::resource::ResourceServiceImpl;
 use crate::services::datasource::DataSourceServiceImpl;
+// TODO: Add collection service when implementing routes (T036-T043)
+// use crate::services::collection_service::CollectionServiceImpl;
 use crate::services::{ProjectService, ResourceService, DataSourceService};
 
 module! {

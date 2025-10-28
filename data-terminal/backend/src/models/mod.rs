@@ -4,6 +4,7 @@ pub mod project;
 pub mod datasource;
 pub mod resource;
 pub mod web;
+pub mod collection;
 
 pub use error::Error;
 

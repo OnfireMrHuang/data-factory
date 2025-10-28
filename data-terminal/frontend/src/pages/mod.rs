@@ -7,3 +7,6 @@ pub mod datasource_mysql_config;
 pub mod datasource_postgres_config;
 pub mod datasource_queryapi_config;
 pub mod datasource_subscribeapi_config;
+pub mod collection_page;
+pub mod collection_create_page;
+pub mod collection_edit_page;
