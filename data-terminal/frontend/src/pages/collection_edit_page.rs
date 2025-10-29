@@ -49,10 +49,10 @@ pub fn CollectionEditPage(id: String) -> Element {
             match collection_api::fetch_collection_task_by_id(&task_id).await {
                 Ok(task) => {
                     // Check if task can be edited
-                    if !matches!(task.status, TaskStatus::Draft | TaskStatus::Saved) {
+                    if !matches!(task.stage, TaskStage::Draft) {
                         error_msg.set(format!(
                             "Cannot edit task with status '{:?}'. Only Draft or Saved tasks can be edited.",
-                            task.status
+                            task.stage
                         ));
                         loading.set(false);
                         return;

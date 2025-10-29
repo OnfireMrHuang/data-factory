@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]
 pub struct CollectTask {
     pub id: String,
+    pub code: String,
     pub name: String,
     pub description: String,
     pub category: CollectionCategory,
@@ -12,7 +13,7 @@ pub struct CollectTask {
     pub datasource: DatasourceInfo,
     pub resource: ResourceInfo,
     pub rule: CollectionRule,
-    pub status: TaskStatus,
+    pub stage: TaskStage,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub applied_at: Option<DateTime<Utc>>,
@@ -35,12 +36,9 @@ pub enum CollectType {
 
 #[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "lowercase")]
-pub enum TaskStatus {
+pub enum TaskStage {
     Draft,
-    Saved,
     Applied,
-    Running,
-    Failed,
 }
 
 /// Collection rule variants

@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::routes::Route;
 use crate::models::collection::*;
-use crate::components::collection::TaskStatusBadge;
+use crate::components::collection::TaskStageBadge;
 use crate::utils::collection_api;
 use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 
@@ -40,7 +40,7 @@ pub fn CollectionPage() -> Element {
         let mut result = tasks().clone();
 
         if !status_filter().is_empty() {
-            result.retain(|t| format!("{:?}", t.status).to_lowercase() == status_filter().to_lowercase());
+            result.retain(|t| format!("{:?}", t.stage).to_lowercase() == status_filter().to_lowercase());
         }
 
         if !category_filter().is_empty() {
@@ -142,7 +142,7 @@ pub fn CollectionPage() -> Element {
                                         }
                                     }
                                     td { "{task.collect_type:?}" }
-                                    td { TaskStatusBadge { status: task.status.clone() } }
+                                    td { TaskStageBadge { stage: task.stage.clone() } }
                                     td {
                                         div { class: "text-sm", "{task.datasource.name}" }
                                         div { class: "text-xs opacity-60", "{task.datasource.datasource_type}" }
@@ -165,26 +165,6 @@ pub fn CollectionPage() -> Element {
                                                             navigator.push(Route::CollectionEditPage { id: edit_id.clone() });
                                                         },
                                                         Icon { icon: HiPencil, class: "w-4 h-4" }
-                                                    }
-                                                }
-                                            }
-
-                                            if matches!(task.status, TaskStatus::Saved) {
-                                                {
-                                                    let apply_id = task.id.clone();
-                                                    rsx! {
-                                                        button {
-                                                            class: "btn btn-sm btn-primary",
-                                                            onclick: move |_| {
-                                                                let id = apply_id.clone();
-                                                                spawn(async move {
-                                                                    if let Err(_e) = collection_api::apply_collection_task(&id).await {
-                                                                        // TODO: Show error toast
-                                                                    }
-                                                                });
-                                                            },
-                                                            "Apply"
-                                                        }
                                                     }
                                                 }
                                             }
