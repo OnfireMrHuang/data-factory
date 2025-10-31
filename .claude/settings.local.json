@@ -22,7 +22,9 @@
       "Bash(fi)",
       "Bash(git rev-parse:*)",
       "Bash(cargo fmt:*)",
-      "Bash(mysql:*)"
+      "Bash(mysql:*)",
+      "mcp__data-factory-api__read_project_oas_5fd30l",
+      "mcp__data-factory-api__read_project_oas_ref_resources_5fd30l"
     ],
     "deny": [],
     "ask": []

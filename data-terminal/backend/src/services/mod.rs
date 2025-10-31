@@ -9,7 +9,10 @@ use crate::models::error::Error;
 use crate::models::web::PageQuery;
 use crate::models::resource::{Resource, ResourceReadOnly, ResourceCreateUpdate};
 use crate::models::datasource::{DataSource, DataSourceReadOnly, DataSourceCreateUpdate};
-use crate::models::collection::{TableMetadata, FieldMetadata};
+use crate::models::collection::{
+    TableMetadata, FieldMetadata, CollectTaskReadOnly, CreateCollectTaskRequest,
+    UpdateCollectTaskRequest, TaskStage, CollectionCategory, CollectType, TableSchema, TableSelection, CollectTask
+};
 
 #[async_trait]
 pub trait ProjectService: Send {
@@ -39,4 +42,44 @@ pub trait DataSourceService: Send {
     async fn list_datasource(&self, project_code: String, params: PageQuery) -> Result<Vec<DataSourceReadOnly>, Error>;
     async fn get_datasource_tables(&self, project_code: String, datasource_id: String) -> Result<Vec<TableMetadata>, Error>;
     async fn get_table_fields(&self, project_code: String, datasource_id: String, table_name: String) -> Result<Vec<FieldMetadata>, Error>;
+}
+
+#[async_trait]
+pub trait CollectionService: Send {
+    async fn create_task(
+        &self,
+        project_code: String,
+        request: CreateCollectTaskRequest,
+    ) -> Result<CollectTaskReadOnly, Error>;
+
+    async fn get_task(&self, project_code: String, id: &str) -> Result<Option<CollectTaskReadOnly>, Error>;
+
+    async fn update_task(
+        &self,
+        project_code: String,
+        request: UpdateCollectTaskRequest,
+    ) -> Result<CollectTaskReadOnly, Error>;
+
+    async fn delete_task(&self, project_code: String, id: &str) -> Result<(), Error>;
+
+    async fn list_tasks(
+        &self,
+        project_code: String,
+        page: i64,
+        limit: i64,
+        stage: Option<TaskStage>,
+        category: Option<CollectionCategory>,
+        collect_type: Option<CollectType>,
+    ) -> Result<(Vec<CollectTaskReadOnly>, i64), Error>;
+
+    async fn apply_task(&self, project_code: String, id: &str) -> Result<CollectTaskReadOnly, Error>;
+
+    async fn generate_schema(
+        &self,
+        datasource_id: &str,
+        resource_id: &str,
+        selected_tables: Vec<TableSelection>,
+    ) -> Result<TableSchema, Error>;
+
+    async fn validate_task_config(&self, task: &CollectTask) -> Result<(), Error>;
 }

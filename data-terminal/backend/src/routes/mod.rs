@@ -58,7 +58,7 @@ fn api_routes_v1() -> Router {
         .nest("/project", project::routes())
         .nest("/resource", resource::routes())
         .nest("/datasource", datasource::routes())
-        .nest("/collections", collection::routes());
+        .nest("/collection", collection::routes());
 
     // 合并两组路由
     public_routes.merge(protected_routes)

@@ -1,29 +1,64 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use crate::models::{Validator, Error};
+use crate::impl_sqlx_for_string_enum;
 
-/// CollectTask model - represents a data collection task configuration
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+/// CollectTask model - represents a data collection task configuration (Internal use)
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, Default)]
 pub struct CollectTask {
     pub id: String,
-    pub code: String, 
+    pub code: String,
     pub name: String,
+    #[serde(default)]
     pub description: String,
+    #[serde(default)]
     pub category: CollectionCategory,
+    #[serde(default)]
     pub collect_type: CollectType,
     pub datasource_id: String,
     pub resource_id: String,
     #[sqlx(json)]
     pub rule: CollectionRule,
+    #[serde(default)]
     pub stage: TaskStage,
+    #[serde(default)]
     pub created_at: DateTime<Utc>,
+    #[serde(default)]
     pub updated_at: DateTime<Utc>,
     pub applied_at: Option<DateTime<Utc>>,
 }
 
+impl Validator for CollectTask {
+    fn validate(&self) -> Result<(), Error> {
+        if self.id.is_empty() {
+            return Err(Error::EmptyValue("id".to_string()));
+        }
+        if self.code.is_empty() {
+            return Err(Error::EmptyValue("code".to_string()));
+        }
+        if self.name.is_empty() {
+            return Err(Error::EmptyValue("name".to_string()));
+        }
+        if self.name.len() > 64 {
+            return Err(Error::InvalidValue("name length must be less than 64 characters".to_string()));
+        }
+        if self.description.len() > 255 {
+            return Err(Error::InvalidValue("description length must be less than 255 characters".to_string()));
+        }
+        if self.datasource_id.is_empty() {
+            return Err(Error::EmptyValue("datasource_id".to_string()));
+        }
+        if self.resource_id.is_empty() {
+            return Err(Error::EmptyValue("resource_id".to_string()));
+        }
+        Ok(())
+    }
+}
+
 /// Collection category enum
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "varchar", rename_all = "lowercase")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum CollectionCategory {
     Database,
@@ -31,23 +66,47 @@ pub enum CollectionCategory {
     Crawler,
 }
 
+impl Default for CollectionCategory {
+    fn default() -> Self {
+        Self::Database
+    }
+}
+
+impl_sqlx_for_string_enum!(CollectionCategory);
+
 /// Collection type enum
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "varchar", rename_all = "lowercase")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum CollectType {
     Full,
     Incremental,
 }
 
+impl Default for CollectType {
+    fn default() -> Self {
+        Self::Full
+    }
+}
+
+impl_sqlx_for_string_enum!(CollectType);
+
 /// Task status enum
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "varchar", rename_all = "lowercase")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum TaskStage {
     Draft,      // User is configuring
     Applied,    // Submitted to data-engine
 }
+
+impl Default for TaskStage {
+    fn default() -> Self {
+        Self::Draft
+    }
+}
+
+impl_sqlx_for_string_enum!(TaskStage);
 
 /// Collection rule variants (mode-specific configuration stored as JSON)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,36 +118,53 @@ pub enum CollectionRule {
     IncrementalApi(IncrementalApiRule),
 }
 
+impl Default for CollectionRule {
+    fn default() -> Self {
+        Self::FullDatabase(FullDatabaseRule::default())
+    }
+}
+
 // ============================================================================
 // Full Collection - Database
 // ============================================================================
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FullDatabaseRule {
+    #[serde(default)]
     pub selected_tables: Vec<TableSelection>,
     pub transformation_sql: Option<String>,
+    #[serde(default)]
     pub target_schema: TableSchema,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TableSelection {
+    #[serde(default)]
     pub table_name: String,
+    #[serde(default)]
     pub selected_fields: Vec<String>, // Empty = all fields
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TableSchema {
+    #[serde(default)]
     pub table_name: String,
+    #[serde(default)]
     pub fields: Vec<FieldSchema>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FieldSchema {
+    #[serde(default)]
     pub field_name: String,
+    #[serde(default)]
     pub field_type: String,       // SQL type (INT, VARCHAR, etc.)
+    #[serde(default)]
     pub nullable: bool,
     pub default_value: Option<String>,
+    #[serde(default)]
     pub primary_key: bool,
+    #[serde(default)]
     pub auto_increment: bool,
 }
 
@@ -275,9 +351,68 @@ pub struct CreateCollectTaskRequest {
 /// Request DTO for updating a collection task
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UpdateCollectTaskRequest {
+    pub id: String,
     pub name: Option<String>,
     pub description: Option<String>,
     pub rule: Option<CollectionRule>,
+}
+
+/// ReadOnly DTO for collection task with formatted timestamps (API response)
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct CollectTaskReadOnly {
+    pub id: String,
+    pub code: String,
+    pub name: String,
+    pub description: String,
+    pub category: CollectionCategory,
+    pub collect_type: CollectType,
+    pub datasource_id: String,
+    pub resource_id: String,
+    pub rule: CollectionRule,
+    pub stage: TaskStage,
+    pub created_at: String,
+    pub updated_at: String,
+    pub applied_at: Option<String>,
+}
+
+impl From<CollectTask> for CollectTaskReadOnly {
+    fn from(task: CollectTask) -> Self {
+        Self {
+            id: task.id,
+            code: task.code,
+            name: task.name,
+            description: task.description,
+            category: task.category,
+            collect_type: task.collect_type,
+            datasource_id: task.datasource_id,
+            resource_id: task.resource_id,
+            rule: task.rule,
+            stage: task.stage,
+            created_at: task.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            updated_at: task.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            applied_at: task.applied_at.map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string()),
+        }
+    }
+}
+
+impl From<CreateCollectTaskRequest> for CollectTask {
+    fn from(request: CreateCollectTaskRequest) -> Self {
+        Self {
+            id: String::new(), // Will be set by service
+            code: String::new(), // Will be set by service
+            name: request.name,
+            description: request.description.unwrap_or_default(),
+            category: request.category,
+            collect_type: request.collect_type,
+            datasource_id: request.datasource_id,
+            resource_id: request.resource_id,
+            rule: request.rule,
+            stage: TaskStage::Draft,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            applied_at: None,
+        }
+    }
 }
 
 /// Response DTO for collection task with nested datasource/resource info

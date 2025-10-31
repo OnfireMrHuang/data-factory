@@ -54,6 +54,9 @@ pub enum Error {
     #[error("invalid json format: {0}")]
     JsonSerializationError(String),
 
+    #[error("invalid operation: {0}")]
+    InvalidOperation(String),
+
     #[error("internal error: {0}")]
     InternalError(String)
 }

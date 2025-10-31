@@ -4,21 +4,21 @@ use shaku::{module, HasProvider};
 use crate::repositories::project::ProjectRepoImpl;
 use crate::repositories::resource::ResourceRepoImpl;
 use crate::repositories::datasource::DataSourceRepoImpl;
-// TODO: Add collection repository when implementing routes (T036-T043)
-// use crate::repositories::collection_repository::CollectionRepositoryImpl;
+use crate::repositories::collection_task::CollectionRepositoryImpl;
 use crate::services::project::ProjectServiceImpl;
 use crate::services::resource::ResourceServiceImpl;
 use crate::services::datasource::DataSourceServiceImpl;
-// TODO: Add collection service when implementing routes (T036-T043)
-// use crate::services::collection_service::CollectionServiceImpl;
+use crate::services::collection_service::CollectionServiceImpl;
 use crate::services::{ProjectService, ResourceService, DataSourceService};
+use crate::services::collection_service::CollectionService;
 
 module! {
     pub AutoFacModule {
         components = [],
-        providers = [ProjectRepoImpl, ProjectServiceImpl, 
-        ResourceRepoImpl, ResourceServiceImpl, 
-        DataSourceRepoImpl, DataSourceServiceImpl]
+        providers = [ProjectRepoImpl, ProjectServiceImpl,
+        ResourceRepoImpl, ResourceServiceImpl,
+        DataSourceRepoImpl, DataSourceServiceImpl,
+        CollectionRepositoryImpl, CollectionServiceImpl]
     }
 }
 
@@ -78,6 +78,11 @@ impl AppState {
 
     /// 获取 DataSourceService 实例
     pub fn get_datasource_service(&self) -> Box<dyn DataSourceService> {
+        self.module.provide().unwrap()
+    }
+
+    /// 获取 CollectionService 实例
+    pub fn get_collection_service(&self) -> Box<dyn CollectionService> {
         self.module.provide().unwrap()
     }
 }

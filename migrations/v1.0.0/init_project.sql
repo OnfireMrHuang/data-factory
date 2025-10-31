@@ -38,6 +38,6 @@ create table if not exists df_c_collection
     primary key (id),
     key idx_datasource_id (datasource_id),
     key idx_resource_id (resource_id),
-    key idx_status (status),
+    key idx_stage (stage),
     key idx_category_type (category, collect_type)
 ) COMMENT '采集任务表' engine = InnoDB;

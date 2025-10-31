@@ -1,60 +1,64 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use shaku::Interface;
-use std::sync::Arc;
 use uuid::Uuid;
+use shaku::Provider;
 
 use crate::models::collection::*;
 use crate::repositories::collection_task::CollectionRepository;
+use crate::models::Error;
 
 /// Collection service trait for business logic
 #[async_trait]
 pub trait CollectionService: Interface {
     async fn create_task(
         &self,
+        project_code: String,
         request: CreateCollectTaskRequest,
-    ) -> Result<CollectTask, ServiceError>;
+    ) -> Result<CollectTaskReadOnly, Error>;
 
-    async fn get_task(&self, id: &str) -> Result<Option<CollectTask>, ServiceError>;
+    async fn get_task(&self, project_code: String, id: &str) -> Result<Option<CollectTaskReadOnly>, Error>;
 
     async fn update_task(
         &self,
-        id: &str,
+        project_code: String,
         request: UpdateCollectTaskRequest,
-    ) -> Result<CollectTask, ServiceError>;
+    ) -> Result<CollectTaskReadOnly, Error>;
 
-    async fn delete_task(&self, id: &str) -> Result<(), ServiceError>;
+    async fn delete_task(&self, project_code: String, id: &str) -> Result<(), Error>;
 
     async fn list_tasks(
         &self,
+        project_code: String,
         page: i64,
         limit: i64,
         stage: Option<TaskStage>,
         category: Option<CollectionCategory>,
         collect_type: Option<CollectType>,
-    ) -> Result<(Vec<CollectTask>, i64), ServiceError>;
+    ) -> Result<(Vec<CollectTaskReadOnly>, i64), Error>;
 
-    async fn apply_task(&self, id: &str) -> Result<CollectTask, ServiceError>;
+    async fn apply_task(&self, project_code: String, id: &str) -> Result<CollectTaskReadOnly, Error>;
 
     async fn generate_schema(
         &self,
+        project_code: String,
         datasource_id: &str,
         resource_id: &str,
         selected_tables: Vec<TableSelection>,
-    ) -> Result<TableSchema, ServiceError>;
+    ) -> Result<TableSchema, Error>;
 
-    async fn validate_task_config(&self, task: &CollectTask) -> Result<(), ServiceError>;
+    async fn validate_task_config(&self, project_code: String, task: &CollectTask) -> Result<(), Error>;
 }
 
 /// Collection service implementation
+#[derive(Provider)]
+#[shaku(interface = CollectionService)]
 pub struct CollectionServiceImpl {
-    repository: Arc<dyn CollectionRepository>,
+    #[shaku(provide)]
+    repository: Box<dyn CollectionRepository>
 }
 
 impl CollectionServiceImpl {
-    pub fn new(repository: Arc<dyn CollectionRepository>) -> Self {
-        Self { repository }
-    }
 
     /// Validate datasource/resource compatibility based on collection mode
     fn validate_compatibility(
@@ -62,7 +66,7 @@ impl CollectionServiceImpl {
         category: &CollectionCategory,
         collect_type: &CollectType,
         rule: &CollectionRule,
-    ) -> Result<(), ServiceError> {
+    ) -> Result<(), Error> {
         // Validation rules from spec:
         // - Full + Database → relational_database only, must have FullDatabaseRule
         // - Full + API → relational_database or file_system, must have FullApiRule
@@ -72,14 +76,14 @@ impl CollectionServiceImpl {
         match (category, collect_type) {
             (CollectionCategory::Database, CollectType::Full) => {
                 if !matches!(rule, CollectionRule::FullDatabase(_)) {
-                    return Err(ServiceError::ValidationError(
+                    return Err(Error::InvalidValue(
                         "Full Database collection requires FullDatabaseRule".to_string()
                     ));
                 }
                 // Validate rule contents
                 if let CollectionRule::FullDatabase(db_rule) = rule {
                     if db_rule.selected_tables.is_empty() {
-                        return Err(ServiceError::ValidationError(
+                        return Err(Error::InvalidValue(
                             "Must select at least one table".to_string()
                         ));
                     }
@@ -88,7 +92,7 @@ impl CollectionServiceImpl {
             }
             (CollectionCategory::Api, CollectType::Full) => {
                 if !matches!(rule, CollectionRule::FullApi(_)) {
-                    return Err(ServiceError::ValidationError(
+                    return Err(Error::InvalidValue(
                         "Full API collection requires FullApiRule".to_string()
                     ));
                 }
@@ -96,7 +100,7 @@ impl CollectionServiceImpl {
             }
             (CollectionCategory::Database, CollectType::Incremental) => {
                 if !matches!(rule, CollectionRule::IncrementalDatabase(_)) {
-                    return Err(ServiceError::ValidationError(
+                    return Err(Error::InvalidValue(
                         "Incremental Database collection requires IncrementalDatabaseRule".to_string()
                     ));
                 }
@@ -104,7 +108,7 @@ impl CollectionServiceImpl {
             }
             (CollectionCategory::Api, CollectType::Incremental) => {
                 if !matches!(rule, CollectionRule::IncrementalApi(_)) {
-                    return Err(ServiceError::ValidationError(
+                    return Err(Error::InvalidValue(
                         "Incremental API collection requires IncrementalApiRule".to_string()
                     ));
                 }
@@ -119,8 +123,9 @@ impl CollectionServiceImpl {
 impl CollectionService for CollectionServiceImpl {
     async fn create_task(
         &self,
+        project_code: String,
         request: CreateCollectTaskRequest,
-    ) -> Result<CollectTask, ServiceError> {
+    ) -> Result<CollectTaskReadOnly, Error> {
         // Generate UUID for new task
         let id = Uuid::new_v4().to_string();
         let code = Uuid::new_v4().to_string();
@@ -145,30 +150,42 @@ impl CollectionService for CollectionServiceImpl {
             applied_at: None,
         };
 
-        let created = self.repository.create(&task).await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+        let created_id = self.repository.create(project_code, task.clone()).await
+            .map_err(|e| match e {
+                Error::DbError(_) => e,
+                _ => Error::InternalError(format!("Failed to create task: {:?}", e)),
+            })?;
 
-        Ok(created)
+        // Return the created task as ReadOnly
+        Ok(CollectTaskReadOnly::from(task))
     }
 
-    async fn get_task(&self, id: &str) -> Result<Option<CollectTask>, ServiceError> {
-        self.repository.find_by_id(id).await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))
+    async fn get_task(&self, project_code: String, id: &str) -> Result<Option<CollectTaskReadOnly>, Error> {
+        let task = self.repository.find_by_id(project_code, id).await
+            .map_err(|e| match e {
+                Error::DbError(_) => e,
+                _ => Error::InternalError(format!("Failed to get task: {:?}", e)),
+            })?;
+
+        Ok(task.map(CollectTaskReadOnly::from))
     }
 
     async fn update_task(
         &self,
-        id: &str,
+        project_code: String,
         request: UpdateCollectTaskRequest,
-    ) -> Result<CollectTask, ServiceError> {
+    ) -> Result<CollectTaskReadOnly, Error> {
         // Fetch existing task
-        let mut task = self.repository.find_by_id(id).await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
-            .ok_or(ServiceError::NotFound(format!("Task {} not found", id)))?;
+        let mut task = self.repository.find_by_id(project_code.clone(), &request.id).await
+            .map_err(|e| match e {
+                Error::DbError(_) => e,
+                _ => Error::InternalError(format!("Failed to find task: {:?}", e)),
+            })?
+            .ok_or(Error::NotFound)?;
 
-        // Only allow updates for Draft 
+        // Only allow updates for Draft
         if !matches!(task.stage, TaskStage::Draft) {
-            return Err(ServiceError::InvalidOperation(
+            return Err(Error::InvalidOperation(
                 "Cannot update task that is applied or running".to_string()
             ));
         }
@@ -186,71 +203,105 @@ impl CollectionService for CollectionServiceImpl {
 
         task.updated_at = Utc::now();
 
-        let updated = self.repository.update(&task).await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+        self.repository.update(project_code.clone(), task.clone()).await
+            .map_err(|e| match e {
+                Error::DbError(_) => e,
+                _ => Error::InternalError(format!("Failed to update task: {:?}", e)),
+            })?;
 
-        Ok(updated)
+        Ok(CollectTaskReadOnly::from(task))
     }
 
-    async fn delete_task(&self, id: &str) -> Result<(), ServiceError> {
+    async fn delete_task(&self, project_code: String, id: &str) -> Result<(), Error> {
         // Fetch task to check status
-        let task = self.repository.find_by_id(id).await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
-            .ok_or(ServiceError::NotFound(format!("Task {} not found", id)))?;
+        let task = self.repository.find_by_id(project_code.clone(), id).await
+            .map_err(|e| match e {
+                Error::DbError(_) => e,
+                _ => Error::InternalError(format!("Failed to find task: {:?}", e)),
+            })?
+            .ok_or(Error::NotFound)?;
 
         // delete draft task and applied task
-        self.repository.delete_task(&task.code).await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))
+        self.repository.delete_task(project_code, &task.code).await
+            .map_err(|e| match e {
+                Error::DbError(_) => e,
+                _ => Error::InternalError(format!("Failed to delete task: {:?}", e)),
+            })
     }
 
     async fn list_tasks(
         &self,
+        project_code: String,
         page: i64,
         limit: i64,
         stage: Option<TaskStage>,
         category: Option<CollectionCategory>,
         collect_type: Option<CollectType>,
-    ) -> Result<(Vec<CollectTask>, i64), ServiceError> {
-        let tasks = self.repository.find_all(page, limit, stage.clone(), category.clone(), collect_type.clone()).await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+    ) -> Result<(Vec<CollectTaskReadOnly>, i64), Error> {
+        use crate::models::web::PageQuery;
 
-        let total = self.repository.count_all(stage, category, collect_type).await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+        let params = PageQuery {
+            keyword: None,
+            page: Some(page as u64),
+            page_size: Some(limit as u64),
+        };
 
-        Ok((tasks, total))
+        let tasks = self.repository.find_all(project_code.clone(), params, stage.clone(), category.clone(), collect_type.clone()).await
+            .map_err(|e| match e {
+                Error::DbError(_) => e,
+                _ => Error::InternalError(format!("Failed to list tasks: {:?}", e)),
+            })?;
+
+        let total = self.repository.count_all(project_code, stage, category, collect_type).await
+            .map_err(|e| match e {
+                Error::DbError(_) => e,
+                _ => Error::InternalError(format!("Failed to count tasks: {:?}", e)),
+            })?;
+
+        Ok((tasks.into_iter().map(CollectTaskReadOnly::from).collect(), total))
     }
 
-    async fn apply_task(&self, id: &str) -> Result<CollectTask, ServiceError> {
+    async fn apply_task(&self, project_code: String, id: &str) -> Result<CollectTaskReadOnly, Error> {
         // Fetch task
-        let mut task = self.repository.find_by_id(id).await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?
-            .ok_or(ServiceError::NotFound(format!("Task {} not found", id)))?;
+        let mut task = self.repository.find_by_id(project_code.clone(), id).await
+            .map_err(|e| match e {
+                Error::DbError(_) => e,
+                _ => Error::InternalError(format!("Failed to find task: {:?}", e)),
+            })?
+            .ok_or(Error::NotFound)?;
 
         // attampt to delete existing applied task
-        self.repository.delete_by_code(&task.code, task.stage).await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
-        
+        self.repository.delete_by_code(project_code.clone(), &task.code, task.stage).await
+            .map_err(|e| match e {
+                Error::DbError(_) => e,
+                _ => Error::InternalError(format!("Failed to delete existing task: {:?}", e)),
+            })?;
+
         // create applied task
         task.id = Uuid::new_v4().to_string(); // recreate id
-        task.stage = TaskStage::Applied; // 
+        task.stage = TaskStage::Applied; //
         task.applied_at = Some(Utc::now());
         task.updated_at = Utc::now();
 
-        let updated = self.repository.create(&task).await
-            .map_err(|e| ServiceError::DatabaseError(e.to_string()))?;
+        self.repository.create(project_code, task.clone()).await
+            .map_err(|e| match e {
+                Error::DbError(_) => e,
+                _ => Error::InternalError(format!("Failed to apply task: {:?}", e)),
+            })?;
 
-        Ok(updated)
+        Ok(CollectTaskReadOnly::from(task))
     }
 
     async fn generate_schema(
         &self,
+        _project_code: String,
         _datasource_id: &str,
         _resource_id: &str,
         selected_tables: Vec<TableSelection>,
-    ) -> Result<TableSchema, ServiceError> {
+    ) -> Result<TableSchema, Error> {
         // Validate input
         if selected_tables.is_empty() {
-            return Err(ServiceError::ValidationError("No tables selected".to_string()));
+            return Err(Error::InvalidValue("No tables selected".to_string()));
         }
 
         let first_table = &selected_tables[0];
@@ -312,7 +363,7 @@ impl CollectionService for CollectionServiceImpl {
         })
     }
 
-    async fn validate_task_config(&self, _task: &CollectTask) -> Result<(), ServiceError> {
+    async fn validate_task_config(&self, _project_code: String, _task: &CollectTask) -> Result<(), Error> {
         // TODO: Implement comprehensive validation (US2-US4)
         Ok(())
     }
@@ -335,33 +386,3 @@ impl CollectionServiceImpl {
     }
 }
 
-// impl<M: shaku::Module> shaku::Component<M> for CollectionServiceImpl {
-//     type Interface = dyn CollectionService;
-//     type Parameters = Box<dyn CollectionRepository>;
-
-//     fn build(
-//         _context: &mut shaku::ModuleBuildContext<M>,
-//         params: Self::Parameters,
-//     ) -> Box<Self::Interface> {
-//         Box::new(Self::new(params))
-//     }
-// }
-
-/// Service error types
-#[derive(Debug, thiserror::Error)]
-pub enum ServiceError {
-    #[error("Database error: {0}")]
-    DatabaseError(String),
-
-    #[error("Not found: {0}")]
-    NotFound(String),
-
-    #[error("Invalid operation: {0}")]
-    InvalidOperation(String),
-
-    #[error("Validation error: {0}")]
-    ValidationError(String),
-
-    #[error("External service error: {0}")]
-    ExternalServiceError(String),
-}
