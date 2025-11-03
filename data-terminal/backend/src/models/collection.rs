@@ -110,7 +110,7 @@ impl_sqlx_for_string_enum!(TaskStage);
 
 /// Collection rule variants (mode-specific configuration stored as JSON)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
 pub enum CollectionRule {
     FullDatabase(FullDatabaseRule),
     FullApi(FullApiRule),
@@ -129,6 +129,7 @@ impl Default for CollectionRule {
 // ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
 pub struct FullDatabaseRule {
     #[serde(default)]
     pub selected_tables: Vec<TableSelection>,
@@ -351,7 +352,7 @@ pub struct CreateCollectTaskRequest {
 /// Request DTO for updating a collection task
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UpdateCollectTaskRequest {
-    pub id: String,
+    pub code: String,
     pub name: Option<String>,
     pub description: Option<String>,
     pub rule: Option<CollectionRule>,
@@ -473,4 +474,12 @@ pub struct FieldMetadata {
 #[derive(Debug, Serialize)]
 pub struct GenerateSchemaResponse {
     pub target_schema: TableSchema,
+}
+
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DetailRequest {
+    pub code: String,
+    pub stage: TaskStage,
 }

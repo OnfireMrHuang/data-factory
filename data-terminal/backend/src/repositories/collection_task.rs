@@ -13,6 +13,7 @@ use crate::models::web::PageQuery;
 pub trait CollectionRepository: Interface {
     async fn create(&self, project_code: String, task: CollectTask) -> Result<String, Error>;
     async fn find_by_id(&self, project_code: String, id: &str) -> Result<Option<CollectTask>, Error>;
+    async fn find_by_code(&self, project_code: String, code: &str, stage: TaskStage) -> Result<Option<CollectTask>, Error>;
     async fn update(&self, project_code: String, task: CollectTask) -> Result<(), Error>;
     async fn delete_task(&self, project_code: String, code: &str) -> Result<(), Error>;
     async fn delete_by_code(&self, project_code: String, code: &str, stage: TaskStage) -> Result<(), Error>;
@@ -112,6 +113,37 @@ impl CollectionRepository for CollectionRepositoryImpl {
 
         Ok(result)
     }
+
+    async fn find_by_code(&self, project_code: String, code: &str, stage: TaskStage) -> Result<Option<CollectTask>, Error> {
+        let pool = get_project_db(project_code).await?;
+        let result = sqlx::query_as::<_, CollectTask>(
+            r#"
+            SELECT
+                id,
+                code,
+                name,
+                description,
+                category,
+                collect_type,
+                datasource_id,
+                resource_id,
+                rule,
+                stage,
+                created_at,
+                updated_at,
+                applied_at
+            FROM df_c_collection
+            WHERE code = ? AND stage = ?
+            "#
+        )
+        .bind(code)
+        .bind(stage)
+        .fetch_optional(&pool)
+        .await?;
+
+        Ok(result)
+    }
+
 
     async fn update(&self, project_code: String, task: CollectTask) -> Result<(), Error> {
         task.validate()?;

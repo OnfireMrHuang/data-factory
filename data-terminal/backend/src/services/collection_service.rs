@@ -17,7 +17,7 @@ pub trait CollectionService: Interface {
         request: CreateCollectTaskRequest,
     ) -> Result<CollectTaskReadOnly, Error>;
 
-    async fn get_task(&self, project_code: String, id: &str) -> Result<Option<CollectTaskReadOnly>, Error>;
+    async fn get_task(&self, project_code: String, params: DetailRequest) -> Result<Option<CollectTaskReadOnly>, Error>;
 
     async fn update_task(
         &self,
@@ -25,7 +25,7 @@ pub trait CollectionService: Interface {
         request: UpdateCollectTaskRequest,
     ) -> Result<CollectTaskReadOnly, Error>;
 
-    async fn delete_task(&self, project_code: String, id: &str) -> Result<(), Error>;
+    async fn delete_task(&self, project_code: String, code: &str) -> Result<(), Error>;
 
     async fn list_tasks(
         &self,
@@ -37,7 +37,7 @@ pub trait CollectionService: Interface {
         collect_type: Option<CollectType>,
     ) -> Result<(Vec<CollectTaskReadOnly>, i64), Error>;
 
-    async fn apply_task(&self, project_code: String, id: &str) -> Result<CollectTaskReadOnly, Error>;
+    async fn apply_task(&self, project_code: String, code: &str) -> Result<CollectTaskReadOnly, Error>;
 
     async fn generate_schema(
         &self,
@@ -160,8 +160,8 @@ impl CollectionService for CollectionServiceImpl {
         Ok(CollectTaskReadOnly::from(task))
     }
 
-    async fn get_task(&self, project_code: String, id: &str) -> Result<Option<CollectTaskReadOnly>, Error> {
-        let task = self.repository.find_by_id(project_code, id).await
+    async fn get_task(&self, project_code: String, params: DetailRequest) -> Result<Option<CollectTaskReadOnly>, Error> {
+        let task = self.repository.find_by_code(project_code, &params.code, params.stage).await
             .map_err(|e| match e {
                 Error::DbError(_) => e,
                 _ => Error::InternalError(format!("Failed to get task: {:?}", e)),
@@ -176,7 +176,7 @@ impl CollectionService for CollectionServiceImpl {
         request: UpdateCollectTaskRequest,
     ) -> Result<CollectTaskReadOnly, Error> {
         // Fetch existing task
-        let mut task = self.repository.find_by_id(project_code.clone(), &request.id).await
+        let mut task = self.repository.find_by_code(project_code.clone(), &request.code, TaskStage::Draft).await
             .map_err(|e| match e {
                 Error::DbError(_) => e,
                 _ => Error::InternalError(format!("Failed to find task: {:?}", e)),
@@ -212,9 +212,9 @@ impl CollectionService for CollectionServiceImpl {
         Ok(CollectTaskReadOnly::from(task))
     }
 
-    async fn delete_task(&self, project_code: String, id: &str) -> Result<(), Error> {
+    async fn delete_task(&self, project_code: String, code: &str) -> Result<(), Error> {
         // Fetch task to check status
-        let task = self.repository.find_by_id(project_code.clone(), id).await
+        let task = self.repository.find_by_code(project_code.clone(), code, TaskStage::Draft).await
             .map_err(|e| match e {
                 Error::DbError(_) => e,
                 _ => Error::InternalError(format!("Failed to find task: {:?}", e)),
@@ -261,9 +261,9 @@ impl CollectionService for CollectionServiceImpl {
         Ok((tasks.into_iter().map(CollectTaskReadOnly::from).collect(), total))
     }
 
-    async fn apply_task(&self, project_code: String, id: &str) -> Result<CollectTaskReadOnly, Error> {
+    async fn apply_task(&self, project_code: String, code: &str) -> Result<CollectTaskReadOnly, Error> {
         // Fetch task
-        let mut task = self.repository.find_by_id(project_code.clone(), id).await
+        let mut task = self.repository.find_by_code(project_code.clone(), code, TaskStage::Draft).await
             .map_err(|e| match e {
                 Error::DbError(_) => e,
                 _ => Error::InternalError(format!("Failed to find task: {:?}", e)),

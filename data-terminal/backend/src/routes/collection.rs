@@ -14,7 +14,7 @@ pub fn routes() -> Router {
     Router::new()
         .route("/list", get(list_collection_tasks))
         .route("/add", post(create_collection_task))
-        .route("/{code}", get(get_collection_task))
+        .route("/detail", get(get_collection_task))
         .route("/update", post(update_collection_task))
         .route("/{code}", delete(delete_collection_task))
         .route("/{code}/apply", post(apply_collection_task))
@@ -61,20 +61,20 @@ async fn create_collection_task(
     }
 }
 
-/// GET /api/v1/collections/:id - Get collection task by ID
+
 #[debug_handler]
 async fn get_collection_task(
     claims: Claims,
-    Path(id): Path<String>,
+    Query(params): Query<DetailRequest>,
 ) -> (StatusCode, Json<Response<CollectTaskReadOnly>>) {
     let result = autofac::get_global_app_state_ref()
         .get_collection_service()
-        .get_task(claims.project, &id)
+        .get_task(claims.project, params)
         .await;
 
     match result {
         Ok(Some(task)) => (StatusCode::OK, Json(Response::success(task))),
-        Ok(None) => (StatusCode::OK, Json(Response::error(format!("Task {} not found", id)))),
+        Ok(None) => (StatusCode::OK, Json(Response::error(format!("Task not found")))),
         Err(e) => (StatusCode::OK, Json(Response::error(e.to_string()))),
     }
 }
@@ -100,11 +100,11 @@ async fn update_collection_task(
 #[debug_handler]
 async fn apply_collection_task(
     claims: Claims,
-    Path(id): Path<String>,
+    Path(code): Path<String>,
 ) -> (StatusCode, Json<Response<CollectTaskReadOnly>>) {
     let result = autofac::get_global_app_state_ref()
         .get_collection_service()
-        .apply_task(claims.project, &id)
+        .apply_task(claims.project, &code)
         .await;
 
     match result {
@@ -150,11 +150,11 @@ async fn list_collection_tasks(
 #[debug_handler]
 async fn delete_collection_task(
     claims: Claims,
-    Path(id): Path<String>,
+    Path(code): Path<String>,
 ) -> (StatusCode, Json<Response<String>>) {
     let result = autofac::get_global_app_state_ref()
         .get_collection_service()
-        .delete_task(claims.project, &id)
+        .delete_task(claims.project, &code)
         .await;
 
     match result {
