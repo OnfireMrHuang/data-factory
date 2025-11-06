@@ -5,7 +5,6 @@ use crate::utils::{
     request::{HttpRequest, RequestBuilder},
 };
 use dioxus::prelude::*;
-use dioxus_toast::{Icon, ToastInfo, ToastManager};
 
 #[component]
 pub fn ProjectPanel() -> Element {
@@ -22,7 +21,6 @@ pub fn ProjectPanel() -> Element {
     let mut show_action_menu = use_signal(|| None as Option<String>); // 表示操作菜单是否显示
     let mut menu_position = use_signal(|| "bottom" as &str); // 表示菜单显示位置：bottom 或 top
 
-    let mut toast = use_signal(|| ToastManager::default()); // 表示错误弹窗
 
     // 获取项目列表
     let fetch_projects = {
@@ -60,14 +58,7 @@ pub fn ProjectPanel() -> Element {
                 }
                 loading.set(false);
                 if !error_msg.is_empty() {
-                    let _id = toast.write().popup(ToastInfo {
-                        heading: Some("获取项目列表失败".into()),
-                        context: error_msg,
-                        allow_toast_close: true,
-                        position: dioxus_toast::Position::TopRight,
-                        icon: Some(Icon::Error),
-                        hide_after: Some(3),
-                    });
+                    // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
                 }
             });
         }
@@ -128,14 +119,7 @@ pub fn ProjectPanel() -> Element {
                             }
                         }
                         if !error_msg.is_empty() {
-                            let _id = toast.write().popup(ToastInfo {
-                                heading: Some("新增项目失败".into()),
-                                context: error_msg,
-                                allow_toast_close: true,
-                                position: dioxus_toast::Position::TopRight,
-                                icon: Some(Icon::Error),
-                                hide_after: Some(3),
-                            });
+                            // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
                         }
                     }
                     ProjectModalMode::Edit(_) => {
@@ -167,14 +151,7 @@ pub fn ProjectPanel() -> Element {
                             }
                         }
                         if !error_msg.is_empty() {
-                            let _id = toast.write().popup(ToastInfo {
-                                heading: Some("编辑项目失败".into()),
-                                context: error_msg,
-                                allow_toast_close: true,
-                                position: dioxus_toast::Position::TopRight,
-                                icon: Some(Icon::Error),
-                                hide_after: Some(3),
-                            });
+                            // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
                         }
                     }
                 }
@@ -230,14 +207,7 @@ pub fn ProjectPanel() -> Element {
                     }
                 }
                 if !error_msg.is_empty() {
-                    let _id = toast.write().popup(ToastInfo {
-                        heading: Some("删除项目失败".into()),
-                        context: error_msg,
-                        allow_toast_close: true,
-                        position: dioxus_toast::Position::TopRight,
-                        icon: Some(Icon::Error),
-                        hide_after: Some(3),
-                    });
+                    // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
                 }
             });
             show_project_delete_modal.set(false);
@@ -273,9 +243,7 @@ pub fn ProjectPanel() -> Element {
     rsx! {
 
         // 错误弹窗
-        dioxus_toast::ToastFrame {
-            manager: toast
-        }
+        // FIXME: ToastFrame disabled
 
         // 项目主面板
         div {

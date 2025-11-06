@@ -1,7 +1,8 @@
 use dioxus::prelude::*;
 use dioxus::hooks::use_signal;
-use dioxus_free_icons::{icons::{hi_outline_icons::*, fa_solid_icons::*, 
-    md_content_icons::*, md_notification_icons::*, ld_icons::*}, Icon};
+// FIXME: dioxus-free-icons doesn't support Dioxus 0.7 yet
+// use dioxus_free_icons::{icons::{hi_outline_icons::*, fa_solid_icons::*,
+//     md_content_icons::*, md_notification_icons::*, ld_icons::*}, Icon};
 use crate::routes::Route;
 use web_sys::window;
 
@@ -103,13 +104,13 @@ pub fn SidebarLeft() -> Element {
                             selected.set(Some(SubMenu::DataSourceManagement));
                             navigator.push(Route::DatasourceOverViewPage {});
                         },
-                        Icon { icon: HiDatabase, class: "w-4 h-4" }
+                        span { "💾" }
                         "数据源管理"
                     }
                     button {
                         class: tasks_class,
                         onclick: move |_| selected.set(Some(SubMenu::CollectionTasks)),
-                        Icon { icon: FaDownload, class: "w-4 h-4" }
+                        span { "📥" }
                         "采集任务"
                     }
                 }
@@ -142,19 +143,19 @@ pub fn SidebarLeft() -> Element {
                     button {
                         class: wide_class,
                         onclick: move |_| selected.set(Some(SubMenu::WideTableDevelopment)),
-                        Icon { icon: HiTable, class: "w-4 h-4" }
+                        span { "📊" }
                         "宽表开发"
                     }
                     button {
                         class: file_class,
                         onclick: move |_| selected.set(Some(SubMenu::FileDevelopment)),
-                        Icon { icon: FaFile, class: "w-4 h-4" }
+                        span { "📄" }
                         "文件开发"
                     }
                     button {
                         class: stream_class,
                         onclick: move |_| selected.set(Some(SubMenu::StreamDevelopment)),
-                        Icon { icon: MdStream, class: "w-4 h-4" }
+                        span { "🌊" }
                         "流开发"
                     }
                 }
@@ -187,19 +188,19 @@ pub fn SidebarLeft() -> Element {
                     button {
                         class: query_class,
                         onclick: move |_| selected.set(Some(SubMenu::DataQuery)),
-                        Icon { icon: HiSearch, class: "w-4 h-4" }
+                        span { "🔍" }
                         "数据查询"
                     }
                     button {
                         class: sync_class,
                         onclick: move |_| selected.set(Some(SubMenu::DataSync)),
-                        Icon { icon: MdSync, class: "w-4 h-4" }
+                        span { "🔄" }
                         "数据同步"
                     }
                     button {
                         class: subscription_class,
                         onclick: move |_| selected.set(Some(SubMenu::DataSubscription)),
-                        Icon { icon: HiBell, class: "w-4 h-4" }
+                        span { "🔔" }
                         "数据订阅"
                     }
                 }
@@ -239,25 +240,25 @@ pub fn SidebarLeft() -> Element {
                     button {
                         class: collection_class,
                         onclick: move |_| selected.set(Some(SubMenu::CollectionTaskMonitoring)),
-                        Icon { icon: HiEye, class: "w-4 h-4" }
+                        span { "👁️" }
                         "采集任务监控"
                     }
                     button {
                         class: wide_class,
                         onclick: move |_| selected.set(Some(SubMenu::WideTableTaskMonitoring)),
-                        Icon { icon: HiTable, class: "w-4 h-4" }
+                        span { "📊" }
                         "宽表任务监控"
                     }
                     button {
                         class: file_class,
                         onclick: move |_| selected.set(Some(SubMenu::FileTaskMonitoring)),
-                        Icon { icon: FaFile, class: "w-4 h-4" }
+                        span { "📄" }
                         "文件任务监控"
                     }
                     button {
                         class: stream_class,
                         onclick: move |_| selected.set(Some(SubMenu::StreamTaskMonitoring)),
-                        Icon { icon: MdStream, class: "w-4 h-4" }
+                        span { "🌊" }
                         "流任务监控"
                     }
                 }
@@ -266,7 +267,7 @@ pub fn SidebarLeft() -> Element {
     };
 
     rsx! {
-        aside { 
+        aside {
             class: "w-56 bg-base-200 flex flex-col p-4",
             // 主页一级菜单按钮
             button {
@@ -275,7 +276,7 @@ pub fn SidebarLeft() -> Element {
                     selected.set(None);
                     navigator.push(Route::Home {});
                 },
-                Icon { icon: HiHome, class: "w-5 h-5" }
+                span { "🏠" }
                 span { "主页" }
             }
             // 数据采集
@@ -294,14 +295,14 @@ pub fn SidebarLeft() -> Element {
                     selected.set(None);
                     save_expanded_to_storage(new_state);
                 },
-                Icon { icon: HiCollection, class: "w-5 h-5" }
+                span { "📦" }
                 span { "数据采集" }
                 span {
                     class: "text-base-content/50 ml-auto",
                     { if expanded() == Some(MainMenu::DataCollection) {
-                        rsx!(Icon { icon: HiChevronDown, class: "w-4 h-4" })
+                        rsx!(span { "▼" })
                     } else {
-                        rsx!(Icon { icon: HiChevronRight, class: "w-4 h-4" })
+                        rsx!(span { "▶" })
                     }}
                 }
             }
@@ -323,14 +324,14 @@ pub fn SidebarLeft() -> Element {
                     selected.set(None);
                     save_expanded_to_storage(new_state);
                 },
-                Icon { icon: FaHammer, class: "w-5 h-5" }
+                span { "🔨" }
                 span { "数据加工" }
                 span {
                     class: "text-base-content/50 ml-auto",
                     { if expanded() == Some(MainMenu::DataProcessing) {
-                        rsx!(Icon { icon: HiChevronDown, class: "w-4 h-4" })
+                        rsx!(span { "▼" })
                     } else {
-                        rsx!(Icon { icon: HiChevronRight, class: "w-4 h-4" })
+                        rsx!(span { "▶" })
                     }}
                 }
             }
@@ -352,14 +353,14 @@ pub fn SidebarLeft() -> Element {
                     selected.set(None);
                     save_expanded_to_storage(new_state);
                 },
-                Icon { icon: HiShare, class: "w-5 h-5" }
+                span { "📤" }
                 span { "数据供应" }
                 span {
                     class: "text-base-content/50 ml-auto",
                     { if expanded() == Some(MainMenu::DataSupply) {
-                        rsx!(Icon { icon: HiChevronDown, class: "w-4 h-4" })
+                        rsx!(span { "▼" })
                     } else {
-                        rsx!(Icon { icon: HiChevronRight, class: "w-4 h-4" })
+                        rsx!(span { "▶" })
                     }}
                 }
             }
@@ -381,14 +382,14 @@ pub fn SidebarLeft() -> Element {
                     selected.set(None);
                     save_expanded_to_storage(new_state);
                 },
-                Icon { icon: LdMonitorCheck, class: "w-5 h-5" }
+                span { "📈" }
                 span { "运维监控" }
                 span {
                     class: "text-base-content/50 ml-auto",
                     { if expanded() == Some(MainMenu::OpsMonitoring) {
-                        rsx!(Icon { icon: HiChevronDown, class: "w-4 h-4" })
+                        rsx!(span { "▼" })
                     } else {
-                        rsx!(Icon { icon: HiChevronRight, class: "w-4 h-4" })
+                        rsx!(span { "▶" })
                     }}
                 }
             }

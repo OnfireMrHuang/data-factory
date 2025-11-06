@@ -1,7 +1,6 @@
 use dioxus::prelude::*;
 use super::project_panel::ProjectPanel;
 use crate::routes::Route;
-use dioxus_free_icons::{icons::{bs_icons::*, ld_icons::*}, Icon};
 
 
 // 定义菜单项结构
@@ -70,11 +69,11 @@ pub fn Navbar() -> Element {
             // 右侧按钮（靠右）
             div { class: "ml-auto flex gap-2 items-center",
                 button { class: "btn flex items-center gap-1",
-                    Icon { icon: LdBot, class: "w-5 h-5" }
+                    span { "🤖" }
                     "智能助手"
                 }
                 button { class: "btn flex items-center gap-1",
-                    Icon { icon: BsTools, class: "w-5 h-5" }
+                    span { "🔧" }
                     "工具"
                 }
                 // 设置按钮和下拉菜单

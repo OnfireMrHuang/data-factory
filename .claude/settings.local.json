@@ -24,7 +24,16 @@
       "Bash(cargo fmt:*)",
       "Bash(mysql:*)",
       "mcp__data-factory-api__read_project_oas_5fd30l",
-      "mcp__data-factory-api__read_project_oas_ref_resources_5fd30l"
+      "mcp__data-factory-api__read_project_oas_ref_resources_5fd30l",
+      "WebSearch",
+      "WebFetch(domain:crates.io)",
+      "Bash(for file in pages/collection_page.rs pages/datasource_overview.rs components/datasource_card.rs components/datasource_type_dialog.rs)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(__NEW_LINE__ grep -n \"dioxus_free_icons\\|Icon {\" \"$file\")",
+      "Bash(__NEW_LINE__ echo)",
+      "Bash(__NEW_LINE__ done)",
+      "Bash(perl -0777 -i.bak2 -pe:*)",
+      "Bash(perl:*)"
     ],
     "deny": [],
     "ask": []

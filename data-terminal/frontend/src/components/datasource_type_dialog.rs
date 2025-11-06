@@ -1,6 +1,5 @@
 use dioxus::prelude::*;
 use crate::models::datasource::DataSourceType;
-use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 
 #[component]
 pub fn DataSourceTypeDialog(
@@ -68,10 +67,7 @@ pub fn DataSourceTypeDialog(
                             on_select.call(DataSourceType::QueryApi);
                         },
                         div { class: "card-body items-center text-center",
-                            Icon {
-                                icon: HiDatabase,
-                                class: "w-16 h-16 mb-4"
-                            }
+                            span { class: "text-6xl mb-4", "🗂️" }
                             h4 { class: "card-title text-lg", "Query API" }
                             p { class: "text-sm text-base-content/70",
                                 "查询型API接口"
@@ -86,10 +82,7 @@ pub fn DataSourceTypeDialog(
                             on_select.call(DataSourceType::SubscribeApi);
                         },
                         div { class: "card-body items-center text-center",
-                            Icon {
-                                icon: HiFolder,
-                                class: "w-16 h-16 mb-4"
-                            }
+                            span { class: "text-6xl mb-4", "📁" }
                             h4 { class: "card-title text-lg", "Subscribe API" }
                             p { class: "text-sm text-base-content/70",
                                 "订阅型API接口"

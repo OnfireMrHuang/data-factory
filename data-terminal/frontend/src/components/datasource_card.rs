@@ -1,6 +1,5 @@
 use dioxus::prelude::*;
 use crate::models::datasource::*;
-use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 use std::sync::Arc;
 
 // 获取数据源图标
@@ -59,22 +58,13 @@ fn get_connection_status_text(status: &ConnectionStatus) -> &'static str {
 fn get_connection_status_icon(status: &ConnectionStatus) -> Element {
     match status {
         ConnectionStatus::Connected => rsx! {
-            Icon { 
-                icon: HiCheckCircle,
-                class: "w-4 h-4"
-            }
+            span { "✓" }
         },
         ConnectionStatus::Disconnected => rsx! {
-            Icon { 
-                icon: HiExclamation,
-                class: "w-4 h-4"
-            }
+            span { "!" }
         },
         ConnectionStatus::Error => rsx! {
-            Icon { 
-                icon: HiXCircle,
-                class: "w-4 h-4"
-            }
+            span { "✗" }
         },
     }
 }
@@ -105,7 +95,7 @@ pub fn DatasourceCard(
                         button { 
                             class: "btn btn-ghost btn-sm",
                             onclick: move |_| show_menu.set(!show_menu()),
-                            Icon { icon: HiDotsVertical, class: "w-4 h-4" }
+                            span { "⋮" }
                         }
                         {if show_menu() {
                             rsx! {
@@ -118,7 +108,7 @@ pub fn DatasourceCard(
                                                 let ds_type = ds_type.clone();
                                                 move |_| on_edit.call(((*id).clone(), ds_type.clone()))
                                             },
-                                            Icon { icon: HiPencil, class: "w-4 h-4 mr-2" }
+                                            span { "💾" }
                                             "编辑"
                                         }
                                     }
@@ -129,7 +119,7 @@ pub fn DatasourceCard(
                                                 let id = Arc::clone(&id);
                                                 move |_| on_delete.call((*id).clone())
                                             },
-                                            Icon { icon: HiTrash, class: "w-4 h-4 mr-2" }
+                                            span { "💾" }
                                             "删除"
                                         }
                                     }

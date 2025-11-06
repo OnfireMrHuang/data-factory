@@ -3,7 +3,8 @@ use crate::routes::Route;
 use crate::models::collection::*;
 use crate::components::collection::TaskStageBadge;
 use crate::utils::collection_api;
-use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
+// FIXME: dioxus-free-icons doesn't support Dioxus 0.7 yet
+// use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 
 /// T052: CollectionPage - List all collection tasks
 #[component]
@@ -60,7 +61,7 @@ pub fn CollectionPage() -> Element {
                     onclick: move |_| {
                         navigator.push(Route::CollectionCreatePage {});
                     },
-                    Icon { icon: HiPlusCircle, class: "w-5 h-5" }
+                    span { "➕" }
                     "Create Collection Task"
                 }
             }
@@ -164,7 +165,7 @@ pub fn CollectionPage() -> Element {
                                                         onclick: move |_| {
                                                             navigator.push(Route::CollectionEditPage { id: edit_id.clone() });
                                                         },
-                                                        Icon { icon: HiPencil, class: "w-4 h-4" }
+                                                        span { "✏️" }
                                                     }
                                                 }
                                             }

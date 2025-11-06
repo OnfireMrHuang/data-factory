@@ -6,7 +6,8 @@ use crate::components::datasource_delete_dialog::DatasourceDeleteDialog;
 use crate::models::{datasource::*, protocol::*};
 use crate::utils::request::HttpRequest;
 use crate::utils::{cookie, request::RequestBuilder};
-use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
+// FIXME: dioxus-free-icons does not support Dioxus 0.7 yet
+// use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 use tracing::info;
 
 #[component]
@@ -220,7 +221,7 @@ pub fn DatasourceOverViewPage() -> Element {
                     button {
                         class: "btn btn-info ml-auto",
                         onclick: handle_add,
-                        Icon { icon: HiPlus, class: "w-4 h-4 mr-2" }
+                        span { "➕" }
                         "添加数据源"
                     }
                 }
