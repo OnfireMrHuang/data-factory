@@ -15,17 +15,29 @@ pub fn CollectionPage() -> Element {
     let mut loading = use_signal(|| true);
     let mut error_msg = use_signal(|| String::new());
 
+    // Pagination
+    let mut current_page = use_signal(|| 1u32);
+    let mut page_size = use_signal(|| 20u32);
+    let mut total_items = use_signal(|| 0u32);
+
     // Filters
     let mut status_filter = use_signal(String::new);
     let mut category_filter = use_signal(String::new);
 
-    // Load tasks on mount
+    // Load tasks on mount and when filters/page change
     use_effect(move || {
         spawn(async move {
             loading.set(true);
-            match collection_api::fetch_collection_tasks(Some(1), Some(20), None, None, None).await {
+            match collection_api::fetch_collection_tasks(
+                Some(current_page()),
+                Some(page_size()),
+                None,
+                None,
+                None
+            ).await {
                 Ok(response) => {
                     tasks.set(response.data);
+                    total_items.set(response.pagination.total);
                     error_msg.set(String::new());
                 }
                 Err(e) => {
@@ -49,6 +61,17 @@ pub fn CollectionPage() -> Element {
         }
 
         result
+    });
+
+    // Calculate total pages
+    let total_pages = use_memo(move || {
+        let total = total_items();
+        let size = page_size();
+        if total == 0 {
+            1
+        } else {
+            (total + size - 1) / size
+        }
     });
 
     rsx! {
@@ -75,12 +98,9 @@ pub fn CollectionPage() -> Element {
                             class: "select select-bordered",
                             value: "{status_filter}",
                             onchange: move |evt| status_filter.set(evt.value()),
-                            option { value: "", "All Statuses" }
-                            option { value: "draft", "Draft" }
-                            option { value: "saved", "Saved" }
-                            option { value: "applied", "Applied" }
-                            option { value: "running", "Running" }
-                            option { value: "failed", "Failed" }
+                            option { value: "", "全部状态" }
+                            option { value: "draft", "开发态" }
+                            option { value: "applied", "应用态" }
                         }
 
                         // Category filter
@@ -88,10 +108,10 @@ pub fn CollectionPage() -> Element {
                             class: "select select-bordered",
                             value: "{category_filter}",
                             onchange: move |evt| category_filter.set(evt.value()),
-                            option { value: "", "All Categories" }
-                            option { value: "database", "Database" }
-                            option { value: "api", "API" }
-                            option { value: "crawler", "Crawler" }
+                            option { value: "", "所有分类" }
+                            option { value: "database", "数据库采集" }
+                            option { value: "api", "API采集" }
+                            option { value: "crawler", "爬虫采集" }
                         }
                     }
                 }
@@ -119,14 +139,14 @@ pub fn CollectionPage() -> Element {
                     table { class: "table table-zebra",
                         thead {
                             tr {
-                                th { "Name" }
-                                th { "Category" }
-                                th { "Type" }
-                                th { "Status" }
-                                th { "Datasource" }
-                                th { "Resource" }
-                                th { "Created" }
-                                th { "Actions" }
+                                th { "名称" }
+                                th { "分类" }
+                                th { "类型" }
+                                th { "状态" }
+                                th { "数据源" }
+                                th { "资源" }
+                                th { "创建时间" }
+                                th { "更多" }
                             }
                         }
                         tbody {
@@ -135,20 +155,53 @@ pub fn CollectionPage() -> Element {
                                     key: "{task.id}",
                                     td {
                                         div { class: "font-semibold", "{task.name}" }
-                                        div { class: "text-xs opacity-70", "{task.description}" }
                                     }
                                     td {
-                                        span { class: "badge badge-outline",
-                                            "{task.category:?}"
+                                        match task.category {
+                                            crate::models::collection::CollectionCategory::Database => rsx! {
+                                                span { class: "badge badge-outline badge-primary",
+                                                    "数据库采集"
+                                                }
+                                            },
+                                            crate::models::collection::CollectionCategory::Api => rsx! {
+                                                span { class: "badge badge-outline badge-success",
+                                                    "API采集"
+                                                }
+                                            },
+                                            crate::models::collection::CollectionCategory::Crawler => rsx! {
+                                                span { class: "badge badge-outline badge-warning",
+                                                    "爬虫采集"
+                                                }
+                                            },
                                         }
                                     }
-                                    td { "{task.collect_type:?}" }
-                                    td { TaskStageBadge { stage: task.stage.clone() } }
+                                    td { 
+                                        // 类型名称映射
+                                        {
+                                            let type_name = match task.collect_type {
+                                                crate::models::collection::CollectType::Full => "全量采集",
+                                                crate::models::collection::CollectType::Incremental => "增量采集",
+                                            };
+                                            rsx! { "{type_name}" }
+                                        }
+                                    }
+                                    // TaskStage 显示名映射
                                     td {
-                                        div { class: "text-sm", "{task.datasource_id}" }
+                                        {
+                                            let stage_display = match task.stage {
+                                                crate::models::collection::TaskStage::Draft => "开发态",
+                                                crate::models::collection::TaskStage::Applied => "应用态",
+                                            };
+                                            rsx! {
+                                                span { class: "badge badge-info", "{stage_display}" }
+                                            }
+                                        }
                                     }
                                     td {
-                                        div { class: "text-sm", "{task.resource_id}" }
+                                        div { class: "text-sm", "{task.datasource_name}" }
+                                    }
+                                    td {
+                                        div { class: "text-sm", "{task.resource_name}" }
                                     }
                                     td {
                                         "{task.created_at.format(\"%Y-%m-%d\")}"
@@ -163,7 +216,7 @@ pub fn CollectionPage() -> Element {
                                                         onclick: move |_| {
                                                             navigator.push(Route::CollectionEditPage { id: edit_id.clone() });
                                                         },
-                                                        span { "✏️" }
+                                                        span { "..."}
                                                     }
                                                 }
                                             }
@@ -171,6 +224,98 @@ pub fn CollectionPage() -> Element {
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+
+                // Pagination controls
+                div { class: "flex justify-between items-center mt-6",
+                    // Pagination info
+                    div { class: "text-sm opacity-70",
+                        "Showing {filtered_tasks().len()} of {total_items()} tasks (Page {current_page()} of {total_pages()})"
+                    }
+
+                    // Pagination buttons
+                    div { class: "join",
+                        button {
+                            class: "join-item btn btn-sm",
+                            disabled: current_page() <= 1,
+                            onclick: move |_| {
+                                if current_page() > 1 {
+                                    current_page.set(current_page() - 1);
+                                }
+                            },
+                            "«"
+                        }
+
+                        // Page numbers
+                        {
+                            let current = current_page();
+                            let total = total_pages();
+                            let mut pages_to_show = Vec::new();
+
+                            // Always show first page
+                            pages_to_show.push(1);
+
+                            // Show pages around current
+                            for i in (current.saturating_sub(2))..=(current + 2).min(total) {
+                                if i > 1 && i < total {
+                                    pages_to_show.push(i);
+                                }
+                            }
+
+                            // Always show last page
+                            if total > 1 {
+                                pages_to_show.push(total);
+                            }
+
+                            pages_to_show.sort();
+                            pages_to_show.dedup();
+
+                            let mut elements = Vec::new();
+                            let mut prev_page = 0u32;
+
+                            for page in pages_to_show {
+                                // Add ellipsis if there's a gap
+                                if prev_page > 0 && page > prev_page + 1 {
+                                    elements.push(rsx! {
+                                        button {
+                                            key: "ellipsis-{prev_page}",
+                                            class: "join-item btn btn-sm btn-disabled",
+                                            "..."
+                                        }
+                                    });
+                                }
+
+                                let is_current = page == current;
+                                let page_num = page;
+
+                                elements.push(rsx! {
+                                    button {
+                                        key: "page-{page}",
+                                        class: if is_current { "join-item btn btn-sm btn-active" } else { "join-item btn btn-sm" },
+                                        onclick: move |_| {
+                                            current_page.set(page_num);
+                                        },
+                                        "{page}"
+                                    }
+                                });
+
+                                prev_page = page;
+                            }
+
+                            elements.into_iter()
+                        }
+
+                        button {
+                            class: "join-item btn btn-sm",
+                            disabled: current_page() >= total_pages(),
+                            onclick: move |_| {
+                                if current_page() < total_pages() {
+                                    current_page.set(current_page() + 1);
+                                }
+                            },
+                            "»"
                         }
                     }
                 }

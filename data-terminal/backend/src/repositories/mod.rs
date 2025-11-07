@@ -36,5 +36,6 @@ pub trait DataSourceRepo: Interface {
     async fn del_datasource(&self, project_code: String, id: String) -> Result<(), Error>;
     async fn get_datasource(&self, project_code: String, id: String) -> Result<DataSource, Error>;
     async fn list_datasource(&self, project_code: String, params: PageQuery) -> Result<Vec<DataSource>, Error>;
+    async fn batch_query_datsource(&self, project_code: String, datasource_ids: Vec<String>) -> Result<Vec<DataSource>, Error>;
     async fn list_datasource_by_project(&self, project_code: String, params: PageQuery) -> Result<Vec<DataSource>, Error>;
 }

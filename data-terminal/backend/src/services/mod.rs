@@ -13,9 +13,10 @@ use crate::models::collection::{
     TableMetadata, FieldMetadata, CollectTaskReadOnly, CreateCollectTaskRequest,
     UpdateCollectTaskRequest, TaskStage, CollectionCategory, CollectType, TableSchema, TableSelection, CollectTask
 };
+use shaku::Interface;
 
 #[async_trait]
-pub trait ProjectService: Send {
+pub trait ProjectService: Interface + Send {
     async fn add_project(&self, project: Project) -> Result<String, Error>;
     async fn edit_project(&self, project: Project) -> Result<(), Error>;
     async fn del_project(&self, code: String) -> Result<(), Error>;
@@ -24,7 +25,7 @@ pub trait ProjectService: Send {
 }
 
 #[async_trait]
-pub trait ResourceService: Send {
+pub trait ResourceService: Interface + Send {
     async fn add_resource(&self, resource: ResourceCreateUpdate) -> Result<String, Error>;
     async fn edit_resource(&self, resource: ResourceCreateUpdate) -> Result<(), Error>;
     async fn del_resource(&self, id: String) -> Result<(), Error>;
@@ -33,19 +34,20 @@ pub trait ResourceService: Send {
 }
 
 #[async_trait]
-pub trait DataSourceService: Send {
+pub trait DataSourceService: Interface + Send {
     async fn add_datasource(&self, project_code: String, datasource: DataSourceCreateUpdate) -> Result<String, Error>;
     async fn edit_datasource(&self, project_code: String, datasource: DataSourceCreateUpdate) -> Result<(), Error>;
     async fn ping_datasource(&self, project_code: String, datasource: DataSourceCreateUpdate) -> Result<(), Error>;
     async fn del_datasource(&self, project_code: String, id: String) -> Result<(), Error>;
     async fn get_datasource(&self, project_code: String, id: String) -> Result<DataSourceReadOnly, Error>;
     async fn list_datasource(&self, project_code: String, params: PageQuery) -> Result<Vec<DataSourceReadOnly>, Error>;
+    async fn batch_query_datsource(&self, project_code: String, datasource_id_list: Vec<String>) -> Result<Vec<DataSourceReadOnly>, Error>;
     async fn get_datasource_tables(&self, project_code: String, datasource_id: String) -> Result<Vec<TableMetadata>, Error>;
     async fn get_table_fields(&self, project_code: String, datasource_id: String, table_name: String) -> Result<Vec<FieldMetadata>, Error>;
 }
 
 #[async_trait]
-pub trait CollectionService: Send {
+pub trait CollectionService: Interface + Send {
     async fn create_task(
         &self,
         project_code: String,

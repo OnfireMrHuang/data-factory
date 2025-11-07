@@ -100,6 +100,17 @@ impl DataSourceService for DataSourceServiceImpl {
         }
     }
 
+    async fn batch_query_datsource(&self, project_code: String, datasource_id_list: Vec<String>) -> Result<Vec<DataSourceReadOnly>, Error> {
+        let result = self.repo.batch_query_datsource(project_code, datasource_id_list).await;
+        match result {
+            Ok(datasources) => Ok(datasources.into_iter().map(DataSourceReadOnly::from).collect()),
+            Err(e) => {
+                println!("Error: {:?}", e);
+                return Err(e);
+            },
+        }
+    }
+
     /// Get tables from a database datasource (MySQL/PostgreSQL)
     async fn get_datasource_tables(&self, project_code: String, datasource_id: String) -> Result<Vec<TableMetadata>, Error> {
         // // Fetch datasource configuration

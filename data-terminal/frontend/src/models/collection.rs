@@ -1,5 +1,44 @@
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use chrono::{DateTime, NaiveDateTime, Utc};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Custom deserializer for DateTime fields from backend
+/// Backend sends dates in format "2025-11-03 10:13:27"
+mod datetime_format {
+    use super::*;
+
+    const FORMAT: &str = "%Y-%m-%d %H:%M:%S";
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        NaiveDateTime::parse_from_str(&s, FORMAT)
+            .map_err(serde::de::Error::custom)
+            .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
+    }
+}
+
+mod optional_datetime_format {
+    use super::*;
+
+    const FORMAT: &str = "%Y-%m-%d %H:%M:%S";
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let opt = Option::<String>::deserialize(deserializer)?;
+        match opt {
+            Some(s) => {
+                NaiveDateTime::parse_from_str(&s, FORMAT)
+                    .map_err(serde::de::Error::custom)
+                    .map(|dt| Some(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)))
+            }
+            None => Ok(None),
+        }
+    }
+}
 
 /// CollectTask model for frontend
 #[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]
@@ -11,11 +50,16 @@ pub struct CollectTask {
     pub category: CollectionCategory,
     pub collect_type: CollectType,
     pub datasource_id: String,
+    pub datasource_name: String,
     pub resource_id: String,
+    pub resource_name: String,
     pub rule: serde_json::Value,
     pub stage: TaskStage,
+    #[serde(deserialize_with = "datetime_format::deserialize")]
     pub created_at: DateTime<Utc>,
+    #[serde(deserialize_with = "datetime_format::deserialize")]
     pub updated_at: DateTime<Utc>,
+    #[serde(deserialize_with = "optional_datetime_format::deserialize")]
     pub applied_at: Option<DateTime<Utc>>,
 }
 

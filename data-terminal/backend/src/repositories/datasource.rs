@@ -124,6 +124,28 @@ impl DataSourceRepo for DataSourceRepoImpl {
         Ok(rows)
     }
 
+    async fn batch_query_datsource(&self, project_code: String, datasource_ids: Vec<String>) -> Result<Vec<DataSource>, Error> {
+        let pool = get_project_db(project_code).await?;
+        
+        if datasource_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        
+        // 动态构建 IN 子句的占位符
+        let placeholders = datasource_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        let sql = format!("SELECT * FROM df_c_datasource WHERE id IN ({})", placeholders);
+        
+        // 动态绑定参数
+        let mut query = sqlx::query_as::<_, DataSource>(&sql);
+        for id in &datasource_ids {
+            query = query.bind(id);
+        }
+        
+        let rows = query.fetch_all(&pool).await?;
+
+        Ok(rows)
+    }
+
     async fn list_datasource_by_project(&self, project_code: String, params: PageQuery) -> Result<Vec<DataSource>, Error> {
         let pool = get_project_db(project_code).await?;
         let keyword = params.keyword.unwrap_or_default();

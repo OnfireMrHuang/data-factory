@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use chrono::Utc;
 use shaku::Interface;
@@ -5,8 +7,10 @@ use uuid::Uuid;
 use shaku::Provider;
 
 use crate::models::collection::*;
+use crate::models::datasource::DataSourceReadOnly;
 use crate::repositories::collection_task::CollectionRepository;
 use crate::models::Error;
+use crate::services::{DataSourceService, ResourceService};
 
 /// Collection service trait for business logic
 #[async_trait]
@@ -55,7 +59,11 @@ pub trait CollectionService: Interface {
 #[shaku(interface = CollectionService)]
 pub struct CollectionServiceImpl {
     #[shaku(provide)]
-    repository: Box<dyn CollectionRepository>
+    repository: Box<dyn CollectionRepository>,
+    #[shaku(provide)]
+    datasource_service: Box<dyn DataSourceService>,
+    #[shaku(provide)]
+    resource_service: Box<dyn ResourceService>,
 }
 
 impl CollectionServiceImpl {
@@ -257,6 +265,9 @@ impl CollectionService for CollectionServiceImpl {
                 Error::DbError(_) => e,
                 _ => Error::InternalError(format!("Failed to count tasks: {:?}", e)),
             })?;
+
+        // 批量获取数据源信息
+        let datasource_infos = self.datasource_service.batch_query_datsource(project_code.clone(), tasks.clone().iter().map(|task| task.datasource_id.clone()).collect());
 
         Ok((tasks.into_iter().map(CollectTaskReadOnly::from).collect(), total))
     }
