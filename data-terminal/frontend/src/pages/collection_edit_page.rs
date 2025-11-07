@@ -46,7 +46,7 @@ pub fn CollectionEditPage(id: String) -> Element {
         let task_id = id_for_load.clone();
         spawn(async move {
             loading.set(true);
-            match collection_api::fetch_collection_task_by_id(&task_id).await {
+            match collection_api::fetch_collection_task_by_code(&task_id, None).await {
                 Ok(task) => {
                     // Check if task can be edited
                     if !matches!(task.stage, TaskStage::Draft) {
@@ -62,8 +62,8 @@ pub fn CollectionEditPage(id: String) -> Element {
                     task_name.set(task.name.clone());
                     task_description.set(task.description.clone());
                     selected_category.set(task.category.clone());
-                    selected_datasource_id.set(Some(task.datasource.id.clone()));
-                    selected_resource_id.set(Some(task.resource.id.clone()));
+                    selected_datasource_id.set(Some(task.datasource_id.clone()));
+                    selected_resource_id.set(Some(task.resource_id.clone()));
 
                     // Set mode based on collect_type
                     selected_mode.set(Some(match task.collect_type {
@@ -72,22 +72,25 @@ pub fn CollectionEditPage(id: String) -> Element {
                     }));
 
                     // Extract rule-specific data
-                    match &task.rule {
-                        CollectionRule::FullDatabase(rule) => {
-                            let table_names: Vec<String> = rule.selected_tables
-                                .iter()
-                                .map(|t| t.table_name.clone())
-                                .collect();
-                            selected_tables.set(table_names);
-                            transform_sql.set(rule.transformation_sql.clone().unwrap_or_default());
-                            target_schema.set(Some(rule.target_schema.clone()));
-                        }
-                        CollectionRule::IncrementalDatabase(rule) => {
-                            selected_tables.set(rule.cdc_config.source_tables.clone());
-                            // Incremental mode doesn't have transformation_sql or target_schema in the same way
-                        }
-                        _ => {
-                            // API and Crawler modes not implemented yet
+                    // Try to deserialize the rule from JSON Value to CollectionRule
+                    if let Ok(collection_rule) = serde_json::from_value::<CollectionRule>(task.rule.clone()) {
+                        match &collection_rule {
+                            CollectionRule::FullDatabase(rule) => {
+                                let table_names: Vec<String> = rule.selected_tables
+                                    .iter()
+                                    .map(|t| t.table_name.clone())
+                                    .collect();
+                                selected_tables.set(table_names);
+                                transform_sql.set(rule.transformation_sql.clone().unwrap_or_default());
+                                target_schema.set(Some(rule.target_schema.clone()));
+                            }
+                            CollectionRule::IncrementalDatabase(rule) => {
+                                selected_tables.set(rule.cdc_config.source_tables.clone());
+                                // Incremental mode doesn't have transformation_sql or target_schema in the same way
+                            }
+                            _ => {
+                                // API and Crawler modes not implemented yet
+                            }
                         }
                     }
 
@@ -162,9 +165,13 @@ pub fn CollectionEditPage(id: String) -> Element {
             };
 
             let request = UpdateCollectTaskRequest {
-                name: Some(task_name()),
-                description: Some(task_description()),
-                rule: Some(rule),
+                name: task_name(),
+                description: if task_description().is_empty() {
+                    None
+                } else {
+                    Some(task_description())
+                },
+                rule: serde_json::to_value(&rule).unwrap_or(serde_json::json!(null)),
             };
 
             match collection_api::update_collection_task(&task_id, request).await {

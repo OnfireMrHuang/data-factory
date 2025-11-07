@@ -23,9 +23,9 @@ pub fn CollectionPage() -> Element {
     use_effect(move || {
         spawn(async move {
             loading.set(true);
-            match collection_api::fetch_collection_tasks().await {
-                Ok(data) => {
-                    tasks.set(data);
+            match collection_api::fetch_collection_tasks(Some(1), Some(20), None, None, None).await {
+                Ok(response) => {
+                    tasks.set(response.data);
                     error_msg.set(String::new());
                 }
                 Err(e) => {
@@ -145,12 +145,10 @@ pub fn CollectionPage() -> Element {
                                     td { "{task.collect_type:?}" }
                                     td { TaskStageBadge { stage: task.stage.clone() } }
                                     td {
-                                        div { class: "text-sm", "{task.datasource.name}" }
-                                        div { class: "text-xs opacity-60", "{task.datasource.datasource_type}" }
+                                        div { class: "text-sm", "{task.datasource_id}" }
                                     }
                                     td {
-                                        div { class: "text-sm", "{task.resource.name}" }
-                                        div { class: "text-xs opacity-60", "{task.resource.resource_type}" }
+                                        div { class: "text-sm", "{task.resource_id}" }
                                     }
                                     td {
                                         "{task.created_at.format(\"%Y-%m-%d\")}"

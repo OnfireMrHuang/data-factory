@@ -33,7 +33,10 @@
       "Bash(__NEW_LINE__ echo)",
       "Bash(__NEW_LINE__ done)",
       "Bash(perl -0777 -i.bak2 -pe:*)",
-      "Bash(perl:*)"
+      "Bash(perl:*)",
+      "mcp__data-factory-api__read_project_oas_gnngym",
+      "mcp__data-factory-api__read_project_oas_ref_resources_gnngym",
+      "mcp__data-factory-api__refresh_project_oas_gnngym"
     ],
     "deny": [],
     "ask": []

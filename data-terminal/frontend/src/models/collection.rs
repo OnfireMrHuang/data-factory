@@ -10,9 +10,9 @@ pub struct CollectTask {
     pub description: String,
     pub category: CollectionCategory,
     pub collect_type: CollectType,
-    pub datasource: DatasourceInfo,
-    pub resource: ResourceInfo,
-    pub rule: CollectionRule,
+    pub datasource_id: String,
+    pub resource_id: String,
+    pub rule: serde_json::Value,
     pub stage: TaskStage,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -274,14 +274,14 @@ pub struct CreateCollectTaskRequest {
     pub collect_type: CollectType,
     pub datasource_id: String,
     pub resource_id: String,
-    pub rule: CollectionRule,
+    pub rule: serde_json::Value,
 }
 
 #[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]
 pub struct UpdateCollectTaskRequest {
-    pub name: Option<String>,
+    pub name: String,
     pub description: Option<String>,
-    pub rule: Option<CollectionRule>,
+    pub rule: serde_json::Value,
 }
 
 #[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]

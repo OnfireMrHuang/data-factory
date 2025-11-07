@@ -113,7 +113,6 @@ async fn apply_collection_task(
     }
 }
 
-/// GET /api/v1/collections/list - List all collection tasks
 #[debug_handler]
 async fn list_collection_tasks(
     claims: Claims,

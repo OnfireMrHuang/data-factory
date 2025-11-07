@@ -109,7 +109,10 @@ pub fn SidebarLeft() -> Element {
                     }
                     button {
                         class: tasks_class,
-                        onclick: move |_| selected.set(Some(SubMenu::CollectionTasks)),
+                        onclick: move |_| {
+                            selected.set(Some(SubMenu::CollectionTasks));
+                            navigator.push(Route::CollectionPage {});
+                        },
                         span { "📥" }
                         "采集任务"
                     }

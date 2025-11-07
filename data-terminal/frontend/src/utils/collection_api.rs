@@ -1,158 +1,206 @@
 use crate::models::collection::*;
+use crate::utils::cookie;
 use crate::utils::error::RequestError;
-use gloo::net::http::Request;
+use crate::utils::request::{create_client_with_cookies, HttpRequest, RequestBuilder};
+use serde::Deserialize;
+use std::collections::HashMap;
 
-const API_BASE: &str = "http://localhost:3000/api/v1";
+const API_BASE: &str = "http://localhost:3000";
 
-/// Fetch all collection tasks
-pub async fn fetch_collection_tasks() -> Result<Vec<CollectTask>, RequestError> {
-    let url = format!("{}/collections", API_BASE);
-
-    let response = Request::get(&url)
-        .send()
-        .await
-        .map_err(|e| RequestError::network_error(e.to_string()))?;
-
-    if !response.ok() {
-        return Err(RequestError::http_error(response.status(), response.status_text()));
-    }
-
-    let tasks: Vec<CollectTask> = response
-        .json()
-        .await
-        .map_err(|e| RequestError::deserialization_error(e.to_string()))?;
-
-    Ok(tasks)
+/// Standard API response wrapper
+#[derive(Deserialize)]
+struct ApiResponse<T> {
+    result: bool,
+    msg: String,
+    data: T,
 }
 
-/// Fetch a specific collection task by ID
-pub async fn fetch_collection_task_by_id(id: &str) -> Result<CollectTask, RequestError> {
-    let url = format!("{}/collections/{}", API_BASE, id);
+/// Paginated list response
+#[derive(Deserialize)]
+pub struct PaginatedResponse<T> {
+    pub data: Vec<T>,
+    pub pagination: Pagination,
+}
 
-    let response = Request::get(&url)
-        .send()
-        .await
-        .map_err(|e| RequestError::network_error(e.to_string()))?;
+#[derive(Deserialize)]
+pub struct Pagination {
+    pub page: u32,
+    pub page_size: u32,
+    pub total: u32,
+}
 
-    if !response.ok() {
-        return Err(RequestError::http_error(response.status(), response.status_text()));
+/// Create HTTP client with cookies from browser
+fn create_client() -> impl HttpRequest {
+    let cookies_str = cookie::get_browser_cookies();
+    let mut cookies = HashMap::new();
+
+    // Parse cookies from browser
+    for cookie_part in cookies_str.split(';') {
+        let trimmed = cookie_part.trim();
+        if let Some(eq_pos) = trimmed.find('=') {
+            let name = &trimmed[..eq_pos];
+            let value = &trimmed[eq_pos + 1..];
+            cookies.insert(name.to_string(), value.to_string());
+        }
     }
 
-    let task: CollectTask = response
-        .json()
-        .await
-        .map_err(|e| RequestError::deserialization_error(e.to_string()))?;
+    create_client_with_cookies(API_BASE, cookies)
+}
 
-    Ok(task)
+/// Fetch all collection tasks with optional filters
+pub async fn fetch_collection_tasks(
+    page: Option<u32>,
+    page_size: Option<u32>,
+    stage: Option<&str>,
+    category: Option<&str>,
+    collect_type: Option<&str>,
+) -> Result<PaginatedResponse<CollectTask>, RequestError> {
+    let client = create_client();
+    let mut builder = RequestBuilder::new();
+
+    if let Some(p) = page {
+        builder = builder.query_param("page", p);
+    }
+    if let Some(ps) = page_size {
+        builder = builder.query_param("page_size", ps);
+    }
+    if let Some(s) = stage {
+        builder = builder.query_param("stage", s);
+    }
+    if let Some(c) = category {
+        builder = builder.query_param("category", c);
+    }
+    if let Some(ct) = collect_type {
+        builder = builder.query_param("collect_type", ct);
+    }
+
+    let config = builder.build();
+    let api_response: ApiResponse<PaginatedResponse<CollectTask>> = client
+        .get_json("/api/v1/collection/list", Some(config))
+        .await?;
+
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
+    }
+
+    Ok(api_response.data)
+}
+
+/// Fetch a specific collection task by code
+pub async fn fetch_collection_task_by_code(
+    code: &str,
+    stage: Option<&str>,
+) -> Result<CollectTask, RequestError> {
+    let client = create_client();
+    let mut builder = RequestBuilder::new().query_param("code", code);
+
+    if let Some(s) = stage {
+        builder = builder.query_param("stage", s);
+    }
+
+    let config = builder.build();
+    let api_response: ApiResponse<CollectTask> = client
+        .get_json("/api/v1/collection/detail", Some(config))
+        .await?;
+
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
+    }
+
+    Ok(api_response.data)
 }
 
 /// Create a new collection task
+/// Returns the task code on success
 pub async fn create_collection_task(
     request: CreateCollectTaskRequest,
-) -> Result<CollectTask, RequestError> {
-    let url = format!("{}/collections", API_BASE);
+) -> Result<String, RequestError> {
+    let client = create_client();
 
-    let response = Request::post(&url)
-        .json(&request)
-        .map_err(|e| RequestError::serialization_error(e.to_string()))?
-        .send()
-        .await
-        .map_err(|e| RequestError::network_error(e.to_string()))?;
+    let api_response: ApiResponse<String> = client
+        .post_json("/api/v1/collection/add", None, request)
+        .await?;
 
-    if !response.ok() {
-        return Err(RequestError::http_error(response.status(), response.status_text()));
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
     }
 
-    let task: CollectTask = response
-        .json()
-        .await
-        .map_err(|e| RequestError::deserialization_error(e.to_string()))?;
-
-    Ok(task)
+    Ok(api_response.data)
 }
 
 /// Update an existing collection task
+/// Returns the task code on success
 pub async fn update_collection_task(
-    id: &str,
+    code: &str,
     request: UpdateCollectTaskRequest,
-) -> Result<CollectTask, RequestError> {
-    let url = format!("{}/collections/{}", API_BASE, id);
+) -> Result<String, RequestError> {
+    let client = create_client();
 
-    let response = Request::put(&url)
-        .json(&request)
-        .map_err(|e| RequestError::serialization_error(e.to_string()))?
-        .send()
-        .await
-        .map_err(|e| RequestError::network_error(e.to_string()))?;
+    // Build the request body with code included
+    let body = serde_json::json!({
+        "code": code,
+        "name": request.name,
+        "description": request.description,
+        "rule": request.rule,
+    });
 
-    if !response.ok() {
-        return Err(RequestError::http_error(response.status(), response.status_text()));
+    let api_response: ApiResponse<String> = client
+        .post_json("/api/v1/collection/update", None, body)
+        .await?;
+
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
     }
 
-    let task: CollectTask = response
-        .json()
-        .await
-        .map_err(|e| RequestError::deserialization_error(e.to_string()))?;
-
-    Ok(task)
+    Ok(api_response.data)
 }
 
 /// Delete a collection task
-pub async fn delete_collection_task(id: &str) -> Result<(), RequestError> {
-    let url = format!("{}/collections/{}", API_BASE, id);
+pub async fn delete_collection_task(code: &str) -> Result<(), RequestError> {
+    let client = create_client();
 
-    let response = Request::delete(&url)
-        .send()
-        .await
-        .map_err(|e| RequestError::network_error(e.to_string()))?;
+    let response_text: String = client
+        .delete(&format!("/api/v1/collection/{}", code), None)
+        .await?;
 
-    if !response.ok() {
-        return Err(RequestError::http_error(response.status(), response.status_text()));
+    let api_response: ApiResponse<String> = serde_json::from_str(&response_text)
+        .map_err(|e| RequestError::deserialization_error(e.to_string()))?;
+
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
     }
 
     Ok(())
 }
 
 /// Apply a collection task to the data engine
-pub async fn apply_collection_task(id: &str) -> Result<CollectTask, RequestError> {
-    let url = format!("{}/collections/{}/apply", API_BASE, id);
+pub async fn apply_collection_task(code: &str) -> Result<String, RequestError> {
+    let client = create_client();
 
-    let response = Request::post(&url)
-        .send()
-        .await
-        .map_err(|e| RequestError::network_error(e.to_string()))?;
+    let api_response: ApiResponse<String> = client
+        .post_json(&format!("/api/v1/collection/{}/apply", code), None, serde_json::json!({}))
+        .await?;
 
-    if !response.ok() {
-        return Err(RequestError::http_error(response.status(), response.status_text()));
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
     }
 
-    let task: CollectTask = response
-        .json()
-        .await
-        .map_err(|e| RequestError::deserialization_error(e.to_string()))?;
-
-    Ok(task)
+    Ok(api_response.data)
 }
 
 /// Fetch tables from a datasource
 pub async fn fetch_datasource_tables(datasource_id: &str) -> Result<Vec<TableMetadata>, RequestError> {
-    let url = format!("{}/datasources/{}/tables", API_BASE, datasource_id);
+    let client = create_client();
 
-    let response = Request::get(&url)
-        .send()
-        .await
-        .map_err(|e| RequestError::network_error(e.to_string()))?;
+    let api_response: ApiResponse<Vec<TableMetadata>> = client
+        .get_json(&format!("/api/v1/datasources/{}/tables", datasource_id), None)
+        .await?;
 
-    if !response.ok() {
-        return Err(RequestError::http_error(response.status(), response.status_text()));
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
     }
 
-    let tables: Vec<TableMetadata> = response
-        .json()
-        .await
-        .map_err(|e| RequestError::deserialization_error(e.to_string()))?;
-
-    Ok(tables)
+    Ok(api_response.data)
 }
 
 /// Fetch fields from a specific table
@@ -160,26 +208,20 @@ pub async fn fetch_table_fields(
     datasource_id: &str,
     table_name: &str,
 ) -> Result<Vec<FieldMetadata>, RequestError> {
-    let url = format!(
-        "{}/datasources/{}/tables/{}/fields",
-        API_BASE, datasource_id, table_name
-    );
+    let client = create_client();
 
-    let response = Request::get(&url)
-        .send()
-        .await
-        .map_err(|e| RequestError::network_error(e.to_string()))?;
+    let api_response: ApiResponse<Vec<FieldMetadata>> = client
+        .get_json(
+            &format!("/api/v1/datasources/{}/tables/{}/fields", datasource_id, table_name),
+            None,
+        )
+        .await?;
 
-    if !response.ok() {
-        return Err(RequestError::http_error(response.status(), response.status_text()));
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
     }
 
-    let fields: Vec<FieldMetadata> = response
-        .json()
-        .await
-        .map_err(|e| RequestError::deserialization_error(e.to_string()))?;
-
-    Ok(fields)
+    Ok(api_response.data)
 }
 
 /// Generate target schema from selected tables
@@ -188,7 +230,7 @@ pub async fn generate_target_schema(
     resource_id: &str,
     selected_tables: Vec<TableSelection>,
 ) -> Result<TableSchema, RequestError> {
-    let url = format!("{}/collections/generate-schema", API_BASE);
+    let client = create_client();
 
     let request_body = serde_json::json!({
         "datasource_id": datasource_id,
@@ -196,26 +238,18 @@ pub async fn generate_target_schema(
         "selected_tables": selected_tables,
     });
 
-    let response = Request::post(&url)
-        .json(&request_body)
-        .map_err(|e| RequestError::serialization_error(e.to_string()))?
-        .send()
-        .await
-        .map_err(|e| RequestError::network_error(e.to_string()))?;
-
-    if !response.ok() {
-        return Err(RequestError::http_error(response.status(), response.status_text()));
-    }
-
     #[derive(serde::Deserialize)]
     struct GenerateSchemaResponse {
         target_schema: TableSchema,
     }
 
-    let result: GenerateSchemaResponse = response
-        .json()
-        .await
-        .map_err(|e| RequestError::deserialization_error(e.to_string()))?;
+    let api_response: ApiResponse<GenerateSchemaResponse> = client
+        .post_json("/api/v1/collections/generate-schema", None, request_body)
+        .await?;
 
-    Ok(result.target_schema)
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
+    }
+
+    Ok(api_response.data.target_schema)
 }

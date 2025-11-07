@@ -99,7 +99,11 @@ pub fn CollectionCreatePage() -> Element {
 
             let request = CreateCollectTaskRequest {
                 name: task_name(),
-                description: Some(task_description()),
+                description: if task_description().is_empty() {
+                    None
+                } else {
+                    Some(task_description())
+                },
                 category: selected_category(),
                 collect_type: if selected_mode() == Some("full".to_string()) {
                     CollectType::Full
@@ -108,7 +112,7 @@ pub fn CollectionCreatePage() -> Element {
                 },
                 datasource_id: selected_datasource_id().unwrap_or_default(),
                 resource_id: selected_resource_id().unwrap_or_default(),
-                rule,
+                rule: serde_json::to_value(&rule).unwrap_or(serde_json::json!(null)),
             };
 
             match collection_api::create_collection_task(request).await {

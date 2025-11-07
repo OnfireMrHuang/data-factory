@@ -35,6 +35,9 @@ pub enum RequestError {
 
     #[error("未知错误: {0}")]
     Unknown(String),
+
+    #[error("API 错误: {0}")]
+    ApiError(String),
 }
 
 impl RequestError {
@@ -84,6 +87,11 @@ impl RequestError {
     /// 创建未知错误
     pub fn unknown(message: impl Into<String>) -> Self {
         RequestError::Unknown(message.into())
+    }
+
+    /// 创建 API 错误
+    pub fn api_error(message: impl Into<String>) -> Self {
+        RequestError::ApiError(message.into())
     }
 }
 
