@@ -8,6 +8,7 @@ use shaku::Provider;
 
 use crate::models::collection::*;
 use crate::models::datasource::DataSourceReadOnly;
+use crate::models::resource::ResourceReadOnly;
 use crate::repositories::collection_task::CollectionRepository;
 use crate::models::Error;
 use crate::services::{DataSourceService, ResourceService};
@@ -260,16 +261,59 @@ impl CollectionService for CollectionServiceImpl {
                 _ => Error::InternalError(format!("Failed to list tasks: {:?}", e)),
             })?;
 
-        let total = self.repository.count_all(project_code, stage, category, collect_type).await
+        let total = self.repository.count_all(project_code.clone(), stage, category, collect_type).await
             .map_err(|e| match e {
                 Error::DbError(_) => e,
                 _ => Error::InternalError(format!("Failed to count tasks: {:?}", e)),
             })?;
 
         // 批量获取数据源信息
-        let datasource_infos = self.datasource_service.batch_query_datsource(project_code.clone(), tasks.clone().iter().map(|task| task.datasource_id.clone()).collect());
+        let datasource_list = self
+            .datasource_service
+            .batch_query_datsource(
+                project_code.clone(),
+                tasks
+                    .iter()
+                    .map(|task| task.datasource_id.clone())
+                    .collect(),
+            )
+            .await
+            .map_err(|e| Error::InternalError(format!("Failed to query datasources: {:?}", e)))?;
 
-        Ok((tasks.into_iter().map(CollectTaskReadOnly::from).collect(), total))
+        let datasource_map: HashMap<String, DataSourceReadOnly> = datasource_list
+            .into_iter()
+            .map(|ds| (ds.id.clone(), ds))
+            .collect();
+
+        // 批量获取资源信息
+        let resource_list = self
+            .resource_service
+            .batch_query_resource(
+                tasks
+                    .iter()
+                    .map(|task| task.resource_id.clone())
+                    .collect(),
+            )
+            .await
+            .map_err(|e| Error::InternalError(format!("Failed to query resources: {:?}", e)))?;
+
+        let resource_map: HashMap<String, ResourceReadOnly> = resource_list
+            .into_iter()
+            .map(|res| (res.id.clone(), res))
+            .collect();
+
+        Ok((tasks.into_iter().map(|task| {
+            let mut item = CollectTaskReadOnly::from(task);
+            let datasource = datasource_map.get(&item.datasource_id).cloned();
+            let resource = resource_map.get(&item.resource_id).cloned();
+            if let Some(datasource) = datasource {
+                item.datasource_name = datasource.name;
+            }
+            if let Some(resource) = resource {
+                item.resource_name = resource.name;
+            }
+            item
+        }).collect(), total))
     }
 
     async fn apply_task(&self, project_code: String, code: &str) -> Result<CollectTaskReadOnly, Error> {

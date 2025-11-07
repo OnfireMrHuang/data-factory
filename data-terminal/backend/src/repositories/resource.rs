@@ -113,4 +113,25 @@ impl ResourceRepo for ResourceRepoImpl {
 
         Ok(rows)
     }
+
+    async fn batch_query_resource(&self, resource_ids: Vec<String>) -> Result<Vec<Resource>, Error> {
+        let pool = get_config_db().await?;
+
+
+        if resource_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        
+        // 动态构建 IN 子句的占位符
+        let placeholders = resource_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        let sql = format!("SELECT * FROM df_c_resource WHERE id IN ({})", placeholders);
+        
+        // 动态绑定参数
+        let mut query = sqlx::query_as::<_, Resource>(&sql);
+        for id in &resource_ids {
+            query = query.bind(id);
+        }
+        let rows = query.fetch_all(&pool).await?;
+        Ok(rows)
+    }
 }

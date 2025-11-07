@@ -31,6 +31,7 @@ pub trait ResourceService: Interface + Send {
     async fn del_resource(&self, id: String) -> Result<(), Error>;
     async fn get_resource(&self, id: String) -> Result<ResourceReadOnly, Error>;
     async fn list_resource(&self, params: PageQuery) -> Result<Vec<ResourceReadOnly>, Error>;
+    async fn batch_query_resource(&self, resource_id_list: Vec<String>) -> Result<Vec<ResourceReadOnly>, Error>;
 }
 
 #[async_trait]

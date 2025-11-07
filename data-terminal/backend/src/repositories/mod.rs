@@ -27,6 +27,7 @@ pub trait ResourceRepo: Interface {
     async fn del_resource(&self, id: String) -> Result<(), Error>;
     async fn get_resource(&self, id: String) -> Result<Resource, Error>;
     async fn list_resource(&self, params: PageQuery) -> Result<Vec<Resource>, Error>;
+    async fn batch_query_resource(&self, resource_ids: Vec<String>) -> Result<Vec<Resource>, Error>;
 }
 
 #[async_trait]

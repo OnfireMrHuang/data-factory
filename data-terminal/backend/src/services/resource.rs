@@ -63,6 +63,14 @@ impl ResourceService for ResourceServiceImpl {
             Err(e) => Err(e),
         }
     }
+
+    async fn batch_query_resource(&self, resource_id_list: Vec<String>) -> Result<Vec<ResourceReadOnly>, Error> {
+        let result = self.repo.batch_query_resource(resource_id_list).await;
+        match result {
+            Ok(resources) => Ok(resources.into_iter().map(ResourceReadOnly::from).collect()),
+            Err(e) => Err(e),
+        }
+    }
 }
 
 
