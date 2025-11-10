@@ -17,7 +17,7 @@ pub fn CollectionCreatePage() -> Element {
     // Form state
     let mut task_name = use_signal(String::new);
     let mut task_description = use_signal(String::new);
-    let mut selected_mode = use_signal(|| None::<String>);
+    let mut selected_mode = use_signal(|| None::<CollectType>);
     let mut selected_category = use_signal(|| CollectionCategory::Database);
     let mut selected_datasource_id = use_signal(|| None::<String>);
     let mut selected_resource_id = use_signal(|| None::<String>);
@@ -71,7 +71,7 @@ pub fn CollectionCreatePage() -> Element {
             loading.set(true);
 
             // Build the collection rule based on mode
-            let rule = if selected_mode() == Some("full".to_string()) {
+            let rule = if selected_mode() == Some(CollectType::Full) {
                 let table_selections: Vec<TableSelection> = selected_tables()
                     .iter()
                     .map(|name| TableSelection {
@@ -105,11 +105,7 @@ pub fn CollectionCreatePage() -> Element {
                     Some(task_description())
                 },
                 category: selected_category(),
-                collect_type: if selected_mode() == Some("full".to_string()) {
-                    CollectType::Full
-                } else {
-                    CollectType::Incremental
-                },
+                collect_type: selected_mode().unwrap_or(CollectType::Full),
                 datasource_id: selected_datasource_id().unwrap_or_default(),
                 resource_id: selected_resource_id().unwrap_or_default(),
                 rule: serde_json::to_value(&rule).unwrap_or(serde_json::json!(null)),
@@ -129,15 +125,15 @@ pub fn CollectionCreatePage() -> Element {
     };
 
     rsx! {
-        div { class: "container mx-auto p-6 max-w-4xl",
+        div { class: "container mx-auto p-6 max-w-7xl h-full",
             // Header
             div { class: "flex items-center gap-4 mb-6",
                 button {
                     class: "btn btn-ghost btn-sm",
                     onclick: move |_| { navigator.push(Route::CollectionPage {}); },
-                    "← Back"
+                    "<- 返回"
                 }
-                h1 { class: "text-3xl font-bold", "Create Collection Task" }
+                h1 { class: "text-3xl font-bold", "创建采集任务" }
             }
 
             // Progress steps
@@ -198,9 +194,33 @@ pub fn CollectionCreatePage() -> Element {
                             }
                         }
 
-                        ModeSelector {
-                            selected_mode,
-                            on_mode_change: move |mode: String| selected_mode.set(Some(mode))
+                        select {
+                            
+                        }
+
+                        div { class: "form-control w-full",
+                            label { class: "label",
+                                span { class: "label-text font-semibold", "Collection Mode" }
+                            }
+                            select {
+                                class: "select select-bordered w-full",
+                                value: match selected_mode() {
+                                    Some(CollectType::Full) => "full",
+                                    Some(CollectType::Incremental) => "incremental",
+                                    None => "",
+                                },
+                                onchange: move |evt| {
+                                    let mode = match evt.value().as_str() {
+                                        "full" => Some(CollectType::Full),
+                                        "incremental" => Some(CollectType::Incremental),
+                                        _ => None,
+                                    };
+                                    selected_mode.set(mode);
+                                },
+                                option { value: "", disabled: true, selected: selected_mode().is_none(), "Select collection mode..." }
+                                option { value: "full", "Full Collection - Batch ETL, complete data transfer" }
+                                option { value: "incremental", "Incremental Collection - Real-time CDC/streaming" }
+                            }
                         }
 
                         div { class: "card-actions justify-end mt-6",
@@ -321,8 +341,24 @@ pub fn CollectionCreatePage() -> Element {
                                 p { "{task_name()}" }
                             }
                             div {
-                                h3 { class: "font-semibold", "Mode" }
-                                p { "{selected_mode().unwrap_or_default()}" }
+                                h3 { class: "font-semibold", "Category" }
+                                p {
+                                    {match selected_category() {
+                                        CollectionCategory::Database => "Database",
+                                        CollectionCategory::Api => "API",
+                                        CollectionCategory::Crawler => "Crawler",
+                                    }}
+                                }
+                            }
+                            div {
+                                h3 { class: "font-semibold", "Collection Mode" }
+                                p {
+                                    {match selected_mode() {
+                                        Some(CollectType::Full) => "Full Collection",
+                                        Some(CollectType::Incremental) => "Incremental Collection",
+                                        None => "Not selected",
+                                    }}
+                                }
                             }
                             div {
                                 h3 { class: "font-semibold", "Selected Tables" }

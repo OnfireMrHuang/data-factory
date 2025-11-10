@@ -8,3 +8,4 @@ pub mod datasource_card;
 pub mod datasource_type_dialog;
 pub mod datasource_delete_dialog;
 pub mod collection;
+pub mod hover_card;
