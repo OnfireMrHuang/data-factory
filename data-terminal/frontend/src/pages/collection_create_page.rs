@@ -3,7 +3,7 @@ use crate::routes::Route;
 use crate::models::collection::*;
 use crate::models::datasource::DataSource;
 use crate::models::resource::Resource;
-use crate::components::collection::*;
+use crate::components::business::collection::*;
 use crate::utils::collection_api;
 
 /// T053: CollectionCreatePage - Multi-step wizard for creating collection tasks

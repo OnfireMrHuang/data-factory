@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 use crate::routes::Route;
-use crate::components::datasource_card::DatasourceCard;
-use crate::components::datasource_type_dialog::DataSourceTypeDialog;
-use crate::components::datasource_delete_dialog::DatasourceDeleteDialog;
+use crate::components::business::datasource_card::DatasourceCard;
+use crate::components::business::datasource_type_dialog::DataSourceTypeDialog;
+use crate::components::business::datasource_delete_dialog::DatasourceDeleteDialog;
 use crate::models::{datasource::*, protocol::*};
 use crate::utils::request::HttpRequest;
 use crate::utils::{cookie, request::RequestBuilder};

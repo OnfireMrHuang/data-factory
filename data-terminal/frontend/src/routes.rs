@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::components::{navbar::Navbar, sidebar_left::SidebarLeft, sidebar_right::SidebarRight};
+use crate::components::business::{navbar::Navbar, sidebar_left::SidebarLeft, sidebar_right::SidebarRight};
 use crate::{pages::{
     catch_all::PageNotFound,
     home::Home,
