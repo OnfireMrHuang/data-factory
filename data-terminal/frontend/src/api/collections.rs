@@ -1,19 +1,11 @@
+//! Collection task API operations
+
+use crate::api::client::create_api_client;
 use crate::models::collection::*;
-use crate::utils::cookie;
 use crate::utils::error::RequestError;
-use crate::utils::request::{create_client_with_cookies, HttpRequest, RequestBuilder};
+use crate::utils::request::{HttpRequest, RequestBuilder};
 use serde::Deserialize;
-use std::collections::HashMap;
-
-const API_BASE: &str = "http://localhost:3000";
-
-/// Standard API response wrapper
-#[derive(Deserialize)]
-struct ApiResponse<T> {
-    result: bool,
-    msg: String,
-    data: T,
-}
+use crate::models::protocol::ApiResponse;
 
 /// Paginated list response
 #[derive(Deserialize)]
@@ -29,24 +21,6 @@ pub struct Pagination {
     pub total: u32,
 }
 
-/// Create HTTP client with cookies from browser
-fn create_client() -> impl HttpRequest {
-    let cookies_str = cookie::get_browser_cookies();
-    let mut cookies = HashMap::new();
-
-    // Parse cookies from browser
-    for cookie_part in cookies_str.split(';') {
-        let trimmed = cookie_part.trim();
-        if let Some(eq_pos) = trimmed.find('=') {
-            let name = &trimmed[..eq_pos];
-            let value = &trimmed[eq_pos + 1..];
-            cookies.insert(name.to_string(), value.to_string());
-        }
-    }
-
-    create_client_with_cookies(API_BASE, cookies)
-}
-
 /// Fetch all collection tasks with optional filters
 pub async fn fetch_collection_tasks(
     page: Option<u32>,
@@ -55,7 +29,7 @@ pub async fn fetch_collection_tasks(
     category: Option<&str>,
     collect_type: Option<&str>,
 ) -> Result<PaginatedResponse<CollectTask>, RequestError> {
-    let client = create_client();
+    let client = create_api_client();
     let mut builder = RequestBuilder::new();
 
     if let Some(p) = page {
@@ -91,7 +65,7 @@ pub async fn fetch_collection_task_by_code(
     code: &str,
     stage: Option<&str>,
 ) -> Result<CollectTask, RequestError> {
-    let client = create_client();
+    let client = create_api_client();
     let mut builder = RequestBuilder::new().query_param("code", code);
 
     if let Some(s) = stage {
@@ -115,7 +89,7 @@ pub async fn fetch_collection_task_by_code(
 pub async fn create_collection_task(
     request: CreateCollectTaskRequest,
 ) -> Result<String, RequestError> {
-    let client = create_client();
+    let client = create_api_client();
 
     let api_response: ApiResponse<String> = client
         .post_json("/api/v1/collection/add", None, request)
@@ -134,7 +108,7 @@ pub async fn update_collection_task(
     code: &str,
     request: UpdateCollectTaskRequest,
 ) -> Result<String, RequestError> {
-    let client = create_client();
+    let client = create_api_client();
 
     // Build the request body with code included
     let body = serde_json::json!({
@@ -157,7 +131,7 @@ pub async fn update_collection_task(
 
 /// Delete a collection task
 pub async fn delete_collection_task(code: &str) -> Result<(), RequestError> {
-    let client = create_client();
+    let client = create_api_client();
 
     let response_text: String = client
         .delete(&format!("/api/v1/collection/{}", code), None)
@@ -175,7 +149,7 @@ pub async fn delete_collection_task(code: &str) -> Result<(), RequestError> {
 
 /// Apply a collection task to the data engine
 pub async fn apply_collection_task(code: &str) -> Result<String, RequestError> {
-    let client = create_client();
+    let client = create_api_client();
 
     let api_response: ApiResponse<String> = client
         .post_json(&format!("/api/v1/collection/{}/apply", code), None, serde_json::json!({}))
@@ -190,7 +164,7 @@ pub async fn apply_collection_task(code: &str) -> Result<String, RequestError> {
 
 /// Fetch tables from a datasource
 pub async fn fetch_datasource_tables(datasource_id: &str) -> Result<Vec<TableMetadata>, RequestError> {
-    let client = create_client();
+    let client = create_api_client();
 
     let api_response: ApiResponse<Vec<TableMetadata>> = client
         .get_json(&format!("/api/v1/datasources/{}/tables", datasource_id), None)
@@ -208,7 +182,7 @@ pub async fn fetch_table_fields(
     datasource_id: &str,
     table_name: &str,
 ) -> Result<Vec<FieldMetadata>, RequestError> {
-    let client = create_client();
+    let client = create_api_client();
 
     let api_response: ApiResponse<Vec<FieldMetadata>> = client
         .get_json(
@@ -230,7 +204,7 @@ pub async fn generate_target_schema(
     resource_id: &str,
     selected_tables: Vec<TableSelection>,
 ) -> Result<TableSchema, RequestError> {
-    let client = create_client();
+    let client = create_api_client();
 
     let request_body = serde_json::json!({
         "datasource_id": datasource_id,

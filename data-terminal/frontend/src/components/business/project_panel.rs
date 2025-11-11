@@ -1,9 +1,5 @@
 use crate::models::project::{Project, ProjectModalMode};
-use crate::models::protocol::ApiResponse;
-use crate::utils::{
-    cookie,
-    request::{HttpRequest, RequestBuilder},
-};
+use crate::api::projects;
 use dioxus::prelude::*;
 
 #[component]
@@ -29,37 +25,16 @@ pub fn ProjectPanel() -> Element {
         move || {
             loading.set(true);
             spawn(async move {
-                let client = crate::utils::request::create_client("http://localhost:3000");
-                let req_config = RequestBuilder::new()
-                    .header("Content-Type", "application/json")
-                    .header("Cookie", &cookie::get_browser_cookies())
-                    .build();
-                let response = client.get("/api/v1/project/list", Some(req_config)).await;
-                let mut error_msg = String::new();
-                match response {
-                    Ok(response_text) => {
-                        let result = serde_json::from_str::<ApiResponse<Vec<Project>>>(&response_text);
-                        match result {
-                            Ok(api_response) => {
-                                if api_response.result {
-                                    projects.set(api_response.data);
-                                } else {
-                                    error_msg = api_response.msg;
-                                }
-                            }
-                            Err(e) => {
-                                error_msg = e.to_string();
-                            }
-                        }
+                match projects::fetch_projects().await {
+                    Ok(data) => {
+                        projects.set(data);
                     }
                     Err(e) => {
-                        error_msg = e.to_string();
+                        // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
+                        tracing::error!("Failed to fetch projects: {}", e);
                     }
                 }
                 loading.set(false);
-                if !error_msg.is_empty() {
-                    // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
-                }
             });
         }
     };
@@ -77,11 +52,6 @@ pub fn ProjectPanel() -> Element {
         move |project_data: (String, String, String)| {
             let (code, name, description) = project_data;
             spawn(async move {
-                let client = crate::utils::request::create_client("http://localhost:3000");
-                let req_config = RequestBuilder::new()
-                    .header("Content-Type", "application/json")
-                    .header("Cookie", &cookie::get_browser_cookies())
-                    .build();
                 let project_data = Project {
                     code: code,
                     name: name,
@@ -92,66 +62,30 @@ pub fn ProjectPanel() -> Element {
                     created_at: String::new(),
                     updated_at: String::new(),
                 };
-                let mut error_msg = String::new();
+
                 match modal_mode() {
                     ProjectModalMode::Add => {
                         // 新增项目
-                        let response = client
-                            .post("/api/v1/project/add", Some(req_config), Some(project_data))
-                            .await;
-                        match response {
-                            Ok(result) => {
-                                match serde_json::from_str::<ApiResponse<String>>(&result) {
-                                    Ok(api_response) => {
-                                        if api_response.result {
-                                            fetch_projects(); // 刷新项目列表
-                                        } else {
-                                            error_msg = api_response.msg;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        error_msg = e.to_string();
-                                    }
-                                }
+                        match projects::create_project(project_data).await {
+                            Ok(_) => {
+                                fetch_projects(); // 刷新项目列表
                             }
                             Err(e) => {
-                                error_msg = e.to_string();
+                                // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
+                                tracing::error!("Failed to create project: {}", e);
                             }
-                        }
-                        if !error_msg.is_empty() {
-                            // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
                         }
                     }
                     ProjectModalMode::Edit(_) => {
                         // 编辑项目
-                        let response = client
-                            .post(
-                                "/api/v1/project/update",
-                                Some(req_config),
-                                Some(project_data),
-                            )
-                            .await;
-                        match response {
-                            Ok(result) => {
-                                match serde_json::from_str::<ApiResponse<String>>(&result) {
-                                    Ok(api_response) => {
-                                        if api_response.result {
-                                            fetch_projects(); // 刷新项目列表
-                                        } else {
-                                            error_msg = api_response.msg;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        error_msg = e.to_string();
-                                    }
-                                }
+                        match projects::update_project(project_data).await {
+                            Ok(_) => {
+                                fetch_projects(); // 刷新项目列表
                             }
                             Err(e) => {
-                                error_msg = e.to_string();
+                                // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
+                                tracing::error!("Failed to update project: {}", e);
                             }
-                        }
-                        if !error_msg.is_empty() {
-                            // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
                         }
                     }
                 }
@@ -174,40 +108,14 @@ pub fn ProjectPanel() -> Element {
         let mut fetch_projects = fetch_projects.clone();
         move |project: Project| {
             spawn(async move {
-                let mut error_msg = String::new();
-                let client = crate::utils::request::create_client("http://localhost:3000");
-                let req_config = RequestBuilder::new()
-                    .header("Accept", "application/json")
-                    .header("Cookie", &cookie::get_browser_cookies())
-                    .build();
-
-                let response = client
-                    .delete(
-                        &format!("/api/v1/project/{}", project.code),
-                        Some(req_config),
-                    )
-                    .await;
-                match response {
-                    Ok(result) => {
-                        match serde_json::from_str::<ApiResponse<String>>(&result) {
-                            Ok(api_response) => {
-                                if api_response.result {
-                                    fetch_projects(); // 刷新项目列表
-                                } else {
-                                    error_msg = api_response.msg;
-                                }
-                            }
-                            Err(e) => {
-                                error_msg = e.to_string();
-                            }
-                        }
+                match projects::delete_project(&project.code).await {
+                    Ok(_) => {
+                        fetch_projects(); // 刷新项目列表
                     }
                     Err(e) => {
-                        error_msg = e.to_string();
+                        // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
+                        tracing::error!("Failed to delete project: {}", e);
                     }
-                }
-                if !error_msg.is_empty() {
-                    // FIXME: Toast disabled (dioxus-toast not compatible with 0.7)
                 }
             });
             show_project_delete_modal.set(false);

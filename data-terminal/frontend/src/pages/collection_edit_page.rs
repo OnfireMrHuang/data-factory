@@ -4,7 +4,7 @@ use crate::models::collection::*;
 use crate::models::datasource::DataSource;
 use crate::models::resource::Resource;
 use crate::components::business::collection::*;
-use crate::utils::collection_api;
+use crate::api::collections;
 
 /// T054: CollectionEditPage - Edit existing collection tasks
 #[component]
@@ -46,7 +46,7 @@ pub fn CollectionEditPage(id: String) -> Element {
         let task_id = id_for_load.clone();
         spawn(async move {
             loading.set(true);
-            match collection_api::fetch_collection_task_by_code(&task_id, None).await {
+            match collections::fetch_collection_task_by_code(&task_id, None).await {
                 Ok(task) => {
                     // Check if task can be edited
                     if !matches!(task.stage, TaskStage::Draft) {
@@ -119,7 +119,7 @@ pub fn CollectionEditPage(id: String) -> Element {
                     })
                     .collect();
 
-                match collection_api::generate_target_schema(&ds_id, &res_id, table_selections).await {
+                match collections::generate_target_schema(&ds_id, &res_id, table_selections).await {
                     Ok(schema) => {
                         target_schema.set(Some(schema));
                     }
@@ -174,7 +174,7 @@ pub fn CollectionEditPage(id: String) -> Element {
                 rule: serde_json::to_value(&rule).unwrap_or(serde_json::json!(null)),
             };
 
-            match collection_api::update_collection_task(&task_id, request).await {
+            match collections::update_collection_task(&task_id, request).await {
                 Ok(_task) => {
                     saving.set(false);
                     navigator.push(Route::CollectionPage {});

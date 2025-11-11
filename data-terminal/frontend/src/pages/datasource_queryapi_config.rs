@@ -1,13 +1,9 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::utils::{
-    cookie,
-    request::{HttpRequest, RequestBuilder},
-};
+use crate::api::datasources;
 use crate::routes::Route;
 use crate::models::datasource::*;
-use crate::models::protocol::ApiResponse;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -153,34 +149,15 @@ pub fn DatasourceQueryApiEdit(id: String) -> Element {
         move || {
             let id = datasource_id.clone();
             spawn(async move {
-                let client = crate::utils::request::create_client("http://localhost:3000");
-                let req_config = RequestBuilder::new()
-                    .header("Content-Type", "application/json")
-                    .header("Cookie", &cookie::get_browser_cookies())
-                    .build();
-
-                let response = client.get(&format!("/api/v1/datasource/{}", id), Some(req_config)).await;
-                match response {
-                    Ok(response_text) => {
-                        match serde_json::from_str::<ApiResponse<DataSource>>(&response_text) {
-                            Ok(api_response) => {
-                                if api_response.result {
-                                    let ds = api_response.data;
-                                    if let Ok(queryapi_config) = serde_json::from_value::<QueryApiConfig>(ds.connection_config) {
-                                        config.set(queryapi_config);
-                                    }
-                                }
-                                is_loading.set(false);
-                            }
-                            Err(_) => {
-                                is_loading.set(false);
-                            }
+                match datasources::fetch_datasource_by_id(&id).await {
+                    Ok(ds) => {
+                        if let Ok(queryapi_config) = serde_json::from_value::<QueryApiConfig>(ds.connection_config) {
+                            config.set(queryapi_config);
                         }
                     }
-                    Err(_) => {
-                        is_loading.set(false);
-                    }
+                    Err(_) => {}
                 }
+                is_loading.set(false);
             });
         }
     });
@@ -195,11 +172,6 @@ pub fn DatasourceQueryApiEdit(id: String) -> Element {
             }
             let id = id.clone();
             spawn(async move {
-                let client = crate::utils::request::create_client("http://localhost:3000");
-                let req_config = RequestBuilder::new()
-                    .header("Content-Type", "application/json")
-                    .header("Cookie", &cookie::get_browser_cookies())
-                    .build();
                 let queryapi_config = DataSourceCreateUpdate {
                     id: id.clone(),
                     name: config().name,
@@ -208,27 +180,9 @@ pub fn DatasourceQueryApiEdit(id: String) -> Element {
                     datasource_type: DataSourceType::QueryApi,
                     connection_config: serde_json::to_value(config()).unwrap(),
                 };
-                let response = client
-                    .post("/api/v1/datasource/update", Some(req_config), Some(queryapi_config))
-                    .await;
-                match response {
-                    Ok(result) => {
-                        match serde_json::from_str::<ApiResponse<String>>(&result) {
-                            Ok(result) => {
-                                if result.result {
-                                    navigator.push(Route::DatasourceOverViewPage {});
-                                } else {
-                                    let mut errs = errors.clone();
-                                    errs.push(result.msg);
-                                    validation_errors.set(errs);
-                                }
-                            }
-                            Err(e) => {
-                                let mut errs = errors.clone();
-                                errs.push(e.to_string());
-                                validation_errors.set(errs);
-                            }
-                        }
+                match datasources::update_datasource(queryapi_config).await {
+                    Ok(_) => {
+                        navigator.push(Route::DatasourceOverViewPage {});
                     }
                     Err(e) => {
                         let mut errs = errors.clone();
@@ -247,11 +201,6 @@ pub fn DatasourceQueryApiEdit(id: String) -> Element {
             return;
         }
         spawn(async move {
-            let client = crate::utils::request::create_client("http://localhost:3000");
-            let req_config = RequestBuilder::new()
-                .header("Content-Type", "application/json")
-                .header("Cookie", &cookie::get_browser_cookies())
-                .build();
             let queryapi_config = DataSourceCreateUpdate {
                 id: String::new(),
                 name: config().name,
@@ -260,27 +209,9 @@ pub fn DatasourceQueryApiEdit(id: String) -> Element {
                 datasource_type: DataSourceType::QueryApi,
                 connection_config: serde_json::to_value(config()).unwrap(),
             };
-            let response = client
-                .post("/api/v1/datasource/ping", Some(req_config), Some(queryapi_config))
-                .await;
-            match response {
-                Ok(result) => {
-                    match serde_json::from_str::<ApiResponse<String>>(&result) {
-                        Ok(result) => {
-                            if result.result {
-                                validation_errors.set(Vec::new());
-                            } else {
-                                let mut errs = errors.clone();
-                                errs.push(result.msg);
-                                validation_errors.set(errs);
-                            }
-                        }
-                        Err(e) => {
-                            let mut errs = errors.clone();
-                            errs.push(e.to_string());
-                            validation_errors.set(errs);
-                        }
-                    }
+            match datasources::test_datasource_connection(queryapi_config).await {
+                Ok(_) => {
+                    validation_errors.set(Vec::new());
                 }
                 Err(e) => {
                     let mut errs = errors.clone();
@@ -818,11 +749,6 @@ pub fn DatasourceQueryApiAdd() -> Element {
             return;
         }
         spawn(async move {
-            let client = crate::utils::request::create_client("http://localhost:3000");
-            let req_config = RequestBuilder::new()
-                .header("Content-Type", "application/json")
-                .header("Cookie", &cookie::get_browser_cookies())
-                .build();
             let queryapi_config = DataSourceCreateUpdate {
                 id: String::new(),
                 name: config().name,
@@ -831,27 +757,9 @@ pub fn DatasourceQueryApiAdd() -> Element {
                 datasource_type: DataSourceType::QueryApi,
                 connection_config: serde_json::to_value(config()).unwrap(),
             };
-            let response = client
-                .post("/api/v1/datasource/add", Some(req_config), Some(queryapi_config))
-                .await;
-            match response {
-                Ok(result) => {
-                    match serde_json::from_str::<ApiResponse<String>>(&result) {
-                        Ok(result) => {
-                            if result.result {
-                                navigator.push(Route::DatasourceOverViewPage {});
-                            } else {
-                                let mut errs = errors.clone();
-                                errs.push(result.msg);
-                                validation_errors.set(errs);
-                            }
-                        }
-                        Err(e) => {
-                            let mut errs = errors.clone();
-                            errs.push(e.to_string());
-                            validation_errors.set(errs);
-                        }
-                    }
+            match datasources::create_datasource(queryapi_config).await {
+                Ok(_) => {
+                    navigator.push(Route::DatasourceOverViewPage {});
                 }
                 Err(e) => {
                     let mut errs = errors.clone();
@@ -869,11 +777,6 @@ pub fn DatasourceQueryApiAdd() -> Element {
             return;
         }
         spawn(async move {
-            let client = crate::utils::request::create_client("http://localhost:3000");
-            let req_config = RequestBuilder::new()
-                .header("Content-Type", "application/json")
-                .header("Cookie", &cookie::get_browser_cookies())
-                .build();
             let queryapi_config = DataSourceCreateUpdate {
                 id: String::new(),
                 name: config().name,
@@ -882,27 +785,9 @@ pub fn DatasourceQueryApiAdd() -> Element {
                 datasource_type: DataSourceType::QueryApi,
                 connection_config: serde_json::to_value(config()).unwrap(),
             };
-            let response = client
-                .post("/api/v1/datasource/ping", Some(req_config), Some(queryapi_config))
-                .await;
-            match response {
-                Ok(result) => {
-                    match serde_json::from_str::<ApiResponse<String>>(&result) {
-                        Ok(result) => {
-                            if result.result {
-                                validation_errors.set(Vec::new());
-                            } else {
-                                let mut errs = errors.clone();
-                                errs.push(result.msg);
-                                validation_errors.set(errs);
-                            }
-                        }
-                        Err(e) => {
-                            let mut errs = errors.clone();
-                            errs.push(e.to_string());
-                            validation_errors.set(errs);
-                        }
-                    }
+            match datasources::test_datasource_connection(queryapi_config).await {
+                Ok(_) => {
+                    validation_errors.set(Vec::new());
                 }
                 Err(e) => {
                     let mut errs = errors.clone();

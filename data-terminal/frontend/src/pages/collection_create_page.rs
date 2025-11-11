@@ -4,7 +4,7 @@ use crate::models::collection::*;
 use crate::models::datasource::DataSource;
 use crate::models::resource::Resource;
 use crate::components::business::collection::*;
-use crate::utils::collection_api;
+use crate::api::collections;
 
 /// T053: CollectionCreatePage - Multi-step wizard for creating collection tasks
 #[component]
@@ -53,7 +53,7 @@ pub fn CollectionCreatePage() -> Element {
                     })
                     .collect();
 
-                match collection_api::generate_target_schema(&ds_id, &res_id, table_selections).await {
+                match collections::generate_target_schema(&ds_id, &res_id, table_selections).await {
                     Ok(schema) => {
                         target_schema.set(Some(schema));
                     }
@@ -111,7 +111,7 @@ pub fn CollectionCreatePage() -> Element {
                 rule: serde_json::to_value(&rule).unwrap_or(serde_json::json!(null)),
             };
 
-            match collection_api::create_collection_task(request).await {
+            match collections::create_collection_task(request).await {
                 Ok(_task) => {
                     loading.set(false);
                     navigator.push(Route::CollectionPage {});

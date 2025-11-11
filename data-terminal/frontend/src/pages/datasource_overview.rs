@@ -4,8 +4,7 @@ use crate::components::business::datasource_card::DatasourceCard;
 use crate::components::business::datasource_type_dialog::DataSourceTypeDialog;
 use crate::components::business::datasource_delete_dialog::DatasourceDeleteDialog;
 use crate::models::{datasource::*, protocol::*};
-use crate::utils::request::HttpRequest;
-use crate::utils::{cookie, request::RequestBuilder};
+use crate::api::datasources;
 // FIXME: dioxus-free-icons does not support Dioxus 0.7 yet
 // use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 use tracing::info;
@@ -65,39 +64,17 @@ pub fn DatasourceOverViewPage() -> Element {
         let mut datasources = datasources.clone();
         move || {
             spawn(async move {
-            let client = crate::utils::request::create_client("http://localhost:3000");
-            let req_config = RequestBuilder::new()
-                .header("Content-Type", "application/json")
-                .header("Cookie", &cookie::get_browser_cookies())
-                .query_param("page", 1)
-                .query_param("page_size", 100)
-                .build();
-            let response = client.get("/api/v1/datasource/list", Some(req_config)).await;
-            match response {
-                Ok(response_text) => {
-                    info!("Received response: {}", response_text);
-                    let result = serde_json::from_str::<ApiResponse<Vec<DataSource>>>(&response_text);
-                    match result {
-                        Ok(api_response) => {
-                            info!("API response success: {}, data count: {}", 
-                                api_response.result, api_response.data.len());
-                            if api_response.result {
-                                datasources.set(api_response.data);
-                            } else {
-                                error_msg.set(api_response.msg.clone());
-                            }
-                        }
-                        Err(e) => {
-                            error_msg.set(e.to_string());
-                        }
+                match datasources::fetch_datasources(1, 100).await {
+                    Ok(data) => {
+                        info!("Datasources fetched successfully, count: {}", data.len());
+                        datasources.set(data);
+                    }
+                    Err(e) => {
+                        tracing::error!("Request failed: {}", e);
+                        error_msg.set(e.to_string());
                     }
                 }
-                Err(e) => {
-                    tracing::error!("Request failed: {}", e);
-                    error_msg.set(e.to_string());
-                }
-            }
-        })
+            })
         }
     };
 
@@ -136,38 +113,13 @@ pub fn DatasourceOverViewPage() -> Element {
         show_delete.set(false);
         let id = ds.id.clone();
         spawn(async move {
-            let client = crate::utils::request::create_client("http://localhost:3000");
-            let req_config = RequestBuilder::new()
-                .header("Content-Type", "application/json")
-                .header("Cookie", &cookie::get_browser_cookies())
-                .build();
-
-            let response = client.delete(&format!("/api/v1/datasource/{}", id), Some(req_config)).await;
-            match response {
-                Ok(response_text) => {
-                    match serde_json::from_str::<ApiResponse<String>>(&response_text) {
-                        Ok(api_response) => {
-                            if api_response.result {
-                                info!("数据源删除成功: {}", id);
-                                // Refresh datasource list
-                                let client = crate::utils::request::create_client("http://localhost:3000");
-                                let req_config = RequestBuilder::new()
-                                    .header("Content-Type", "application/json")
-                                    .header("Cookie", &cookie::get_browser_cookies())
-                                    .query_param("page", 1)
-                                    .query_param("page_size", 100)
-                                    .build();
-                                let response = client.get("/api/v1/datasource/list", Some(req_config)).await;
-                                if let Ok(response_text) = response {
-                                    if let Ok(result) = serde_json::from_str::<ApiResponse<Vec<DataSource>>>(&response_text) {
-                                        if result.result {
-                                            datasources.set(result.data);
-                                        }
-                                    }
-                                }
-                            } else {
-                                error_msg.set(api_response.msg);
-                            }
+            match datasources::delete_datasource(&id).await {
+                Ok(_) => {
+                    info!("数据源删除成功: {}", id);
+                    // Refresh datasource list
+                    match datasources::fetch_datasources(1, 100).await {
+                        Ok(data) => {
+                            datasources.set(data);
                         }
                         Err(e) => {
                             error_msg.set(e.to_string());

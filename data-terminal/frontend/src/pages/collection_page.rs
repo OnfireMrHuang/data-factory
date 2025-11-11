@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::routes::Route;
 use crate::models::collection::*;
-use crate::utils::collection_api;
+use crate::api::collections;
 // FIXME: dioxus-free-icons doesn't support Dioxus 0.7 yet
 // use dioxus_free_icons::{icons::hi_outline_icons::*, Icon};
 
@@ -30,7 +30,7 @@ pub fn CollectionPage() -> Element {
     use_effect(move || {
         spawn(async move {
             loading.set(true);
-            match collection_api::fetch_collection_tasks(
+            match collections::fetch_collection_tasks(
                 Some(current_page()),
                 Some(page_size()),
                 None,

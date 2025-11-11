@@ -1,12 +1,8 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
-use crate::utils::{
-    cookie,
-    request::{HttpRequest, RequestBuilder},
-};
+use crate::api::datasources;
 use crate::routes::Route;
 use crate::models::datasource::*;
-use crate::models::protocol::ApiResponse;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MysqlConfig {
@@ -72,35 +68,16 @@ pub fn DatasourceMysqlEdit(id: String) -> Element {
         move || {
             let id = datasource_id.clone();
             spawn(async move {
-                let client = crate::utils::request::create_client("http://localhost:3000");
-                let req_config = RequestBuilder::new()
-                    .header("Content-Type", "application/json")
-                    .header("Cookie", &cookie::get_browser_cookies())
-                    .build();
-
-                let response = client.get(&format!("/api/v1/datasource/{}", id), Some(req_config)).await;
-                match response {
-                    Ok(response_text) => {
-                        match serde_json::from_str::<ApiResponse<DataSource>>(&response_text) {
-                            Ok(api_response) => {
-                                if api_response.result {
-                                    let ds = api_response.data;
-                                    // Parse connection_config into MysqlConfig
-                                    if let Ok(mysql_config) = serde_json::from_value::<MysqlConfig>(ds.connection_config) {
-                                        config.set(mysql_config);
-                                    }
-                                }
-                                is_loading.set(false);
-                            }
-                            Err(_) => {
-                                is_loading.set(false);
-                            }
+                match datasources::fetch_datasource_by_id(&id).await {
+                    Ok(ds) => {
+                        // Parse connection_config into MysqlConfig
+                        if let Ok(mysql_config) = serde_json::from_value::<MysqlConfig>(ds.connection_config) {
+                            config.set(mysql_config);
                         }
                     }
-                    Err(_) => {
-                        is_loading.set(false);
-                    }
+                    Err(_) => {}
                 }
+                is_loading.set(false);
             });
         }
     });
@@ -117,11 +94,6 @@ pub fn DatasourceMysqlEdit(id: String) -> Element {
             let id = id.clone();
             spawn(async move {
                 // 请求后端进行校验配置
-                let client = crate::utils::request::create_client("http://localhost:3000");
-                let req_config = RequestBuilder::new()
-                            .header("Content-Type", "application/json")
-                            .header("Cookie", &cookie::get_browser_cookies())
-                            .build();
                 let mysql_config = DataSourceCreateUpdate{
                     id: id.clone(),
                     name: config().name,
@@ -130,28 +102,10 @@ pub fn DatasourceMysqlEdit(id: String) -> Element {
                     datasource_type: DataSourceType::Mysql,
                     connection_config: serde_json::to_value(config()).unwrap(),
                 };
-                let response = client
-                                    .post("/api/v1/datasource/update", Some(req_config), Some(mysql_config))
-                                    .await;
-                match response {
-                    Ok(result) => {
-                        match serde_json::from_str::<ApiResponse<String>>(&result) {
-                            Ok(result) => {
-                                if result.result {
-                                    navigator.push(Route::DatasourceOverViewPage{}); // 跳转到数据源列表页
-                                } else {
-                                    let mut errs = errors.clone();
-                                    errs.push(result.msg);
-                                    validation_errors.set(errs);
-                                }
-                            },
-                            Err(e) => {
-                                let mut errs = errors.clone();
-                                errs.push(e.to_string());
-                                validation_errors.set(errs);
-                            }
-                        }
-                    },
+                match datasources::update_datasource(mysql_config).await {
+                    Ok(_) => {
+                        navigator.push(Route::DatasourceOverViewPage{}); // 跳转到数据源列表页
+                    }
                     Err(e) => {
                         let mut errs = errors.clone();
                         errs.push(e.to_string());
@@ -171,11 +125,6 @@ pub fn DatasourceMysqlEdit(id: String) -> Element {
         }
         spawn(async move {
             // 请求后端进行校验配置
-            let client = crate::utils::request::create_client("http://localhost:3000");
-            let req_config = RequestBuilder::new()
-                        .header("Content-Type", "application/json")
-                        .header("Cookie", &cookie::get_browser_cookies())
-                        .build();
             let mysql_config = DataSourceCreateUpdate{
                 id: String::new(),
                 name: config().name,
@@ -184,28 +133,10 @@ pub fn DatasourceMysqlEdit(id: String) -> Element {
                 datasource_type: DataSourceType::Mysql,
                 connection_config: serde_json::to_value(config()).unwrap(),
             };
-            let response = client
-                                .post("/api/v1/datasource/ping", Some(req_config), Some(mysql_config))
-                                .await;
-            match response {
-                Ok(result) => {
-                    match serde_json::from_str::<ApiResponse<String>>(&result) {
-                        Ok(result) => {
-                            if result.result {
-                                validation_errors.set(Vec::new());
-                            } else {
-                                let mut errs = errors.clone();
-                                errs.push(result.msg);
-                                validation_errors.set(errs);
-                            }
-                        },
-                        Err(e) => {
-                            let mut errs = errors.clone();
-                            errs.push(e.to_string());
-                            validation_errors.set(errs);
-                        }
-                    }
-                },
+            match datasources::test_datasource_connection(mysql_config).await {
+                Ok(_) => {
+                    validation_errors.set(Vec::new());
+                }
                 Err(e) => {
                     let mut errs = errors.clone();
                     errs.push(e.to_string());
@@ -460,17 +391,12 @@ pub fn DatasourceMysqlAdd() -> Element {
     let handle_save = move |_| {
         // 先组件进行配置校验
         let errors = validate_config(&config());
-        if !errors.is_empty() { 
+        if !errors.is_empty() {
             validation_errors.set(errors);
             return;
         }
         spawn(async move {
             // 请求后端进行校验配置
-            let client = crate::utils::request::create_client("http://localhost:3000");
-            let req_config = RequestBuilder::new()
-                        .header("Content-Type", "application/json")
-                        .header("Cookie", &cookie::get_browser_cookies())
-                        .build();
             let mysql_config = DataSourceCreateUpdate{
                 id: String::new(),
                 name: config().name,
@@ -479,28 +405,10 @@ pub fn DatasourceMysqlAdd() -> Element {
                 datasource_type: DataSourceType::Mysql,
                 connection_config: serde_json::to_value(config()).unwrap(),
             };
-            let response = client
-                                .post("/api/v1/datasource/add", Some(req_config), Some(mysql_config))
-                                .await;
-            match response {
-                Ok(result) => {
-                    match serde_json::from_str::<ApiResponse<String>>(&result) {
-                        Ok(result) => {
-                            if result.result {
-                                navigator.push(Route::DatasourceOverViewPage{}); // 跳转到数据源列表页
-                            } else {
-                                let mut errs = errors.clone();
-                                errs.push(result.msg);
-                                validation_errors.set(errs);
-                            }
-                        },
-                        Err(e) => {
-                            let mut errs = errors.clone();
-                            errs.push(e.to_string());
-                            validation_errors.set(errs);
-                        }
-                    }
-                },
+            match datasources::create_datasource(mysql_config).await {
+                Ok(_) => {
+                    navigator.push(Route::DatasourceOverViewPage{}); // 跳转到数据源列表页
+                }
                 Err(e) => {
                     let mut errs = errors.clone();
                     errs.push(e.to_string());
@@ -513,17 +421,12 @@ pub fn DatasourceMysqlAdd() -> Element {
     let handle_test = move |_| {
         // 先组件进行配置校验
         let errors = validate_config(&config());
-        if !errors.is_empty() { 
+        if !errors.is_empty() {
             validation_errors.set(errors);
             return;
         }
         spawn(async move {
             // 请求后端进行校验配置
-            let client = crate::utils::request::create_client("http://localhost:3000");
-            let req_config = RequestBuilder::new()
-                        .header("Content-Type", "application/json")
-                        .header("Cookie", &cookie::get_browser_cookies())
-                        .build();
             let mysql_config = DataSourceCreateUpdate{
                 id: String::new(),
                 name: config().name,
@@ -532,28 +435,10 @@ pub fn DatasourceMysqlAdd() -> Element {
                 datasource_type: DataSourceType::Mysql,
                 connection_config: serde_json::to_value(config()).unwrap(),
             };
-            let response = client
-                                .post("/api/v1/datasource/ping", Some(req_config), Some(mysql_config))
-                                .await;
-            match response {
-                Ok(result) => {
-                    match serde_json::from_str::<ApiResponse<String>>(&result) {
-                        Ok(result) => {
-                            if result.result {
-                                validation_errors.set(Vec::new());
-                            } else {
-                                let mut errs = errors.clone();
-                                errs.push(result.msg);
-                                validation_errors.set(errs);
-                            }
-                        },
-                        Err(e) => {
-                            let mut errs = errors.clone();
-                            errs.push(e.to_string());
-                            validation_errors.set(errs);
-                        }
-                    }
-                },
+            match datasources::test_datasource_connection(mysql_config).await {
+                Ok(_) => {
+                    validation_errors.set(Vec::new());
+                }
                 Err(e) => {
                     let mut errs = errors.clone();
                     errs.push(e.to_string());
