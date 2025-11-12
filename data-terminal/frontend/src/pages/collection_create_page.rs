@@ -1,9 +1,11 @@
+use dioxus::html::div;
 use dioxus::prelude::*;
 use crate::routes::Route;
 use crate::models::collection::*;
 use crate::models::datasource::DataSource;
 use crate::models::resource::Resource;
 use crate::components::business::collection::*;
+use crate::components::common::*;
 use crate::api::collections;
 
 /// T053: CollectionCreatePage - Multi-step wizard for creating collection tasks
@@ -18,7 +20,7 @@ pub fn CollectionCreatePage() -> Element {
     let mut task_name = use_signal(String::new);
     let mut task_description = use_signal(String::new);
     let mut selected_mode = use_signal(|| None::<CollectType>);
-    let mut selected_category = use_signal(|| CollectionCategory::Database);
+    let mut selected_category = use_signal(|| None::<CollectionCategory>);
     let mut selected_datasource_id = use_signal(|| None::<String>);
     let mut selected_resource_id = use_signal(|| None::<String>);
     let mut selected_tables = use_signal(|| Vec::<String>::new());
@@ -104,7 +106,7 @@ pub fn CollectionCreatePage() -> Element {
                 } else {
                     Some(task_description())
                 },
-                category: selected_category(),
+                category: selected_category().unwrap_or(CollectionCategory::Database),
                 collect_type: selected_mode().unwrap_or(CollectType::Full),
                 datasource_id: selected_datasource_id().unwrap_or_default(),
                 resource_id: selected_resource_id().unwrap_or_default(),
@@ -129,30 +131,29 @@ pub fn CollectionCreatePage() -> Element {
             // Header
             div { class: "flex items-center gap-4 mb-6",
                 button {
-                    class: "btn btn-ghost btn-sm",
+                    class: "btn btn-soft btn-primary",
                     onclick: move |_| { navigator.push(Route::CollectionPage {}); },
                     "<- 返回"
                 }
-                h1 { class: "text-3xl font-bold", "创建采集任务" }
             }
 
             // Progress steps
             div { class: "steps steps-horizontal w-full mb-8",
                 div {
                     class: if current_step() >= 1 { "step step-primary" } else { "step" },
-                    "Basic Info"
+                    "基础信息"
                 }
                 div {
                     class: if current_step() >= 2 { "step step-primary" } else { "step" },
-                    "Select Source"
+                    "选择数据来源、目标资源"
                 }
                 div {
                     class: if current_step() >= 3 { "step step-primary" } else { "step" },
-                    "Configure"
+                    "采集规则配置"
                 }
                 div {
                     class: if current_step() >= 4 { "step step-primary" } else { "step" },
-                    "Review"
+                    "测试"
                 }
             }
 
@@ -167,59 +168,90 @@ pub fn CollectionCreatePage() -> Element {
             if current_step() == 1 {
                 div { class: "card bg-base-200",
                     div { class: "card-body",
-                        h2 { class: "card-title mb-4", "Step 1: Basic Information" }
 
                         div { class: "form-control mb-4",
-                            label { class: "label",
-                                span { class: "label-text font-semibold", "Task Name" }
-                            }
-                            input {
-                                r#type: "text",
-                                class: "input input-bordered",
-                                placeholder: "Enter task name...",
-                                value: "{task_name}",
-                                oninput: move |evt| task_name.set(evt.value())
+                            div { class: "flex items-center gap-4",
+                                label { class: "label mb-2 m-0",
+                                    span { class: "label-text font-semibold", "名称" }
+                                }
+                                input {
+                                    r#type: "text",
+                                    class: "input input-bordered",
+                                    placeholder: "输入任务名称",
+                                    value: "{task_name}",
+                                    oninput: move |evt| task_name.set(evt.value())
+                                }
                             }
                         }
 
                         div { class: "form-control mb-4",
-                            label { class: "label",
-                                span { class: "label-text font-semibold", "Description" }
-                            }
-                            textarea {
-                                class: "textarea textarea-bordered",
-                                placeholder: "Enter task description...",
-                                value: "{task_description}",
-                                oninput: move |evt| task_description.set(evt.value())
+                            div { class: "flex items-center gap-4", 
+                                label { class: "label",
+                                    span { class: "label-text font-semibold", "描述" }
+                                }
+                                textarea {
+                                    class: "textarea textarea-bordered",
+                                    placeholder: "输入任务描述",
+                                    value: "{task_description}",
+                                    oninput: move |evt| task_description.set(evt.value())
+                                }
                             }
                         }
 
-                        select {
-                            
+                        div { class: "form-control mb-4",
+                            div { class: "flex items-center gap-4", 
+                                label { class: "label",
+                                    span { class: "label-text font-semibold", "采集来源" }
+                                }
+                                select {
+                                    class: "select select-bordered",
+                                    value: match selected_category() {
+                                        Some(CollectionCategory::Database) => "数据库",
+                                        Some(CollectionCategory::Api) => "API",
+                                        Some(CollectionCategory::Crawler) => "爬虫",
+                                        _ => "",
+                                    },
+                                    onchange: move |evt| {
+                                        let category = match evt.value().as_str() {
+                                            "数据库" => Some(CollectionCategory::Database),
+                                            "API" => Some(CollectionCategory::Api),
+                                            "爬虫" => Some(CollectionCategory::Crawler),
+                                            _ => None,
+                                        };
+                                        selected_category.set(category);
+                                    },
+                                    option { value: "", disabled: true, selected: selected_category().is_none(), "选择采集来源..." }
+                                    option { value: "数据库", "数据库" }
+                                    option { value: "API", "API" }
+                                    option { value: "爬虫", "爬虫" }
+                                }
+                            }
                         }
 
-                        div { class: "form-control w-full",
-                            label { class: "label",
-                                span { class: "label-text font-semibold", "Collection Mode" }
-                            }
-                            select {
-                                class: "select select-bordered w-full",
-                                value: match selected_mode() {
-                                    Some(CollectType::Full) => "full",
-                                    Some(CollectType::Incremental) => "incremental",
-                                    None => "",
-                                },
-                                onchange: move |evt| {
-                                    let mode = match evt.value().as_str() {
-                                        "full" => Some(CollectType::Full),
-                                        "incremental" => Some(CollectType::Incremental),
-                                        _ => None,
-                                    };
-                                    selected_mode.set(mode);
-                                },
-                                option { value: "", disabled: true, selected: selected_mode().is_none(), "Select collection mode..." }
-                                option { value: "full", "Full Collection - Batch ETL, complete data transfer" }
-                                option { value: "incremental", "Incremental Collection - Real-time CDC/streaming" }
+                        div { class: "form-control mb-4",
+                            div {class: "flex items-center gap-4",
+                                label { class: "label",
+                                    span { class: "label-text font-semibold", "选择采集模式" }
+                                }
+                                select {
+                                    class: "select select-bordered",
+                                    value: match selected_mode() {
+                                        Some(CollectType::Full) => "full",
+                                        Some(CollectType::Incremental) => "incremental",
+                                        None => "",
+                                    },
+                                    onchange: move |evt| {
+                                        let mode = match evt.value().as_str() {
+                                            "full" => Some(CollectType::Full),
+                                            "incremental" => Some(CollectType::Incremental),
+                                            _ => None,
+                                        };
+                                        selected_mode.set(mode);
+                                    },
+                                    option { value: "", disabled: true, selected: selected_mode().is_none(), "选择采集模式..." }
+                                    option { value: "full", "全量" }
+                                    option { value: "incremental", "增量" }
+                                }
                             }
                         }
 
@@ -239,8 +271,6 @@ pub fn CollectionCreatePage() -> Element {
             if current_step() == 2 {
                 div { class: "card bg-base-200",
                     div { class: "card-body",
-                        h2 { class: "card-title mb-4", "Step 2: Select Source & Target" }
-
                         DatasourceSelector {
                             datasources: datasources(),
                             selected_datasource: selected_datasource_id,
@@ -249,7 +279,6 @@ pub fn CollectionCreatePage() -> Element {
                                 // TODO: Fetch tables for this datasource
                             }
                         }
-
                         div { class: "divider" }
 
                         ResourceSelector {
@@ -344,9 +373,10 @@ pub fn CollectionCreatePage() -> Element {
                                 h3 { class: "font-semibold", "Category" }
                                 p {
                                     {match selected_category() {
-                                        CollectionCategory::Database => "Database",
-                                        CollectionCategory::Api => "API",
-                                        CollectionCategory::Crawler => "Crawler",
+                                        Some(CollectionCategory::Database) => "Database",
+                                        Some(CollectionCategory::Api) => "API",
+                                        Some(CollectionCategory::Crawler) => "Crawler",
+                                        None => "Not selected",
                                     }}
                                 }
                             }

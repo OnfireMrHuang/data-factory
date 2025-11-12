@@ -10,8 +10,8 @@ pub fn DatasourceSelector(
 ) -> Element {
     rsx! {
         div { class: "form-control w-full",
-            label { class: "label",
-                span { class: "label-text font-semibold", "Source Datasource" }
+            label { class: "label mb-4",
+                span { class: "label-text font-semibold", "选择数据源" }
             }
             select {
                 class: "select select-bordered w-full",

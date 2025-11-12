@@ -10,8 +10,8 @@ pub fn ResourceSelector(
 ) -> Element {
     rsx! {
         div { class: "form-control w-full",
-            label { class: "label",
-                span { class: "label-text font-semibold", "Target Resource" }
+            label { class: "label mb-4",
+                span { class: "label-text font-semibold", "选择目标资源" }
             }
             select {
                 class: "select select-bordered w-full",
