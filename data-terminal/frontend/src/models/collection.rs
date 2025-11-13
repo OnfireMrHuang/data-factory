@@ -71,6 +71,17 @@ pub enum CollectionCategory {
     Crawler,
 }
 
+impl CollectionCategory {
+
+    pub fn matches_datasource_category(&self, category: &crate::models::datasource::DataSourceCategory) -> bool {
+        match (self, category) {
+            (CollectionCategory::Database, crate::models::datasource::DataSourceCategory::Database) => true,
+            (CollectionCategory::Api, crate::models::datasource::DataSourceCategory::Api) => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum CollectType {

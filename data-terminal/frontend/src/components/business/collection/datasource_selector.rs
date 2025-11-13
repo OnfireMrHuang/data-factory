@@ -28,11 +28,6 @@ pub fn DatasourceSelector(
                     }
                 }
             }
-            if let Some(ds_id) = selected_datasource() {
-                label { class: "label",
-                    span { class: "label-text-alt text-info", "Selected: {ds_id}" }
-                }
-            }
         }
     }
 }

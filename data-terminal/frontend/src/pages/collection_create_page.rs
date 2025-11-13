@@ -38,8 +38,22 @@ pub fn CollectionCreatePage() -> Element {
     // Load datasources and resources on mount
     use_effect(move || {
         spawn(async move {
-            // TODO: Fetch datasources and resources from API
-            // For now, using empty lists as placeholders
+            match crate::api::datasources::fetch_datasources(1, 1000).await {
+                Ok(list) => {
+                    if let Some(category) = selected_category() {
+                        datasources.set(
+                            list.into_iter()
+                                .filter(|item| category.matches_datasource_category(&item.category))
+                                .collect()
+                        );
+                    } else {
+                        datasources.set(list);
+                    }
+                }
+                Err(e) => {
+                    error_msg.set(format!("获取数据源失败: {:?}", e));
+                }
+            }
         });
     });
 
