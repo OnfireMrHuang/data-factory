@@ -17,7 +17,8 @@ pub struct ResourceServiceImpl {
 #[async_trait]
 impl ResourceService for ResourceServiceImpl {
     async fn add_resource(&self, resource: ResourceCreateUpdate) -> Result<String, Error> {
-        let resource = Resource::from(resource);
+        let mut resource = Resource::from(resource);
+        resource.id = uuid::Uuid::new_v4().to_string();
         let result = self.repo.add_resource(resource).await;
         match result {
             Ok(id) => Ok(id),

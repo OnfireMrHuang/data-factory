@@ -38,6 +38,7 @@ pub fn CollectionCreatePage() -> Element {
     // Load datasources and resources on mount
     use_effect(move || {
         spawn(async move {
+            // fetch datasources
             match crate::api::datasources::fetch_datasources(1, 1000).await {
                 Ok(list) => {
                     if let Some(category) = selected_category() {
@@ -52,6 +53,23 @@ pub fn CollectionCreatePage() -> Element {
                 }
                 Err(e) => {
                     error_msg.set(format!("获取数据源失败: {:?}", e));
+                }
+            }
+            // fetch resources
+            match crate::api::resources::fetch_resources().await {
+                Ok(list) => {
+                    if let Some(category) = selected_mode() {
+                        resources.set(
+                            list.into_iter()
+                                .filter(|item| category.matches_resource_category(&item.category))
+                                .collect()
+                        );
+                    } else {
+                        resources.set(list);
+                    }
+                }
+                Err(e) => {
+                    error_msg.set(format!("获取资源失败: {:?}", e));
                 }
             }
         });
@@ -290,7 +308,6 @@ pub fn CollectionCreatePage() -> Element {
                             selected_datasource: selected_datasource_id,
                             on_datasource_change: move |id: String| {
                                 selected_datasource_id.set(Some(id.clone()));
-                                // TODO: Fetch tables for this datasource
                             }
                         }
                         div { class: "divider" }

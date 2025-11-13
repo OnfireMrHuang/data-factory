@@ -1,27 +1,57 @@
 use dioxus::prelude::*;
 use crate::models::resource::{Resource, Category, ResourceType, Status};
 use crate::components::business::{
-    resource_dialog::{ResourceDialog, ResourceModalMode},
+    resource_dialog::{ResourceDialog, ResourceModalMode, ResourceSaveData},
     resource_delete_dialog::ResourceDeleteDialog,
 };
 use crate::routes::Route;
+use crate::api::resources;
+use dioxus_logger::tracing::info;
 
 #[component]
 pub fn ResourcePage() -> Element {
     let navigator = use_navigator();
     let mut selected_category = use_signal(|| Category::RelationalDatabase);
     let mut selected_resource_type = use_signal(|| ResourceType::Mysql);
-    
+
     // 弹窗状态管理
     let mut show_add_dialog = use_signal(|| false);
     let mut show_resource_dialog = use_signal(|| false);
     let mut show_delete_dialog = use_signal(|| false);
     let mut resource_modal_mode = use_signal(|| ResourceModalMode::Add);
     let mut selected_resource_for_action = use_signal(|| None as Option<Resource>);
-    
+
     // 操作菜单状态管理
     let mut show_action_menu = use_signal(|| None as Option<String>);
     let mut menu_position = use_signal(|| "bottom" as &str);
+
+    // 资源数据状态
+    let mut resources = use_signal(|| Vec::<Resource>::new());
+    let mut loading = use_signal(|| true);
+    let mut error_msg = use_signal(|| String::new());
+
+    // 重新加载资源数据的触发器
+    let mut reload_trigger = use_signal(|| 0);
+
+    // 加载资源数据
+    use_effect(move || {
+        let _ = reload_trigger();
+        spawn(async move {
+            loading.set(true);
+            error_msg.set(String::new());
+
+            match resources::fetch_resources().await {
+                Ok(data) => {
+                    resources.set(data);
+                    loading.set(false);
+                }
+                Err(e) => {
+                    error_msg.set(format!("加载资源失败: {}", e));
+                    loading.set(false);
+                }
+            }
+        });
+    });
 
     // 获取资源类型
     let get_resource_types = |category: Category| {
@@ -143,10 +173,24 @@ pub fn ResourcePage() -> Element {
     // 处理删除确认
     let mut handle_delete_confirm = {
         let mut show_delete_dialog = show_delete_dialog.clone();
+        let mut reload_trigger = reload_trigger.clone();
         move |resource: Resource| {
-            // TODO: 调用删除API
-            println!("删除资源: {}", resource.name);
-            show_delete_dialog.set(false);
+            let mut show_delete_dialog = show_delete_dialog.clone();
+            let mut reload_trigger = reload_trigger.clone();
+            async move {
+                match resources::delete_resource(&resource.id).await {
+                    Ok(_) => {
+                        info!("删除资源成功: {}", resource.name);
+                        show_delete_dialog.set(false);
+                        // 触发重新加载
+                        reload_trigger.set(reload_trigger() + 1);
+                    }
+                    Err(e) => {
+                        info!("删除资源失败: {}", e);
+                        // TODO: 显示错误提示
+                    }
+                }
+            }
         }
     };
 
@@ -159,7 +203,7 @@ pub fn ResourcePage() -> Element {
     };
 
     rsx! {
-        div { 
+        div {
             class: "flex flex-col h-screen bg-gray-50",
             onclick: handle_click_outside,
             // 导航栏
@@ -193,10 +237,10 @@ pub fn ResourcePage() -> Element {
                         div { class: "space-y-2",
                             {get_all_categories().into_iter().map(|category| {
                                 let is_selected = selected_category() == category;
-                                let class_name = if is_selected { 
-                                    "w-full text-left px-3 py-2 rounded-lg transition-colors bg-blue-100 text-blue-700" 
-                                } else { 
-                                    "w-full text-left px-3 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-100" 
+                                let class_name = if is_selected {
+                                    "w-full text-left px-3 py-2 rounded-lg transition-colors bg-blue-100 text-blue-700"
+                                } else {
+                                    "w-full text-left px-3 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-100"
                                 };
                                 rsx! {
                                     button {
@@ -226,10 +270,10 @@ pub fn ResourcePage() -> Element {
                                 div { class: "flex space-x-2",
                                     {get_resource_types(selected_category()).into_iter().map(|resource_type| {
                                         let is_selected = selected_resource_type() == resource_type;
-                                        let class_name = if is_selected { 
-                                            "px-3 py-1 rounded-md text-sm transition-colors bg-blue-600 text-white" 
-                                        } else { 
-                                            "px-3 py-1 rounded-md text-sm transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200" 
+                                        let class_name = if is_selected {
+                                            "px-3 py-1 rounded-md text-sm transition-colors bg-blue-600 text-white"
+                                        } else {
+                                            "px-3 py-1 rounded-md text-sm transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
                                         };
                                         rsx! {
                                             button {
@@ -249,137 +293,164 @@ pub fn ResourcePage() -> Element {
                         // 资源实例列表
                         div { class: "flex-1 overflow-y-auto p-6",
                             div { class: "space-y-4",
-                                {get_mock_resources().into_iter().filter(|resource| {
-                                    resource.category == selected_category() && 
-                                    resource.resource_type == selected_resource_type()
-                                }).enumerate().map(|(index, resource)| {
-                                    let status_class = get_status_color(&resource.status);
-                                    let icon = get_resource_icon(&resource.resource_type);
-                                    let name = resource.name.clone();
-                                    let description = resource.description.clone();
-                                    let status = format!("{:?}", resource.status);
-                                    let resource_for_detail = resource.clone();
-                                    let resource_for_edit = resource.clone();
-                                    let resource_for_delete = resource.clone();
-                                    let total_resources = get_mock_resources().into_iter().filter(|r| {
-                                        r.category == selected_category() && 
-                                        r.resource_type == selected_resource_type()
-                                    }).count();
-                                    
-                                    rsx! {
-                                        div {
-                                            key: "{resource.id}",
-                                            class: "bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow",
-                                            div { class: "flex items-center justify-between",
-                                                div { class: "flex items-center space-x-4",
-                                                    div { 
-                                                        class: "w-24 h-24 flex items-center justify-center",
-                                                        dangerous_inner_html: "{icon.replace(\"width=\\\"800\\\" height=\\\"800\\\"\", \"width=\\\"64\\\" height=\\\"64\\\"\").replace(\"width=\\\"88\\\" height=\\\"30\\\"\", \"width=\\\"64\\\" height=\\\"64\\\"\")}"
-                                                    }
-                                                    div {
-                                                        div { class: "font-medium text-gray-900", "{name}" }
-                                                        div { class: "text-sm text-gray-500", "{description}" }
-                                                    }
-                                                }
-                                                div { class: "flex items-center space-x-4",
-                                                    span {
-                                                        class: "px-2 py-1 rounded-full text-xs font-medium {status_class}",
-                                                        "{status}"
-                                                    }
-                                                    div { class: "relative",
-                                                        button {
-                                                            class: "btn btn-ghost btn-xs p-1 relative",
-                                                            onclick: move |event| {
-                                                                event.stop_propagation();
-                                                                // 如果当前资源的菜单已经显示，则关闭；否则显示
-                                                                if show_action_menu() == Some(resource.id.clone()) {
-                                                                    show_action_menu.set(None);
-                                                                } else {
-                                                                    // 判断菜单显示位置
-                                                                    let position = if index > total_resources / 2 { "top" } else { "bottom" };
-                                                                    menu_position.set(position);
-                                                                    
-                                                                    show_action_menu.set(Some(resource.id.clone()));
-                                                                }
-                                                            },
-                                                            svg {
-                                                                class: "w-4 h-4",
-                                                                fill: "none",
-                                                                stroke: "currentColor",
-                                                                stroke_width: "2",
-                                                                view_box: "0 0 24 24",
-                                                                path { d: "M4 6h16M4 12h16M4 18h16" }
-                                                            }
+                                // 处理加载和错误状态
+                                if loading() {
+                                    div { class: "text-center py-12 text-gray-500",
+                                        "加载中..."
+                                    }
+                                } else if !error_msg().is_empty() {
+                                    div { class: "text-center py-12 text-red-600",
+                                        "{error_msg()}"
+                                    }
+                                } else {
+                                    {
+                                        let filtered_resources: Vec<_> = resources()
+                                            .iter()
+                                            .filter(|resource| {
+                                                resource.category == selected_category() &&
+                                                resource.resource_type == selected_resource_type()
+                                            })
+                                            .cloned()
+                                            .collect();
 
-                                                            // 操作菜单 - 根据位置显示在三点按钮上方或下方
-                                                            if show_action_menu() == Some(resource.id.clone()) {
-                                                                div {
-                                                                    class: "absolute w-32 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50",
-                                                                    style: if menu_position() == "top" {
-                                                                        "right: 0; bottom: 100%; margin-bottom: 0.25rem;"
-                                                                    } else {
-                                                                        "right: 0; top: 100%; margin-top: 0.25rem;"
-                                                                    },
-                                                                    div { class: "py-1",
+                                        let total_resources = filtered_resources.len();
+
+                                        if filtered_resources.is_empty() {
+                                            rsx! {
+                                                div { class: "text-center py-12 text-gray-500",
+                                                    "暂无资源数据"
+                                                }
+                                            }
+                                        } else {
+                                            rsx! {
+                                                {filtered_resources.into_iter().enumerate().map(|(index, resource)| {
+                                                    let status_class = get_status_color(&resource.status);
+                                                    let icon = get_resource_icon(&resource.resource_type);
+                                                    let name = resource.name.clone();
+                                                    let description = resource.description.clone();
+                                                    let status = format!("{:?}", resource.status);
+                                                    let resource_for_detail = resource.clone();
+                                                    let resource_for_edit = resource.clone();
+                                                    let resource_for_delete = resource.clone();
+
+                                                    rsx! {
+                                                        div {
+                                                            key: "{resource.id}",
+                                                            class: "bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow",
+                                                            div { class: "flex items-center justify-between",
+                                                                div { class: "flex items-center space-x-4",
+                                                                    div {
+                                                                        class: "w-24 h-24 flex items-center justify-center",
+                                                                        dangerous_inner_html: "{icon.replace(\"width=\\\"800\\\" height=\\\"800\\\"\", \"width=\\\"64\\\" height=\\\"64\\\"\").replace(\"width=\\\"88\\\" height=\\\"30\\\"\", \"width=\\\"64\\\" height=\\\"64\\\"\")}"
+                                                                    }
+                                                                    div {
+                                                                        div { class: "font-medium text-gray-900", "{name}" }
+                                                                        div { class: "text-sm text-gray-500", "{description}" }
+                                                                    }
+                                                                }
+                                                                div { class: "flex items-center space-x-4",
+                                                                    span {
+                                                                        class: "px-2 py-1 rounded-full text-xs font-medium {status_class}",
+                                                                        "{status}"
+                                                                    }
+                                                                    div { class: "relative",
                                                                         button {
-                                                                            class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2",
-                                                                                                                                                        onclick: move |event| {
-                                                                                event.stop_propagation();
-                                                                                handle_resource_detail(resource_for_detail.clone());
-                                                                            },
-                                                                            svg {
-                                                                                class: "w-3 h-3",
-                                                                                fill: "none",
-                                                                                stroke: "currentColor",
-                                                                                stroke_width: "2",
-                                                                                view_box: "0 0 24 24",
-                                                                                path { d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" }
-                                                                                path { d: "M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" }
-                                                                            }
-                                                                            "详情"
-                                                                        }
-                                                                        button {
-                                                                            class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2",
+                                                                            class: "btn btn-ghost btn-xs p-1 relative",
                                                                             onclick: move |event| {
                                                                                 event.stop_propagation();
-                                                                                handle_resource_edit(resource_for_edit.clone());
+                                                                                // 如果当前资源的菜单已经显示，则关闭；否则显示
+                                                                                if show_action_menu() == Some(resource.id.clone()) {
+                                                                                    show_action_menu.set(None);
+                                                                                } else {
+                                                                                    // 判断菜单显示位置
+                                                                                    let position = if index > total_resources / 2 { "top" } else { "bottom" };
+                                                                                    menu_position.set(position);
+
+                                                                                    show_action_menu.set(Some(resource.id.clone()));
+                                                                                }
                                                                             },
                                                                             svg {
-                                                                                class: "w-3 h-3",
+                                                                                class: "w-4 h-4",
                                                                                 fill: "none",
                                                                                 stroke: "currentColor",
                                                                                 stroke_width: "2",
                                                                                 view_box: "0 0 24 24",
-                                                                                path { d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }
+                                                                                path { d: "M4 6h16M4 12h16M4 18h16" }
                                                                             }
-                                                                            "编辑"
-                                                                        }
-                                                                        button {
-                                                                            class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2 text-error",
-                                                                            onclick: move |event| {
-                                                                                event.stop_propagation();
-                                                                                handle_resource_delete(resource_for_delete.clone());
-                                                                            },
-                                                                            svg {
-                                                                                class: "w-3 h-3",
-                                                                                fill: "none",
-                                                                                stroke: "currentColor",
-                                                                                stroke_width: "2",
-                                                                                view_box: "0 0 24 24",
-                                                                                path { d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }
+
+                                                                            // 操作菜单 - 根据位置显示在三点按钮上方或下方
+                                                                            if show_action_menu() == Some(resource.id.clone()) {
+                                                                                div {
+                                                                                    class: "absolute w-32 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50",
+                                                                                    style: if menu_position() == "top" {
+                                                                                        "right: 0; bottom: 100%; margin-bottom: 0.25rem;"
+                                                                                    } else {
+                                                                                        "right: 0; top: 100%; margin-top: 0.25rem;"
+                                                                                    },
+                                                                                    div { class: "py-1",
+                                                                                        button {
+                                                                                            class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2",
+                                                                                            onclick: move |event| {
+                                                                                                event.stop_propagation();
+                                                                                                handle_resource_detail(resource_for_detail.clone());
+                                                                                            },
+                                                                                            svg {
+                                                                                                class: "w-3 h-3",
+                                                                                                fill: "none",
+                                                                                                stroke: "currentColor",
+                                                                                                stroke_width: "2",
+                                                                                                view_box: "0 0 24 24",
+                                                                                                path { d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" }
+                                                                                                path { d: "M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" }
+                                                                                            }
+                                                                                            "详情"
+                                                                                        }
+                                                                                        button {
+                                                                                            class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2",
+                                                                                            onclick: move |event| {
+                                                                                                event.stop_propagation();
+                                                                                                handle_resource_edit(resource_for_edit.clone());
+                                                                                            },
+                                                                                            svg {
+                                                                                                class: "w-3 h-3",
+                                                                                                fill: "none",
+                                                                                                stroke: "currentColor",
+                                                                                                stroke_width: "2",
+                                                                                                view_box: "0 0 24 24",
+                                                                                                path { d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }
+                                                                                            }
+                                                                                            "编辑"
+                                                                                        }
+                                                                                        button {
+                                                                                            class: "w-full px-3 py-2 text-left text-sm hover:bg-base-200 flex items-center gap-2 text-error",
+                                                                                            onclick: move |event| {
+                                                                                                event.stop_propagation();
+                                                                                                handle_resource_delete(resource_for_delete.clone());
+                                                                                            },
+                                                                                            svg {
+                                                                                                class: "w-3 h-3",
+                                                                                                fill: "none",
+                                                                                                stroke: "currentColor",
+                                                                                                stroke_width: "2",
+                                                                                                view_box: "0 0 24 24",
+                                                                                                path { d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }
+                                                                                            }
+                                                                                            "删除"
+                                                                                        }
+                                                                                    }
+                                                                                }
                                                                             }
-                                                                            "删除"
                                                                         }
                                                                     }
                                                                 }
                                                             }
                                                         }
                                                     }
-                                                }
+                                                })}
                                             }
                                         }
                                     }
-                                })}
+                                }
                             }
                         }
                     }
@@ -393,11 +464,34 @@ pub fn ResourcePage() -> Element {
                     on_close: move |_| {
                         show_add_dialog.set(false);
                     },
-                    on_test_connection: move |_| {
-                        // TODO: 测试连接
+                    on_test_connection: move |data| {
+                        // TODO: 实现测试连接功能
+                        info!("测试连接: {:?}", data);
                     },
-                    on_save: move |_| {
-                        // TODO: 保存资源
+                    on_save: move |data| {
+                        let mut show_add_dialog = show_add_dialog.clone();
+                        let mut reload_trigger = reload_trigger.clone();
+
+                        async move {
+                            match data {
+                                ResourceSaveData::Create(resource_data) => {
+                                    match resources::create_resource(resource_data).await {
+                                        Ok(id) => {
+                                            info!("创建资源成功: {}", id);
+                                            show_add_dialog.set(false);
+                                            reload_trigger.set(reload_trigger() + 1);
+                                        }
+                                        Err(e) => {
+                                            info!("创建资源失败: {}", e);
+                                            // TODO: 显示错误提示
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    info!("错误: 新增模式不应该收到 Update 数据");
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -409,11 +503,34 @@ pub fn ResourcePage() -> Element {
                     on_close: move |_| {
                         show_resource_dialog.set(false);
                     },
-                    on_test_connection: move |_| {
-                        // TODO: 测试连接
+                    on_test_connection: move |data| {
+                        // TODO: 实现测试连接功能
+                        info!("测试连接: {:?}", data);
                     },
-                    on_save: move |_| {
-                        // TODO: 保存资源
+                    on_save: move |data| {
+                        let mut show_resource_dialog = show_resource_dialog.clone();
+                        let mut reload_trigger = reload_trigger.clone();
+
+                        async move {
+                            match data {
+                                ResourceSaveData::Update(resource_data) => {
+                                    match resources::update_resource(resource_data).await {
+                                        Ok(id) => {
+                                            info!("更新资源成功: {}", id);
+                                            show_resource_dialog.set(false);
+                                            reload_trigger.set(reload_trigger() + 1);
+                                        }
+                                        Err(e) => {
+                                            info!("更新资源失败: {}", e);
+                                            // TODO: 显示错误提示
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    info!("错误: 编辑模式不应该收到 Create 数据");
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -441,99 +558,5 @@ fn get_all_categories() -> Vec<Category> {
         Category::Queue,
         Category::BatchCompute,
         Category::StreamCompute,
-    ]
-}
-
-// 模拟资源数据
-fn get_mock_resources() -> Vec<Resource> {
-    vec![
-        Resource {
-            id: "7".to_string(),
-            name: "Doris分析型数据库".to_string(),
-            description: "高性能MPP分析型数据库".to_string(),
-            category: Category::RelationalDatabase,
-            resource_type: ResourceType::Doris,
-            config: serde_json::json!({}),
-            created_at: "2024-01-01T00:00:00Z".to_string(),
-            updated_at: "2024-01-01T00:00:00Z".to_string(),
-            status: Status::Active,
-        },
-        Resource {
-            id: "1".to_string(),
-            name: "MySQL主库".to_string(),
-            description: "生产环境主数据库".to_string(),
-            category: Category::RelationalDatabase,
-            resource_type: ResourceType::Mysql,
-            config: serde_json::json!({}),
-            created_at: "2024-01-01T00:00:00Z".to_string(),
-            updated_at: "2024-01-01T00:00:00Z".to_string(),
-            status: Status::Active,
-        },
-        Resource {
-            id: "2".to_string(),
-            name: "PostgreSQL从库".to_string(),
-            description: "只读从数据库".to_string(),
-            category: Category::RelationalDatabase,
-            resource_type: ResourceType::Postgres,
-            config: serde_json::json!({}),
-            created_at: "2024-01-01T00:00:00Z".to_string(),
-            updated_at: "2024-01-01T00:00:00Z".to_string(),
-            status: Status::Active,
-        },
-        Resource {
-            id: "3".to_string(),
-            name: "Kafka消息队列".to_string(),
-            description: "实时消息处理队列".to_string(),
-            category: Category::Queue,
-            resource_type: ResourceType::Kafka,
-            config: serde_json::json!({}),
-            created_at: "2024-01-01T00:00:00Z".to_string(),
-            updated_at: "2024-01-01T00:00:00Z".to_string(),
-            status: Status::Active,
-        },
-        Resource {
-            id: "4".to_string(),
-            name: "Spark批处理集群".to_string(),
-            description: "大数据批处理计算集群".to_string(),
-            category: Category::BatchCompute,
-            resource_type: ResourceType::Spark,
-            config: serde_json::json!({}),
-            created_at: "2024-01-01T00:00:00Z".to_string(),
-            updated_at: "2024-01-01T00:00:00Z".to_string(),
-            status: Status::Inactive,
-        },
-        Resource {
-            id: "8".to_string(),
-            name: "Flink流处理集群".to_string(),
-            description: "实时流式数据处理集群".to_string(),
-            category: Category::StreamCompute,
-            resource_type: ResourceType::Flink,
-            config: serde_json::json!({}),
-            created_at: "2024-01-01T00:00:00Z".to_string(),
-            updated_at: "2024-01-01T00:00:00Z".to_string(),
-            status: Status::Active,
-        },
-        Resource {
-            id: "5".to_string(),
-            name: "Milvus向量数据库".to_string(),
-            description: "AI向量检索数据库".to_string(),
-            category: Category::VectorDatabase,
-            resource_type: ResourceType::Mailvus,
-            config: serde_json::json!({}),
-            created_at: "2024-01-01T00:00:00Z".to_string(),
-            updated_at: "2024-01-01T00:00:00Z".to_string(),
-            status: Status::Active,
-        },
-        Resource {
-            id: "6".to_string(),
-            name: "HDFS存储集群".to_string(),
-            description: "分布式文件存储系统".to_string(),
-            category: Category::Filesystem,
-            resource_type: ResourceType::Hdfs,
-            config: serde_json::json!({}),
-            created_at: "2024-01-01T00:00:00Z".to_string(),
-            updated_at: "2024-01-01T00:00:00Z".to_string(),
-            status: Status::Active,
-        },
     ]
 }

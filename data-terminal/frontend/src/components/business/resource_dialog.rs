@@ -1,9 +1,9 @@
 use dioxus::prelude::*;
 use crate::models::resource::{
-    Category, ResourceType, Resource,
+    Category, ResourceType, Resource, ResourceFormData, ResourceCreateUpdate,
 };
 use crate::models::config::{
-    DatabaseConfigForm, QueueConfigForm, FileSystemConfigForm, 
+    DatabaseConfigForm, QueueConfigForm, FileSystemConfigForm,
     VectorDatabaseConfigForm, BatchComputeConfigForm, StreamComputeConfigForm
 };
 
@@ -15,16 +15,28 @@ pub enum ResourceModalMode {
     Detail(Resource),
 }
 
+#[derive(Clone, Debug)]
+pub enum ResourceSaveData {
+    Create(ResourceFormData),
+    Update(ResourceCreateUpdate),
+}
+
 #[component]
 pub fn ResourceDialog(
     mode: ResourceModalMode,
     on_close: EventHandler<()>,
-    on_test_connection: EventHandler<()>,
-    on_save: EventHandler<()>,
+    on_test_connection: EventHandler<ResourceSaveData>,
+    on_save: EventHandler<ResourceSaveData>,
 ) -> Element {
     let is_detail_mode = matches!(mode, ResourceModalMode::Detail(_));
     let is_edit_mode = matches!(mode, ResourceModalMode::Edit(_));
-    
+
+    // Extract resource_id if in Edit mode
+    let resource_id = match &mode {
+        ResourceModalMode::Edit(resource) => Some(resource.id.clone()),
+        _ => None,
+    };
+
     // 初始化表单数据
     let mut dialog_category = use_signal(|| {
         match &mode {
@@ -32,95 +44,307 @@ pub fn ResourceDialog(
             ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => resource.category.clone(),
         }
     });
-    
+
     let mut dialog_resource_type = use_signal(|| {
         match &mode {
             ResourceModalMode::Add => ResourceType::Mysql,
             ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => resource.resource_type.clone(),
         }
     });
-    
+
     let mut resource_name = use_signal(|| {
         match &mode {
             ResourceModalMode::Add => String::new(),
             ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => resource.name.clone(),
         }
     });
-    
+
     let mut resource_description = use_signal(|| {
         match &mode {
             ResourceModalMode::Add => String::new(),
             ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => resource.description.clone(),
         }
     });
-    
-    // 配置表单状态
-    let mut database_config = use_signal(|| DatabaseConfigForm {
-        host: String::new(),
-        port: 3306,
-        username: String::new(),
-        password: String::new(),
-        databases: String::new(),
+
+    // Helper function to parse config from resource
+    let get_config_value = |key: &str| -> serde_json::Value {
+        match &mode {
+            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => {
+                resource.config.get(key).cloned().unwrap_or(serde_json::Value::Null)
+            }
+            _ => serde_json::Value::Null,
+        }
+    };
+
+    // 配置表单状态 - initialize from existing resource if in Edit/Detail mode
+    let mut database_config = use_signal(|| {
+        match &mode {
+            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => {
+                if matches!(resource.category, Category::RelationalDatabase) {
+                    serde_json::from_value(resource.config.clone()).unwrap_or(DatabaseConfigForm {
+                        host: String::new(),
+                        port: 3306,
+                        username: String::new(),
+                        password: String::new(),
+                        databases: String::new(),
+                    })
+                } else {
+                    DatabaseConfigForm {
+                        host: String::new(),
+                        port: 3306,
+                        username: String::new(),
+                        password: String::new(),
+                        databases: String::new(),
+                    }
+                }
+            }
+            _ => DatabaseConfigForm {
+                host: String::new(),
+                port: 3306,
+                username: String::new(),
+                password: String::new(),
+                databases: String::new(),
+            }
+        }
     });
-    
-    let mut queue_config = use_signal(|| QueueConfigForm {
-        host: String::new(),
-        port: 9092,
-        admin_port: 8080,
-        username: None,
-        password: None,
-        virtual_host: None,
-        cluster_name: None,
-        ssl_enabled: false,
-        sasl_enabled: false,
-        sasl_mechanism: None,
+
+    let mut queue_config = use_signal(|| {
+        match &mode {
+            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => {
+                if matches!(resource.category, Category::Queue) {
+                    serde_json::from_value(resource.config.clone()).unwrap_or(QueueConfigForm {
+                        host: String::new(),
+                        port: 9092,
+                        admin_port: 8080,
+                        username: None,
+                        password: None,
+                        virtual_host: None,
+                        cluster_name: None,
+                        ssl_enabled: false,
+                        sasl_enabled: false,
+                        sasl_mechanism: None,
+                    })
+                } else {
+                    QueueConfigForm {
+                        host: String::new(),
+                        port: 9092,
+                        admin_port: 8080,
+                        username: None,
+                        password: None,
+                        virtual_host: None,
+                        cluster_name: None,
+                        ssl_enabled: false,
+                        sasl_enabled: false,
+                        sasl_mechanism: None,
+                    }
+                }
+            }
+            _ => QueueConfigForm {
+                host: String::new(),
+                port: 9092,
+                admin_port: 8080,
+                username: None,
+                password: None,
+                virtual_host: None,
+                cluster_name: None,
+                ssl_enabled: false,
+                sasl_enabled: false,
+                sasl_mechanism: None,
+            }
+        }
     });
-    
-    let mut filesystem_config = use_signal(|| FileSystemConfigForm {
-        host: String::new(),
-        port: 9000,
-        username: None,
-        password: None,
-        ssl_enabled: false,
-        auth_token: None,
-        access_key_id: None,
-        secret_access_key: None,
-        region: None,
-        bucket: None,
+
+    let mut filesystem_config = use_signal(|| {
+        match &mode {
+            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => {
+                if matches!(resource.category, Category::Filesystem) {
+                    serde_json::from_value(resource.config.clone()).unwrap_or(FileSystemConfigForm {
+                        host: String::new(),
+                        port: 9000,
+                        username: None,
+                        password: None,
+                        ssl_enabled: false,
+                        auth_token: None,
+                        access_key_id: None,
+                        secret_access_key: None,
+                        region: None,
+                        bucket: None,
+                    })
+                } else {
+                    FileSystemConfigForm {
+                        host: String::new(),
+                        port: 9000,
+                        username: None,
+                        password: None,
+                        ssl_enabled: false,
+                        auth_token: None,
+                        access_key_id: None,
+                        secret_access_key: None,
+                        region: None,
+                        bucket: None,
+                    }
+                }
+            }
+            _ => FileSystemConfigForm {
+                host: String::new(),
+                port: 9000,
+                username: None,
+                password: None,
+                ssl_enabled: false,
+                auth_token: None,
+                access_key_id: None,
+                secret_access_key: None,
+                region: None,
+                bucket: None,
+            }
+        }
     });
-    
-    let mut vector_config = use_signal(|| VectorDatabaseConfigForm {
-        host: String::new(),
-        port: 19530,
-        username: None,
-        password: None,
-        ssl_enabled: false,
-        collection_name: None,
-        dimension: None,
-        metric_type: None,
+
+    let mut vector_config = use_signal(|| {
+        match &mode {
+            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => {
+                if matches!(resource.category, Category::VectorDatabase) {
+                    serde_json::from_value(resource.config.clone()).unwrap_or(VectorDatabaseConfigForm {
+                        host: String::new(),
+                        port: 19530,
+                        username: None,
+                        password: None,
+                        ssl_enabled: false,
+                        collection_name: None,
+                        dimension: None,
+                        metric_type: None,
+                    })
+                } else {
+                    VectorDatabaseConfigForm {
+                        host: String::new(),
+                        port: 19530,
+                        username: None,
+                        password: None,
+                        ssl_enabled: false,
+                        collection_name: None,
+                        dimension: None,
+                        metric_type: None,
+                    }
+                }
+            }
+            _ => VectorDatabaseConfigForm {
+                host: String::new(),
+                port: 19530,
+                username: None,
+                password: None,
+                ssl_enabled: false,
+                collection_name: None,
+                dimension: None,
+                metric_type: None,
+            }
+        }
     });
-    
-    let mut batch_compute_config = use_signal(|| BatchComputeConfigForm {
-        host: String::new(),
-        port: 7077,
-        username: None,
-        password: None,
-        ssl_enabled: false,
-        cluster_name: None,
-        master_url: None,
-        worker_nodes: None,
+
+    let mut batch_compute_config = use_signal(|| {
+        match &mode {
+            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => {
+                if matches!(resource.category, Category::BatchCompute) {
+                    serde_json::from_value(resource.config.clone()).unwrap_or(BatchComputeConfigForm {
+                        host: String::new(),
+                        port: 7077,
+                        username: None,
+                        password: None,
+                        ssl_enabled: false,
+                        cluster_name: None,
+                        master_url: None,
+                        worker_nodes: None,
+                    })
+                } else {
+                    BatchComputeConfigForm {
+                        host: String::new(),
+                        port: 7077,
+                        username: None,
+                        password: None,
+                        ssl_enabled: false,
+                        cluster_name: None,
+                        master_url: None,
+                        worker_nodes: None,
+                    }
+                }
+            }
+            _ => BatchComputeConfigForm {
+                host: String::new(),
+                port: 7077,
+                username: None,
+                password: None,
+                ssl_enabled: false,
+                cluster_name: None,
+                master_url: None,
+                worker_nodes: None,
+            }
+        }
     });
-    
-    let mut stream_compute_config = use_signal(|| StreamComputeConfigForm {
-        host: String::new(),
-        port: 8081,
-        username: None,
-        password: None,
-        ssl_enabled: false,
-        cluster_name: None,
-        job_manager_url: None,
-        task_manager_count: None,
+
+    let mut stream_compute_config = use_signal(|| {
+        match &mode {
+            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => {
+                if matches!(resource.category, Category::StreamCompute) {
+                    serde_json::from_value(resource.config.clone()).unwrap_or(StreamComputeConfigForm {
+                        host: String::new(),
+                        port: 8081,
+                        username: None,
+                        password: None,
+                        ssl_enabled: false,
+                        cluster_name: None,
+                        job_manager_url: None,
+                        task_manager_count: None,
+                    })
+                } else {
+                    StreamComputeConfigForm {
+                        host: String::new(),
+                        port: 8081,
+                        username: None,
+                        password: None,
+                        ssl_enabled: false,
+                        cluster_name: None,
+                        job_manager_url: None,
+                        task_manager_count: None,
+                    }
+                }
+            }
+            _ => StreamComputeConfigForm {
+                host: String::new(),
+                port: 8081,
+                username: None,
+                password: None,
+                ssl_enabled: false,
+                cluster_name: None,
+                job_manager_url: None,
+                task_manager_count: None,
+            }
+        }
     });
+
+    // Clone signals for use in button handlers
+    let dialog_category_clone1 = dialog_category.clone();
+    let dialog_resource_type_clone1 = dialog_resource_type.clone();
+    let resource_name_clone1 = resource_name.clone();
+    let resource_description_clone1 = resource_description.clone();
+    let database_config_clone1 = database_config.clone();
+    let queue_config_clone1 = queue_config.clone();
+    let filesystem_config_clone1 = filesystem_config.clone();
+    let vector_config_clone1 = vector_config.clone();
+    let batch_compute_config_clone1 = batch_compute_config.clone();
+    let stream_compute_config_clone1 = stream_compute_config.clone();
+    let resource_id_clone1 = resource_id.clone();
+
+    let dialog_category_clone2 = dialog_category.clone();
+    let dialog_resource_type_clone2 = dialog_resource_type.clone();
+    let resource_name_clone2 = resource_name.clone();
+    let resource_description_clone2 = resource_description.clone();
+    let database_config_clone2 = database_config.clone();
+    let queue_config_clone2 = queue_config.clone();
+    let filesystem_config_clone2 = filesystem_config.clone();
+    let vector_config_clone2 = vector_config.clone();
+    let batch_compute_config_clone2 = batch_compute_config.clone();
+    let stream_compute_config_clone2 = stream_compute_config.clone();
+    let resource_id_clone2 = resource_id.clone();
+
 
     // 获取资源类型
     let get_resource_types = |category: Category| {
@@ -934,14 +1158,98 @@ pub fn ResourceDialog(
                         button {
                             class: "btn btn-info",
                             onclick: move |_| {
-                                on_test_connection.call(());
+                                // Collect form data for test connection
+                                let config_json = match dialog_category_clone1() {
+                                    Category::RelationalDatabase => {
+                                        serde_json::to_value(database_config_clone1()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    Category::Queue => {
+                                        serde_json::to_value(queue_config_clone1()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    Category::Filesystem => {
+                                        serde_json::to_value(filesystem_config_clone1()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    Category::VectorDatabase => {
+                                        serde_json::to_value(vector_config_clone1()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    Category::BatchCompute => {
+                                        serde_json::to_value(batch_compute_config_clone1()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    Category::StreamCompute => {
+                                        serde_json::to_value(stream_compute_config_clone1()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    _ => serde_json::Value::Null,
+                                };
+
+                                let data = if let Some(id) = &resource_id_clone1 {
+                                    ResourceSaveData::Update(ResourceCreateUpdate {
+                                        id: id.clone(),
+                                        name: resource_name_clone1(),
+                                        description: resource_description_clone1(),
+                                        category: dialog_category_clone1(),
+                                        resource_type: dialog_resource_type_clone1(),
+                                        config: config_json,
+                                    })
+                                } else {
+                                    ResourceSaveData::Create(ResourceFormData {
+                                        name: resource_name_clone1(),
+                                        description: resource_description_clone1(),
+                                        category: dialog_category_clone1(),
+                                        resource_type: dialog_resource_type_clone1(),
+                                        config: config_json,
+                                    })
+                                };
+
+                                on_test_connection.call(data);
                             },
                             "测试连接"
                         }
                         button {
                             class: "btn btn-primary",
                             onclick: move |_| {
-                                on_save.call(());
+                                // Collect form data for save
+                                let config_json = match dialog_category_clone2() {
+                                    Category::RelationalDatabase => {
+                                        serde_json::to_value(database_config_clone2()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    Category::Queue => {
+                                        serde_json::to_value(queue_config_clone2()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    Category::Filesystem => {
+                                        serde_json::to_value(filesystem_config_clone2()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    Category::VectorDatabase => {
+                                        serde_json::to_value(vector_config_clone2()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    Category::BatchCompute => {
+                                        serde_json::to_value(batch_compute_config_clone2()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    Category::StreamCompute => {
+                                        serde_json::to_value(stream_compute_config_clone2()).unwrap_or(serde_json::Value::Null)
+                                    }
+                                    _ => serde_json::Value::Null,
+                                };
+
+                                let data = if let Some(id) = &resource_id_clone2 {
+                                    ResourceSaveData::Update(ResourceCreateUpdate {
+                                        id: id.clone(),
+                                        name: resource_name_clone2(),
+                                        description: resource_description_clone2(),
+                                        category: dialog_category_clone2(),
+                                        resource_type: dialog_resource_type_clone2(),
+                                        config: config_json,
+                                    })
+                                } else {
+                                    ResourceSaveData::Create(ResourceFormData {
+                                        name: resource_name_clone2(),
+                                        description: resource_description_clone2(),
+                                        category: dialog_category_clone2(),
+                                        resource_type: dialog_resource_type_clone2(),
+                                        config: config_json,
+                                    })
+                                };
+
+                                on_save.call(data);
                             },
                             if is_edit_mode { "更新" } else { "保存" }
                         }

@@ -8,8 +8,8 @@ use crate::impl_sqlx_for_string_enum;
 
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
-#[strum(serialize_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum DataSourceCategory {
     Database,
     Api,
@@ -25,8 +25,8 @@ impl_sqlx_for_string_enum!(DataSourceCategory);
 
 
 #[derive(Debug, Serialize, Deserialize, Clone,  PartialEq, Eq, strum::Display, strum::EnumString)]
-#[strum(serialize_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum DataSourceType {
     Mysql,
     Postgres,
@@ -45,8 +45,8 @@ impl_sqlx_for_string_enum!(DataSourceType);
 
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
-#[strum(serialize_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum ConnectionStatus {
     Connected,
     Disconnected,

@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use crate::impl_sqlx_for_string_enum;
 
 use crate::models::Validator;
 use crate::models::Error;
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "snake_case")]
-#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum Category {
     RelationalDatabase,
     TimeSeriesDatabase,
@@ -26,9 +27,12 @@ impl Default for Category {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
+impl_sqlx_for_string_enum!(Category);
+
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "snake_case")]
-#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum ResourceType {
     Mysql,
     Postgres,
@@ -46,9 +50,11 @@ impl Default for ResourceType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString, sqlx::Type)]
+impl_sqlx_for_string_enum!(ResourceType);
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "snake_case")]
-#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum Status {
     Active,
     Inactive,
@@ -59,6 +65,8 @@ impl Default for Status {
         Self::Active
     }
 }
+
+impl_sqlx_for_string_enum!(Status);
 
 // 内部使用的完整 Resource 模型
 #[derive(Debug, Serialize, Deserialize, FromRow, Default, Clone)]
@@ -111,14 +119,15 @@ pub struct ResourceReadOnly {
     pub category: Category,
     pub resource_type: ResourceType,
     pub config: serde_json::Value,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub created_at: String,
+    pub updated_at: String,
     pub status: Status,
 }
 
 // 用于创建和更新的 Resource 模型（不包含 status 字段）
 #[derive(Debug, Serialize, Deserialize, FromRow, Default, Clone)]
 pub struct ResourceCreateUpdate {
+    #[serde(default)]
     pub id: String,
     pub name: String,
     pub description: String,
@@ -152,8 +161,8 @@ impl From<Resource> for ResourceReadOnly {
             category: resource.category,
             resource_type: resource.resource_type,
             config: resource.config,
-            created_at: resource.created_at,
-            updated_at: resource.updated_at,
+            created_at: resource.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            updated_at: resource.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
             status: resource.status,
         }
     }

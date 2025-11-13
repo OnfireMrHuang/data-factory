@@ -3,7 +3,7 @@ use std::fmt;
 
 // 数据源分类枚举
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum DataSourceCategory {
     Database,
     Api,
@@ -20,7 +20,7 @@ impl fmt::Display for DataSourceCategory {
 
 // 数据源类型枚举
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum DataSourceType {
     Mysql,
     Postgres,
@@ -41,7 +41,7 @@ impl fmt::Display for DataSourceType {
 
 // 连接状态枚举
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum ConnectionStatus {
     Connected,
     Disconnected,

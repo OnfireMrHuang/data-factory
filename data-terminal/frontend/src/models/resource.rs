@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 // 资源分类枚举
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum Category {
     RelationalDatabase,
     TimeSeriesDatabase,
@@ -18,6 +19,7 @@ pub enum Category {
 
 // 资源类型枚举
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum ResourceType {
     Mysql,
     Postgres,
@@ -31,6 +33,7 @@ pub enum ResourceType {
 
 // 资源状态枚举
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum Status {
     Active,
     Inactive,

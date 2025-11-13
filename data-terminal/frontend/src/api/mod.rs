@@ -5,8 +5,10 @@
 //! - projects: Project CRUD operations
 //! - datasources: Datasource CRUD operations
 //! - collections: Collection task operations
+//! - resources: Resource CRUD operations
 
 pub mod client;
 pub mod projects;
 pub mod datasources;
 pub mod collections;
+pub mod resources;

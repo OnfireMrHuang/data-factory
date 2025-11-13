@@ -92,9 +92,11 @@ impl ResourceRepo for ResourceRepoImpl {
         let result = sqlx::query_as::<_, Resource>(sql)
             .bind(&id)
             .fetch_one(&pool)
-            .await?;
-
-        Ok(result)
+            .await;
+        match result {
+            Ok(resource) => Ok(resource),
+            Err(err) => Err(Error::from(err)),
+        }
     }
 
     async fn list_resource(&self, params: PageQuery) -> Result<Vec<Resource>, Error> {

@@ -89,6 +89,22 @@ pub enum CollectType {
     Incremental,
 }
 
+impl CollectType {
+    pub fn matches_resource_category(&self, datasource_type: &crate::models::resource::Category) -> bool {
+        match (self, datasource_type) {
+            (CollectType::Full, crate::models::resource::Category::RelationalDatabase) => true,
+            (CollectType::Full, crate::models::resource::Category::TimeSeriesDatabase) => true,
+            (CollectType::Full, crate::models::resource::Category::DocumentDatabase) => true,
+            (CollectType::Full, crate::models::resource::Category::VectorDatabase) => true,
+            (CollectType::Full, crate::models::resource::Category::Filesystem) => true,
+            (CollectType::Incremental, crate::models::resource::Category::Queue) => true,
+            _ => false,
+        }
+    }
+}
+
+
+
 #[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum TaskStage {
