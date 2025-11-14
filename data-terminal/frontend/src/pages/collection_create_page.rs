@@ -1,10 +1,62 @@
 use dioxus::prelude::*;
 use crate::routes::Route;
 use crate::models::collection::*;
-use crate::models::datasource::DataSource;
-use crate::models::resource::Resource;
+use crate::models::datasource::{DataSource, DataSourceType};
+use crate::models::resource::{Resource, ResourceType};
 use crate::components::business::collection::{DatasourceSelector, ResourceSelector};
 use crate::api::collections;
+
+
+
+
+#[component]
+fn TargetSchemaDefinition(
+    collection_category: CollectionCategory,
+    resource_type: ResourceType,
+    ddl_sql: Signal<String>,
+    json_schema: Signal<String>,
+) -> Element {
+    // todo: 目前仅支持数据库
+    let resource_schema_title = match resource_type.clone() {
+        ResourceType::Mysql => "Mysql建表语句",
+        ResourceType::Postgres => "Postgresql建表语句",
+        ResourceType::Doris => "doris建表语句",
+        _ => "",
+    };
+    let resource_placeholder = match resource_type.clone() {
+        ResourceType::Mysql => "CREATE TABLE target_table (\n  id INT PRIMARY KEY,\n  name VARCHAR(255),\n  created_at TIMESTAMP\n);",
+        ResourceType::Postgres => "CREATE TABLE target_table (\n  id SERIAL PRIMARY KEY,\n  name VARCHAR(255),\n  created_at TIMESTAMP\n);",
+        ResourceType::Doris => "CREATE TABLE target_table (\n  id INT PRIMARY KEY,\n  name VARCHAR(255),\n  created_at TIMESTAMP\n);",
+        _ => "",
+    };
+
+
+    rsx! {
+        div { class: "form-control mb-4 flex flex-col",
+            label { class: "label mb-4",
+                span { class: "label-text font-semibold", "{resource_schema_title}" }
+            }
+            if collection_category.clone() == CollectionCategory::Database {
+                textarea {
+                    class: "textarea textarea-primary font-mono w-full h-96",
+                    placeholder: "{resource_placeholder}",
+                    value: "{ddl_sql}",
+                    oninput: move |evt| ddl_sql.set(evt.value())
+                }
+            } else {
+                textarea {
+                    class: "textarea textarea-primary font-mono w-full h-96",
+                    placeholder: "{resource_placeholder}",
+                    value: "{json_schema}",
+                    oninput: move |evt| json_schema.set(evt.value())
+                }
+            }
+        }
+    }
+}
+
+
+
 
 /// T053: CollectionCreatePage - Multi-step wizard for creating collection tasks
 #[component]
@@ -20,7 +72,9 @@ pub fn CollectionCreatePage() -> Element {
     let mut selected_mode = use_signal(|| None::<CollectType>);
     let mut selected_category = use_signal(|| None::<CollectionCategory>);
     let mut selected_datasource_id = use_signal(|| None::<String>);
+    let mut selected_datasource_type = use_signal(|| None::<DataSourceType>);
     let mut selected_resource_id = use_signal(|| None::<String>);
+    let mut selected_resource_type = use_signal(|| None::<ResourceType>);
 
     // Step 3: Target schema definition
     let mut ddl_sql = use_signal(String::new);        // For Database category
@@ -243,7 +297,7 @@ pub fn CollectionCreatePage() -> Element {
                                     option { value: "", disabled: true, selected: selected_category().is_none(), "选择采集来源..." }
                                     option { value: "数据库", "数据库" }
                                     option { value: "API", "API" }
-                                    option { value: "爬虫", "爬虫" }
+                                    // option { value: "爬虫", "爬虫" } // 先不支持爬虫
                                 }
                             }
                         }
@@ -296,6 +350,12 @@ pub fn CollectionCreatePage() -> Element {
                             selected_datasource: selected_datasource_id,
                             on_datasource_change: move |id: String| {
                                 selected_datasource_id.set(Some(id.clone()));
+                                selected_datasource_type.set(
+                                    datasources()
+                                        .iter()
+                                        .find(|ds| ds.id == id)
+                                        .map(|ds| ds.datasource_type.clone())
+                                );
                             }
                         }
                         div { class: "divider" }
@@ -303,7 +363,15 @@ pub fn CollectionCreatePage() -> Element {
                         ResourceSelector {
                             resources: resources(),
                             selected_resource: selected_resource_id,
-                            on_resource_change: move |id: String| selected_resource_id.set(Some(id))
+                            on_resource_change: move |id: String| {
+                                selected_resource_id.set(Some(id.clone()));
+                                selected_resource_type.set(
+                                    resources()
+                                        .iter()
+                                        .find(|r| r.id == id)
+                                        .map(|r| r.resource_type.clone())
+                                );
+                            }
                         }
 
                         div { class: "card-actions justify-between mt-6",
@@ -327,38 +395,11 @@ pub fn CollectionCreatePage() -> Element {
             if current_step() == 3 {
                 div { class: "card bg-base-200",
                     div { class: "card-body",
-                        h2 { class: "card-title mb-4", "Step 3: 目标Schema定义" }
-
-                        // Database category: DDL SQL textarea
-                        if selected_category() == Some(CollectionCategory::Database) {
-                            div { class: "form-control mb-4",
-                                label { class: "label",
-                                    span { class: "label-text font-semibold", "DDL SQL" }
-                                    span { class: "label-text-alt", "定义目标表结构 (CREATE TABLE ...)" }
-                                }
-                                textarea {
-                                    class: "textarea textarea-bordered font-mono h-64",
-                                    placeholder: "CREATE TABLE target_table (\n  id INT PRIMARY KEY,\n  name VARCHAR(255),\n  created_at TIMESTAMP\n);",
-                                    value: "{ddl_sql}",
-                                    oninput: move |evt| ddl_sql.set(evt.value())
-                                }
-                            }
-                        }
-
-                        // API category: JSON Schema textarea
-                        if selected_category() == Some(CollectionCategory::Api) {
-                            div { class: "form-control mb-4",
-                                label { class: "label",
-                                    span { class: "label-text font-semibold", "JSON Schema" }
-                                    span { class: "label-text-alt", "定义目标数据的JSON Schema" }
-                                }
-                                textarea {
-                                    class: "textarea textarea-bordered font-mono h-64",
-                                    placeholder: "{{\n  \"type\": \"object\",\n  \"properties\": {{\n    \"id\": {{ \"type\": \"integer\" }},\n    \"name\": {{ \"type\": \"string\" }},\n    \"created_at\": {{ \"type\": \"string\", \"format\": \"date-time\" }}\n  }},\n  \"required\": [\"id\", \"name\"]\n}}",
-                                    value: "{json_schema}",
-                                    oninput: move |evt| json_schema.set(evt.value())
-                                }
-                            }
+                        TargetSchemaDefinition{
+                            collection_category: selected_category().unwrap(),
+                            resource_type: selected_resource_type().unwrap(),
+                            ddl_sql: ddl_sql,
+                            json_schema: json_schema,
                         }
 
                         div { class: "card-actions justify-between mt-6",
@@ -551,3 +592,5 @@ pub fn CollectionCreatePage() -> Element {
         }
     }
 }
+
+
