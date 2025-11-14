@@ -1,11 +1,9 @@
-use dioxus::html::div;
 use dioxus::prelude::*;
 use crate::routes::Route;
 use crate::models::collection::*;
 use crate::models::datasource::DataSource;
 use crate::models::resource::Resource;
-use crate::components::business::collection::*;
-use crate::components::common::*;
+use crate::components::business::collection::{DatasourceSelector, ResourceSelector};
 use crate::api::collections;
 
 /// T053: CollectionCreatePage - Multi-step wizard for creating collection tasks
@@ -23,14 +21,18 @@ pub fn CollectionCreatePage() -> Element {
     let mut selected_category = use_signal(|| None::<CollectionCategory>);
     let mut selected_datasource_id = use_signal(|| None::<String>);
     let mut selected_resource_id = use_signal(|| None::<String>);
-    let mut selected_tables = use_signal(|| Vec::<String>::new());
-    let mut transform_sql = use_signal(String::new);
-    let mut target_schema = use_signal(|| None::<TableSchema>);
+
+    // Step 3: Target schema definition
+    let mut ddl_sql = use_signal(String::new);        // For Database category
+    let mut json_schema = use_signal(String::new);    // For API category
+
+    // Step 4: Collection rule definition
+    let mut select_sql = use_signal(String::new);     // For Database category
+    let mut python_script = use_signal(String::new);  // For API category
 
     // Data
     let mut datasources = use_signal(|| Vec::<DataSource>::new());
     let mut resources = use_signal(|| Vec::<Resource>::new());
-    let mut tables = use_signal(|| Vec::<TableMetadata>::new());
 
     let mut loading = use_signal(|| false);
     let mut error_msg = use_signal(|| String::new());
@@ -75,60 +77,42 @@ pub fn CollectionCreatePage() -> Element {
         });
     });
 
-    // Generate schema when tables are selected
-    let generate_schema_handler = move |_| {
-        spawn(async move {
-            if let (Some(ds_id), Some(res_id)) = (selected_datasource_id(), selected_resource_id()) {
-                let table_selections: Vec<TableSelection> = selected_tables()
-                    .iter()
-                    .map(|name| TableSelection {
-                        table_name: name.clone(),
-                        selected_fields: vec![], // Empty = all fields
-                    })
-                    .collect();
-
-                match collections::generate_target_schema(&ds_id, &res_id, table_selections).await {
-                    Ok(schema) => {
-                        target_schema.set(Some(schema));
-                    }
-                    Err(e) => {
-                        error_msg.set(format!("Failed to generate schema: {:?}", e));
-                    }
-                }
-            }
-        });
-    };
-
     // Submit handler
     let submit_handler = move |_| {
         spawn(async move {
             loading.set(true);
 
-            // Build the collection rule based on mode
-            let rule = if selected_mode() == Some(CollectType::Full) {
-                let table_selections: Vec<TableSelection> = selected_tables()
-                    .iter()
-                    .map(|name| TableSelection {
-                        table_name: name.clone(),
-                        selected_fields: vec![],
+            // Build the collection rule based on category and mode
+            let rule = match selected_category() {
+                Some(CollectionCategory::Database) => {
+                    serde_json::json!({
+                        "type": "database",
+                        "mode": match selected_mode() {
+                            Some(CollectType::Full) => "full",
+                            Some(CollectType::Incremental) => "incremental",
+                            None => "full"
+                        },
+                        "ddl_sql": ddl_sql(),
+                        "select_sql": select_sql()
                     })
-                    .collect();
-
-                CollectionRule::FullDatabase(FullDatabaseRule {
-                    selected_tables: table_selections,
-                    transformation_sql: if transform_sql().is_empty() {
-                        None
-                    } else {
-                        Some(transform_sql())
-                    },
-                    target_schema: target_schema().unwrap_or_else(|| TableSchema {
-                        table_name: "default".to_string(),
-                        fields: vec![],
-                    }),
-                })
-            } else {
-                // TODO: Support incremental mode
-                return;
+                }
+                Some(CollectionCategory::Api) => {
+                    serde_json::json!({
+                        "type": "api",
+                        "mode": match selected_mode() {
+                            Some(CollectType::Full) => "full",
+                            Some(CollectType::Incremental) => "incremental",
+                            None => "full"
+                        },
+                        "json_schema": json_schema(),
+                        "python_script": python_script()
+                    })
+                }
+                _ => {
+                    error_msg.set("Invalid category selected".to_string());
+                    loading.set(false);
+                    return;
+                }
             };
 
             let request = CreateCollectTaskRequest {
@@ -142,7 +126,7 @@ pub fn CollectionCreatePage() -> Element {
                 collect_type: selected_mode().unwrap_or(CollectType::Full),
                 datasource_id: selected_datasource_id().unwrap_or_default(),
                 resource_id: selected_resource_id().unwrap_or_default(),
-                rule: serde_json::to_value(&rule).unwrap_or(serde_json::json!(null)),
+                rule,
             };
 
             match collections::create_collection_task(request).await {
@@ -181,11 +165,15 @@ pub fn CollectionCreatePage() -> Element {
                 }
                 div {
                     class: if current_step() >= 3 { "step step-primary" } else { "step" },
-                    "采集规则配置"
+                    "目标schema定义"
                 }
                 div {
                     class: if current_step() >= 4 { "step step-primary" } else { "step" },
-                    "测试"
+                    "采集规则定义"
+                }
+                div {
+                    class: if current_step() >= 5 { "step step-primary" } else { "step" },
+                    "测试运行"
                 }
             }
 
@@ -335,70 +323,146 @@ pub fn CollectionCreatePage() -> Element {
                 }
             }
 
-            // Step 3: Configure Collection
+            // Step 3: Target Schema Definition
             if current_step() == 3 {
-                div { class: "space-y-4",
-                    DbConfigPanel {
-                        tables: tables(),
-                        selected_tables,
-                        on_table_toggle: move |table: String| {
-                            let mut current = selected_tables();
-                            if current.contains(&table) {
-                                current.retain(|t| t != &table);
-                            } else {
-                                current.push(table);
+                div { class: "card bg-base-200",
+                    div { class: "card-body",
+                        h2 { class: "card-title mb-4", "Step 3: 目标Schema定义" }
+
+                        // Database category: DDL SQL textarea
+                        if selected_category() == Some(CollectionCategory::Database) {
+                            div { class: "form-control mb-4",
+                                label { class: "label",
+                                    span { class: "label-text font-semibold", "DDL SQL" }
+                                    span { class: "label-text-alt", "定义目标表结构 (CREATE TABLE ...)" }
+                                }
+                                textarea {
+                                    class: "textarea textarea-bordered font-mono h-64",
+                                    placeholder: "CREATE TABLE target_table (\n  id INT PRIMARY KEY,\n  name VARCHAR(255),\n  created_at TIMESTAMP\n);",
+                                    value: "{ddl_sql}",
+                                    oninput: move |evt| ddl_sql.set(evt.value())
+                                }
                             }
-                            selected_tables.set(current);
                         }
-                    }
 
-                    div { class: "card bg-base-200",
-                        div { class: "card-body",
-                            TransformEditor {
-                                transform_sql,
-                                on_sql_change: move |sql: String| transform_sql.set(sql)
+                        // API category: JSON Schema textarea
+                        if selected_category() == Some(CollectionCategory::Api) {
+                            div { class: "form-control mb-4",
+                                label { class: "label",
+                                    span { class: "label-text font-semibold", "JSON Schema" }
+                                    span { class: "label-text-alt", "定义目标数据的JSON Schema" }
+                                }
+                                textarea {
+                                    class: "textarea textarea-bordered font-mono h-64",
+                                    placeholder: "{{\n  \"type\": \"object\",\n  \"properties\": {{\n    \"id\": {{ \"type\": \"integer\" }},\n    \"name\": {{ \"type\": \"string\" }},\n    \"created_at\": {{ \"type\": \"string\", \"format\": \"date-time\" }}\n  }},\n  \"required\": [\"id\", \"name\"]\n}}",
+                                    value: "{json_schema}",
+                                    oninput: move |evt| json_schema.set(evt.value())
+                                }
                             }
+                        }
 
+                        div { class: "card-actions justify-between mt-6",
                             button {
-                                class: "btn btn-secondary mt-4",
-                                disabled: selected_tables().is_empty(),
-                                onclick: generate_schema_handler,
-                                "Generate Target Schema"
+                                class: "btn",
+                                onclick: move |_| current_step.set(2),
+                                "← Back"
                             }
-                        }
-                    }
-
-                    TargetSchemaEditor {
-                        schema: target_schema,
-                        on_schema_change: move |schema: TableSchema| target_schema.set(Some(schema))
-                    }
-
-                    div { class: "flex justify-between",
-                        button {
-                            class: "btn",
-                            onclick: move |_| current_step.set(2),
-                            "← Back"
-                        }
-                        button {
-                            class: "btn btn-primary",
-                            disabled: selected_tables().is_empty() || target_schema().is_none(),
-                            onclick: move |_| current_step.set(4),
-                            "Next →"
+                            button {
+                                class: "btn btn-primary",
+                                disabled: {
+                                    if selected_category() == Some(CollectionCategory::Database) {
+                                        ddl_sql().is_empty()
+                                    } else if selected_category() == Some(CollectionCategory::Api) {
+                                        json_schema().is_empty()
+                                    } else {
+                                        true
+                                    }
+                                },
+                                onclick: move |_| current_step.set(4),
+                                "Next →"
+                            }
                         }
                     }
                 }
             }
 
-            // Step 4: Review & Submit
+            // Step 4: Collection Rule Definition
             if current_step() == 4 {
                 div { class: "card bg-base-200",
                     div { class: "card-body",
-                        h2 { class: "card-title mb-4", "Step 4: Review & Submit" }
+                        h2 { class: "card-title mb-4", "Step 4: 采集规则定义" }
+
+                        // Database category: SELECT SQL textarea
+                        if selected_category() == Some(CollectionCategory::Database) {
+                            div { class: "form-control mb-4",
+                                label { class: "label",
+                                    span { class: "label-text font-semibold", "SELECT SQL" }
+                                    span { class: "label-text-alt", "从数据源提取数据的SQL查询" }
+                                }
+                                textarea {
+                                    class: "textarea textarea-bordered font-mono h-64",
+                                    placeholder: "SELECT id, name, created_at\nFROM source_table\nWHERE status = 'active'\nORDER BY created_at DESC;",
+                                    value: "{select_sql}",
+                                    oninput: move |evt| select_sql.set(evt.value())
+                                }
+                            }
+                        }
+
+                        // API category: Python script textarea
+                        if selected_category() == Some(CollectionCategory::Api) {
+                            div { class: "form-control mb-4",
+                                label { class: "label",
+                                    span { class: "label-text font-semibold", "Python Script" }
+                                    span { class: "label-text-alt", "转换源JSON到目标JSON的Python脚本" }
+                                }
+                                textarea {
+                                    class: "textarea textarea-bordered font-mono h-64",
+                                    placeholder: "def transform(source_data):\n    # Transform source JSON to target JSON\n    return {{\n        'id': source_data['id'],\n        'name': source_data['name'],\n        'created_at': source_data['timestamp']\n    }}",
+                                    value: "{python_script}",
+                                    oninput: move |evt| python_script.set(evt.value())
+                                }
+                            }
+                        }
+
+                        div { class: "card-actions justify-between mt-6",
+                            button {
+                                class: "btn",
+                                onclick: move |_| current_step.set(3),
+                                "← Back"
+                            }
+                            button {
+                                class: "btn btn-primary",
+                                disabled: {
+                                    if selected_category() == Some(CollectionCategory::Database) {
+                                        select_sql().is_empty()
+                                    } else if selected_category() == Some(CollectionCategory::Api) {
+                                        python_script().is_empty()
+                                    } else {
+                                        true
+                                    }
+                                },
+                                onclick: move |_| current_step.set(5),
+                                "Next →"
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Step 5: Review & Submit
+            if current_step() == 5 {
+                div { class: "card bg-base-200",
+                    div { class: "card-body",
+                        h2 { class: "card-title mb-4", "Step 5: 测试运行 & 提交" }
 
                         div { class: "space-y-4",
                             div {
                                 h3 { class: "font-semibold", "Task Name" }
                                 p { "{task_name()}" }
+                            }
+                            div {
+                                h3 { class: "font-semibold", "Description" }
+                                p { "{task_description()}" }
                             }
                             div {
                                 h3 { class: "font-semibold", "Category" }
@@ -422,15 +486,51 @@ pub fn CollectionCreatePage() -> Element {
                                 }
                             }
                             div {
-                                h3 { class: "font-semibold", "Selected Tables" }
-                                p { "{selected_tables().join(\", \")}" }
+                                h3 { class: "font-semibold", "Datasource ID" }
+                                p { "{selected_datasource_id().unwrap_or_default()}" }
+                            }
+                            div {
+                                h3 { class: "font-semibold", "Resource ID" }
+                                p { "{selected_resource_id().unwrap_or_default()}" }
+                            }
+
+                            // Show Database-specific fields
+                            if selected_category() == Some(CollectionCategory::Database) {
+                                div {
+                                    h3 { class: "font-semibold", "DDL SQL" }
+                                    pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
+                                        code { "{ddl_sql()}" }
+                                    }
+                                }
+                                div {
+                                    h3 { class: "font-semibold", "SELECT SQL" }
+                                    pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
+                                        code { "{select_sql()}" }
+                                    }
+                                }
+                            }
+
+                            // Show API-specific fields
+                            if selected_category() == Some(CollectionCategory::Api) {
+                                div {
+                                    h3 { class: "font-semibold", "JSON Schema" }
+                                    pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
+                                        code { "{json_schema()}" }
+                                    }
+                                }
+                                div {
+                                    h3 { class: "font-semibold", "Python Script" }
+                                    pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
+                                        code { "{python_script()}" }
+                                    }
+                                }
                             }
                         }
 
                         div { class: "card-actions justify-between mt-6",
                             button {
                                 class: "btn",
-                                onclick: move |_| current_step.set(3),
+                                onclick: move |_| current_step.set(4),
                                 "← Back"
                             }
                             button {

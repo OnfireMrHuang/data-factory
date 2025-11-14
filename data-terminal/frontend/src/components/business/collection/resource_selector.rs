@@ -28,11 +28,6 @@ pub fn ResourceSelector(
                     }
                 }
             }
-            if let Some(res_id) = selected_resource() {
-                label { class: "label",
-                    span { class: "label-text-alt text-success", "Selected: {res_id}" }
-                }
-            }
         }
     }
 }
