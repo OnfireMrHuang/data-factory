@@ -56,6 +56,32 @@ fn TargetSchemaDefinition(
 }
 
 
+#[component]
+fn QueryDataRuleDefinition(
+    collection_category: CollectionCategory,
+    datasource_type: DataSourceType,
+    query_sql: Signal<String>,
+) -> Element {
+    rsx!{
+        div { class: "card-body",
+            // Database category: SELECT SQL textarea
+            if collection_category.clone() == CollectionCategory::Database {
+                div { class: "form-control mb-4 flex flex-col",
+                    label { class: "label mb-4",
+                        span { class: "label-text font-semibold", "SELECT SQL" }
+                        span { class: "label-text-alt", "从数据源提取数据的SQL查询" }
+                    }
+                    textarea {
+                        class: "textarea textarea-bordered font-mono w-full h-96",
+                        placeholder: "SELECT id, name, created_at\nFROM source_table\nWHERE status = 'active'\nORDER BY created_at DESC;",
+                        value: "{query_sql}",
+                        oninput: move |evt| query_sql.set(evt.value())
+                    }
+                }
+            }
+        }
+    }
+}
 
 
 /// T053: CollectionCreatePage - Multi-step wizard for creating collection tasks
@@ -223,7 +249,7 @@ pub fn CollectionCreatePage() -> Element {
                 }
                 div {
                     class: if current_step() >= 4 { "step step-primary" } else { "step" },
-                    "采集规则定义"
+                    "取数规则定义"
                 }
                 div {
                     class: if current_step() >= 5 { "step step-primary" } else { "step" },
@@ -431,38 +457,11 @@ pub fn CollectionCreatePage() -> Element {
             if current_step() == 4 {
                 div { class: "card bg-base-200",
                     div { class: "card-body",
-                        h2 { class: "card-title mb-4", "Step 4: 采集规则定义" }
 
-                        // Database category: SELECT SQL textarea
-                        if selected_category() == Some(CollectionCategory::Database) {
-                            div { class: "form-control mb-4",
-                                label { class: "label",
-                                    span { class: "label-text font-semibold", "SELECT SQL" }
-                                    span { class: "label-text-alt", "从数据源提取数据的SQL查询" }
-                                }
-                                textarea {
-                                    class: "textarea textarea-bordered font-mono h-64",
-                                    placeholder: "SELECT id, name, created_at\nFROM source_table\nWHERE status = 'active'\nORDER BY created_at DESC;",
-                                    value: "{select_sql}",
-                                    oninput: move |evt| select_sql.set(evt.value())
-                                }
-                            }
-                        }
-
-                        // API category: Python script textarea
-                        if selected_category() == Some(CollectionCategory::Api) {
-                            div { class: "form-control mb-4",
-                                label { class: "label",
-                                    span { class: "label-text font-semibold", "Python Script" }
-                                    span { class: "label-text-alt", "转换源JSON到目标JSON的Python脚本" }
-                                }
-                                textarea {
-                                    class: "textarea textarea-bordered font-mono h-64",
-                                    placeholder: "def transform(source_data):\n    # Transform source JSON to target JSON\n    return {{\n        'id': source_data['id'],\n        'name': source_data['name'],\n        'created_at': source_data['timestamp']\n    }}",
-                                    value: "{python_script}",
-                                    oninput: move |evt| python_script.set(evt.value())
-                                }
-                            }
+                        QueryDataRuleDefinition {
+                            collection_category: selected_category().unwrap(),
+                            datasource_type: selected_datasource_type().unwrap(),
+                            query_sql: select_sql,
                         }
 
                         div { class: "card-actions justify-between mt-6",
@@ -591,6 +590,7 @@ pub fn CollectionCreatePage() -> Element {
             }
         }
     }
+
 }
 
 
