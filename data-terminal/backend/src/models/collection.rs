@@ -17,7 +17,8 @@ pub struct CollectTask {
     #[serde(default)]
     pub collect_type: CollectType,
     pub datasource_id: String,
-    pub resource_id: String,
+    pub queue_resource_id: String,
+    pub database_resource_id: String,
     #[sqlx(json)]
     pub rule: CollectionRule,
     #[serde(default)]
@@ -49,8 +50,20 @@ impl Validator for CollectTask {
         if self.datasource_id.is_empty() {
             return Err(Error::EmptyValue("datasource_id".to_string()));
         }
-        if self.resource_id.is_empty() {
-            return Err(Error::EmptyValue("resource_id".to_string()));
+
+        // Validate resource_id based on collect_type
+        match self.collect_type {
+            CollectType::Incremental => {
+                if self.queue_resource_id.is_empty() {
+                    return Err(Error::EmptyValue("queue_resource_id required for incremental collection".to_string()));
+                }
+            }
+            CollectType::Full => {
+                // For database category, database_resource_id is required
+                if matches!(self.category, CollectionCategory::Database) && self.database_resource_id.is_empty() {
+                    return Err(Error::EmptyValue("database_resource_id required for full database collection".to_string()));
+                }
+            }
         }
         Ok(())
     }
@@ -345,7 +358,8 @@ pub struct CreateCollectTaskRequest {
     pub category: CollectionCategory,
     pub collect_type: CollectType,
     pub datasource_id: String,
-    pub resource_id: String,
+    pub queue_resource_id: String,
+    pub database_resource_id: String,
     pub rule: CollectionRule,
 }
 
@@ -369,8 +383,10 @@ pub struct CollectTaskReadOnly {
     pub collect_type: CollectType,
     pub datasource_id: String,
     pub datasource_name: String,
-    pub resource_id: String,
-    pub resource_name: String,
+    pub queue_resource_id: String,
+    pub queue_resource_name: String,
+    pub database_resource_id: String,
+    pub database_resource_name: String,
     pub rule: CollectionRule,
     pub stage: TaskStage,
     pub created_at: String,
@@ -389,8 +405,10 @@ impl From<CollectTask> for CollectTaskReadOnly {
             collect_type: task.collect_type,
             datasource_id: task.datasource_id,
             datasource_name: "".to_string(),
-            resource_id: task.resource_id,
-            resource_name: "".to_string(),
+            queue_resource_id: task.queue_resource_id,
+            queue_resource_name: "".to_string(),
+            database_resource_id: task.database_resource_id,
+            database_resource_name: "".to_string(),
             rule: task.rule,
             stage: task.stage,
             created_at: task.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
@@ -410,7 +428,8 @@ impl From<CreateCollectTaskRequest> for CollectTask {
             category: request.category,
             collect_type: request.collect_type,
             datasource_id: request.datasource_id,
-            resource_id: request.resource_id,
+            queue_resource_id: request.queue_resource_id,
+            database_resource_id: request.database_resource_id,
             rule: request.rule,
             stage: TaskStage::Draft,
             created_at: chrono::Utc::now(),
@@ -430,7 +449,8 @@ pub struct CollectTaskResponse {
     pub category: CollectionCategory,
     pub collect_type: CollectType,
     pub datasource: DatasourceInfo,
-    pub resource: ResourceInfo,
+    pub queue_resource: Option<ResourceInfo>,
+    pub database_resource: Option<ResourceInfo>,
     pub rule: CollectionRule,
     pub stage: TaskStage,
     pub created_at: DateTime<Utc>,

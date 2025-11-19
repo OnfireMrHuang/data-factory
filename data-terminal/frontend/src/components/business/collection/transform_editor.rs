@@ -17,7 +17,7 @@ pub fn TransformEditor(
                 value: "{transform_sql}",
                 oninput: move |evt| {
                     let value = evt.value();
-                    transform_sql.set(value.clone());
+                    transform_sql.set(value.clone());   
                     on_sql_change.call(value);
                 }
             }

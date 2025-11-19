@@ -40,7 +40,9 @@
       "Bash(cargo build:*)",
       "Bash(find:*)",
       "mcp__data-factory-api__read_project_oas_gthwhm",
-      "mcp__data-factory-api__read_project_oas_ref_resources_gthwhm"
+      "mcp__data-factory-api__read_project_oas_ref_resources_gthwhm",
+      "mcp__data-factory-api__read_project_oas_ysxfho",
+      "mcp__data-factory-api__read_project_oas_ref_resources_ysxfho"
     ],
     "deny": [],
     "ask": []

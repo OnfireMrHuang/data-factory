@@ -3,7 +3,7 @@ use crate::routes::Route;
 use crate::models::collection::*;
 use crate::models::datasource::{DataSource, DataSourceType};
 use crate::models::resource::{Resource, ResourceType};
-use crate::components::business::collection::{DatasourceSelector, ResourceSelector};
+use crate::components::business::collection::{DatasourceSelector, ResourceSelectorForDatabaseFull, ResourceSelectorForDatabaseIncremental};
 use crate::api::collections;
 
 
@@ -99,8 +99,9 @@ pub fn CollectionCreatePage() -> Element {
     let mut selected_category = use_signal(|| None::<CollectionCategory>);
     let mut selected_datasource_id = use_signal(|| None::<String>);
     let mut selected_datasource_type = use_signal(|| None::<DataSourceType>);
-    let mut selected_resource_id = use_signal(|| None::<String>);
-    let mut selected_resource_type = use_signal(|| None::<ResourceType>);
+    let mut selected_queue_resource_id = use_signal(|| None::<String>);
+    let mut selected_database_resource_id = use_signal(|| None::<String>);
+    let mut selected_database_resource_type = use_signal(|| None::<ResourceType>);
 
     // Step 3: Target schema definition
     let mut ddl_sql = use_signal(String::new);        // For Database category
@@ -205,7 +206,8 @@ pub fn CollectionCreatePage() -> Element {
                 category: selected_category().unwrap_or(CollectionCategory::Database),
                 collect_type: selected_mode().unwrap_or(CollectType::Full),
                 datasource_id: selected_datasource_id().unwrap_or_default(),
-                resource_id: selected_resource_id().unwrap_or_default(),
+                queue_resource_id: selected_queue_resource_id().unwrap_or_default(),
+                database_resource_id: selected_database_resource_id().unwrap_or_default(),
                 rule,
             };
 
@@ -321,8 +323,8 @@ pub fn CollectionCreatePage() -> Element {
                                         selected_category.set(category);
                                     },
                                     option { value: "", disabled: true, selected: selected_category().is_none(), "选择采集来源..." }
-                                    option { value: "数据库", "数据库" }
-                                    option { value: "API", "API" }
+                                    option { value: "数据库", "数据库" } // 仅先支持数据库采集
+                                    // option { value: "API", "API" }
                                     // option { value: "爬虫", "爬虫" } // 先不支持爬虫
                                 }
                             }
@@ -371,34 +373,69 @@ pub fn CollectionCreatePage() -> Element {
             if current_step() == 2 {
                 div { class: "card bg-base-200",
                     div { class: "card-body",
-                        DatasourceSelector {
-                            datasources: datasources(),
-                            selected_datasource: selected_datasource_id,
-                            on_datasource_change: move |id: String| {
-                                selected_datasource_id.set(Some(id.clone()));
-                                selected_datasource_type.set(
-                                    datasources()
-                                        .iter()
-                                        .find(|ds| ds.id == id)
-                                        .map(|ds| ds.datasource_type.clone())
-                                );
+                        // 非爬虫形式则需要选定数据源
+                        if selected_category() != Some(CollectionCategory::Crawler) {
+                            DatasourceSelector {
+                                datasources: datasources(),
+                                selected_datasource: selected_datasource_id,
+                                on_datasource_change: move |id: String| {
+                                    selected_datasource_id.set(Some(id.clone()));
+                                    selected_datasource_type.set(
+                                        datasources()
+                                            .iter()
+                                            .find(|ds| ds.id == id)
+                                            .map(|ds| ds.datasource_type.clone())
+                                    );
+                                }
                             }
+                            div { class: "divider" }
                         }
-                        div { class: "divider" }
 
-                        ResourceSelector {
-                            resources: resources(),
-                            selected_resource: selected_resource_id,
-                            on_resource_change: move |id: String| {
-                                selected_resource_id.set(Some(id.clone()));
-                                selected_resource_type.set(
-                                    resources()
-                                        .iter()
-                                        .find(|r| r.id == id)
-                                        .map(|r| r.resource_type.clone())
-                                );
+                        match selected_category() {
+                            Some(CollectionCategory::Database) => {
+                                if selected_mode() == Some(CollectType::Full) {
+                                    rsx! {
+                                        ResourceSelectorForDatabaseFull {
+                                            resources: resources(),
+                                            selected_database_resource: selected_database_resource_id,
+                                            on_database_resource_change: move |id: String| {
+                                                selected_database_resource_id.set(Some(id.clone()));
+                                                selected_database_resource_type.set(
+                                                    resources()
+                                                        .iter()
+                                                        .find(|r| r.id == id)
+                                                        .map(|r| r.resource_type.clone())
+                                                );
+                                            },
+                                        }
+                                    }
+                                } else if selected_mode() == Some(CollectType::Incremental) {
+                                    rsx! {
+                                        ResourceSelectorForDatabaseIncremental {
+                                            resources: resources(),
+                                            selected_queue_resource: selected_queue_resource_id,
+                                            selected_database_resource: selected_database_resource_id,
+                                            on_queue_resource_change: move |id: String| {
+                                                selected_queue_resource_id.set(Some(id));
+                                            },
+                                            on_database_resource_change: move |id: String| {
+                                                selected_database_resource_id.set(Some(id.clone()));
+                                                selected_database_resource_type.set(
+                                                    resources()
+                                                        .iter()
+                                                        .find(|r| r.id == id)
+                                                        .map(|r| r.resource_type.clone())
+                                                );
+                                            },
+                                        }
+                                    }
+                                } else {
+                                    rsx!{}
+                                }
                             }
+                            _ => rsx!{}
                         }
+
 
                         div { class: "card-actions justify-between mt-6",
                             button {
@@ -408,7 +445,9 @@ pub fn CollectionCreatePage() -> Element {
                             }
                             button {
                                 class: "btn btn-primary",
-                                disabled: selected_datasource_id().is_none() || selected_resource_id().is_none(),
+                                disabled: selected_datasource_id().is_none() ||
+                                    (selected_mode() == Some(CollectType::Incremental) && selected_queue_resource_id().is_none()) ||
+                                    (selected_mode() == Some(CollectType::Full) && selected_category() == Some(CollectionCategory::Database) && selected_database_resource_id().is_none()),
                                 onclick: move |_| current_step.set(3),
                                 "Next →"
                             }
@@ -423,7 +462,7 @@ pub fn CollectionCreatePage() -> Element {
                     div { class: "card-body",
                         TargetSchemaDefinition{
                             collection_category: selected_category().unwrap(),
-                            resource_type: selected_resource_type().unwrap(),
+                            resource_type: selected_database_resource_type().unwrap(),
                             ddl_sql: ddl_sql,
                             json_schema: json_schema,
                         }
@@ -528,10 +567,6 @@ pub fn CollectionCreatePage() -> Element {
                             div {
                                 h3 { class: "font-semibold", "Datasource ID" }
                                 p { "{selected_datasource_id().unwrap_or_default()}" }
-                            }
-                            div {
-                                h3 { class: "font-semibold", "Resource ID" }
-                                p { "{selected_resource_id().unwrap_or_default()}" }
                             }
 
                             // Show Database-specific fields

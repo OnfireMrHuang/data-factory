@@ -51,8 +51,10 @@ pub struct CollectTask {
     pub collect_type: CollectType,
     pub datasource_id: String,
     pub datasource_name: String,
-    pub resource_id: String,
-    pub resource_name: String,
+    pub queue_resource_id: String,
+    pub queue_resource_name: String,
+    pub database_resource_id: String,
+    pub database_resource_name: String,
     pub rule: serde_json::Value,
     pub stage: TaskStage,
     #[serde(deserialize_with = "datetime_format::deserialize")]
@@ -344,12 +346,14 @@ pub struct CreateCollectTaskRequest {
     pub category: CollectionCategory,
     pub collect_type: CollectType,
     pub datasource_id: String,
-    pub resource_id: String,
+    pub queue_resource_id: String,
+    pub database_resource_id: String,
     pub rule: serde_json::Value,
 }
 
 #[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]
 pub struct UpdateCollectTaskRequest {
+    pub code: String,
     pub name: String,
     pub description: Option<String>,
     pub rule: serde_json::Value,

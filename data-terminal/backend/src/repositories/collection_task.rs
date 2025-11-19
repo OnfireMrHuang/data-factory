@@ -52,7 +52,8 @@ impl CollectionRepository for CollectionRepositoryImpl {
         let category = task.category;
         let collect_type = task.collect_type;
         let datasource_id = task.datasource_id.clone();
-        let resource_id = task.resource_id.clone();
+        let queue_resource_id = task.queue_resource_id.clone();
+        let database_resource_id = task.database_resource_id.clone();
         let rule = task.rule.clone();
         let stage = task.stage;
         let created_at = task.created_at;
@@ -62,8 +63,8 @@ impl CollectionRepository for CollectionRepositoryImpl {
         sqlx::query(
             r#"
             INSERT INTO df_c_collection
-            (id, code, name, description, category, collect_type, datasource_id, resource_id, rule, stage, created_at, updated_at, applied_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, code, name, description, category, collect_type, datasource_id, queue_resource_id, database_resource_id, rule, stage, created_at, updated_at, applied_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#
         )
         .bind(&id)
@@ -73,7 +74,8 @@ impl CollectionRepository for CollectionRepositoryImpl {
         .bind(&category)
         .bind(&collect_type)
         .bind(&datasource_id)
-        .bind(&resource_id)
+        .bind(&queue_resource_id)
+        .bind(&database_resource_id)
         .bind(serde_json::to_value(&rule).unwrap())
         .bind(&stage)
         .bind(&created_at)
@@ -97,7 +99,8 @@ impl CollectionRepository for CollectionRepositoryImpl {
                 category,
                 collect_type,
                 datasource_id,
-                resource_id,
+                queue_resource_id,
+                database_resource_id,
                 rule,
                 stage,
                 created_at,
@@ -126,7 +129,8 @@ impl CollectionRepository for CollectionRepositoryImpl {
                 category,
                 collect_type,
                 datasource_id,
-                resource_id,
+                queue_resource_id,
+                database_resource_id,
                 rule,
                 stage,
                 created_at,
@@ -219,7 +223,7 @@ impl CollectionRepository for CollectionRepositoryImpl {
 
         // Build dynamic query based on filters
         let mut query = String::from(
-            "SELECT id, code, name, description, category, collect_type, datasource_id, resource_id, rule, stage, created_at, updated_at, applied_at FROM df_c_collection WHERE 1=1"
+            "SELECT id, code, name, description, category, collect_type, datasource_id, queue_resource_id, database_resource_id, rule, stage, created_at, updated_at, applied_at FROM df_c_collection WHERE 1=1"
         );
 
         if !keyword.is_empty() {

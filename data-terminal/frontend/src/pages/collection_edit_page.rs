@@ -24,7 +24,8 @@ pub fn CollectionEditPage(id: String) -> Element {
     let mut selected_mode = use_signal(|| None::<String>);
     let mut selected_category = use_signal(|| CollectionCategory::Database);
     let mut selected_datasource_id = use_signal(|| None::<String>);
-    let mut selected_resource_id = use_signal(|| None::<String>);
+    let mut selected_queue_resource_id = use_signal(|| None::<String>);
+    let mut selected_database_resource_id = use_signal(|| None::<String>);
     let mut selected_tables = use_signal(|| Vec::<String>::new());
     let mut transform_sql = use_signal(String::new);
     let mut target_schema = use_signal(|| None::<TableSchema>);
@@ -63,7 +64,8 @@ pub fn CollectionEditPage(id: String) -> Element {
                     task_description.set(task.description.clone());
                     selected_category.set(task.category.clone());
                     selected_datasource_id.set(Some(task.datasource_id.clone()));
-                    selected_resource_id.set(Some(task.resource_id.clone()));
+                    selected_queue_resource_id.set(Some(task.queue_resource_id.clone()));
+                    selected_database_resource_id.set(Some(task.database_resource_id.clone()));
 
                     // Set mode based on collect_type
                     selected_mode.set(Some(match task.collect_type {
@@ -110,7 +112,14 @@ pub fn CollectionEditPage(id: String) -> Element {
     // Generate schema when tables are selected
     let generate_schema_handler = move |_| {
         spawn(async move {
-            if let (Some(ds_id), Some(res_id)) = (selected_datasource_id(), selected_resource_id()) {
+            // Determine which resource ID to use based on collection mode
+            let resource_id = if selected_mode() == Some("incremental".to_string()) {
+                selected_queue_resource_id()
+            } else {
+                selected_database_resource_id()
+            };
+
+            if let (Some(ds_id), Some(res_id)) = (selected_datasource_id(), resource_id) {
                 let table_selections: Vec<TableSelection> = selected_tables()
                     .iter()
                     .map(|name| TableSelection {
@@ -165,6 +174,7 @@ pub fn CollectionEditPage(id: String) -> Element {
             };
 
             let request = UpdateCollectTaskRequest {
+                code: task_id.clone(),
                 name: task_name(),
                 description: if task_description().is_empty() {
                     None
@@ -295,14 +305,6 @@ pub fn CollectionEditPage(id: String) -> Element {
                                 }
                             }
 
-                            div { class: "divider" }
-
-                            ResourceSelector {
-                                resources: resources(),
-                                selected_resource: selected_resource_id,
-                                on_resource_change: move |id: String| selected_resource_id.set(Some(id))
-                            }
-
                             div { class: "card-actions justify-between mt-6",
                                 button {
                                     class: "btn",
@@ -311,7 +313,7 @@ pub fn CollectionEditPage(id: String) -> Element {
                                 }
                                 button {
                                     class: "btn btn-primary",
-                                    disabled: selected_datasource_id().is_none() || selected_resource_id().is_none(),
+                                    disabled: selected_datasource_id().is_none() || selected_queue_resource_id().is_none(),
                                     onclick: move |_| current_step.set(3),
                                     "Next →"
                                 }

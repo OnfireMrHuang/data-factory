@@ -29,7 +29,8 @@ create table if not exists df_c_collection
     category      enum('database', 'api', 'crawler') not null comment '采集分类',
     collect_type  enum('full', 'incremental') not null comment '采集类型',
     datasource_id char(36) not null comment 'source: 数据源ID',
-    resource_id   char(36) not null comment 'sink: 资源ID',
+    queue_resource_id char(36) not null comment '队列资源ID, 当采集类型为增量时必选',
+    database_resource_id   char(36) not null comment '数据库资源ID, 当采集分类为database时必选',
     rule          json not null comment '采集规则',
     stage         enum('draft', 'applied') not null default 'draft' comment '开发阶段',
     created_at    timestamp not null default current_timestamp comment '创建时间',
@@ -37,7 +38,9 @@ create table if not exists df_c_collection
     applied_at    timestamp null comment '应用到数据引擎的时间',
     primary key (id),
     key idx_datasource_id (datasource_id),
-    key idx_resource_id (resource_id),
+    key idx_queue_resource_id (queue_resource_id),
+    key idx_database_resource_id (database_resource_id),
     key idx_stage (stage),
     key idx_category_type (category, collect_type)
 ) COMMENT '采集任务表' engine = InnoDB;
+

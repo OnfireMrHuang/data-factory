@@ -110,16 +110,8 @@ pub async fn update_collection_task(
 ) -> Result<String, RequestError> {
     let client = create_api_client();
 
-    // Build the request body with code included
-    let body = serde_json::json!({
-        "code": code,
-        "name": request.name,
-        "description": request.description,
-        "rule": request.rule,
-    });
-
     let api_response: ApiResponse<String> = client
-        .post_json("/api/v1/collection/update", None, body)
+        .post_json("/api/v1/collection/update", None, request)
         .await?;
 
     if !api_response.result {

@@ -151,7 +151,8 @@ impl CollectionService for CollectionServiceImpl {
             category: request.category,
             collect_type: request.collect_type,
             datasource_id: request.datasource_id,
-            resource_id: request.resource_id,
+            queue_resource_id: request.queue_resource_id,
+            database_resource_id: request.database_resource_id,
             rule: request.rule,
             stage: TaskStage::Draft,
             created_at: now,
@@ -285,17 +286,34 @@ impl CollectionService for CollectionServiceImpl {
             .map(|ds| (ds.id.clone(), ds))
             .collect();
 
-        // 批量获取资源信息
-        let resource_list = self
-            .resource_service
-            .batch_query_resource(
-                tasks
-                    .iter()
-                    .map(|task| task.resource_id.clone())
-                    .collect(),
-            )
-            .await
-            .map_err(|e| Error::InternalError(format!("Failed to query resources: {:?}", e)))?;
+        // 批量获取资源信息 (收集所有的 queue_resource_id 和 database_resource_id)
+        let mut all_resource_ids: Vec<String> = tasks
+            .iter()
+            .flat_map(|task| {
+                let mut ids = Vec::new();
+                if !task.queue_resource_id.is_empty() {
+                    ids.push(task.queue_resource_id.clone());
+                }
+                if !task.database_resource_id.is_empty() {
+                    ids.push(task.database_resource_id.clone());
+                }
+                ids
+            })
+            .collect();
+
+        // 去重
+        all_resource_ids.sort();
+        all_resource_ids.dedup();
+
+        let resource_list = if !all_resource_ids.is_empty() {
+            self
+                .resource_service
+                .batch_query_resource(all_resource_ids)
+                .await
+                .map_err(|e| Error::InternalError(format!("Failed to query resources: {:?}", e)))?
+        } else {
+            Vec::new()
+        };
 
         let resource_map: HashMap<String, ResourceReadOnly> = resource_list
             .into_iter()
@@ -305,12 +323,23 @@ impl CollectionService for CollectionServiceImpl {
         Ok((tasks.into_iter().map(|task| {
             let mut item = CollectTaskReadOnly::from(task);
             let datasource = datasource_map.get(&item.datasource_id).cloned();
-            let resource = resource_map.get(&item.resource_id).cloned();
+
+            // 设置队列资源名称
+            if !item.queue_resource_id.is_empty() {
+                if let Some(resource) = resource_map.get(&item.queue_resource_id) {
+                    item.queue_resource_name = resource.name.clone();
+                }
+            }
+
+            // 设置数据库资源名称
+            if !item.database_resource_id.is_empty() {
+                if let Some(resource) = resource_map.get(&item.database_resource_id) {
+                    item.database_resource_name = resource.name.clone();
+                }
+            }
+
             if let Some(datasource) = datasource {
                 item.datasource_name = datasource.name;
-            }
-            if let Some(resource) = resource {
-                item.resource_name = resource.name;
             }
             item
         }).collect(), total))

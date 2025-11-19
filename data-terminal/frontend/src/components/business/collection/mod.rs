@@ -10,7 +10,7 @@ pub mod task_stage_badge;
 
 pub use mode_selector::ModeSelector;
 pub use datasource_selector::DatasourceSelector;
-pub use resource_selector::ResourceSelector;
+pub use resource_selector::{ResourceSelectorForDatabaseFull, ResourceSelectorForDatabaseIncremental};
 pub use db_config_panel::DbConfigPanel;
 pub use transform_editor::TransformEditor;
 pub use target_schema_editor::TargetSchemaEditor;

@@ -205,7 +205,22 @@ pub fn CollectionPage() -> Element {
                                         div { class: "text-sm", "{task.datasource_name}" }
                                     }
                                     td {
-                                        div { class: "text-sm", "{task.resource_name}" }
+                                        div { class: "text-sm",
+                                            {
+                                                // Display appropriate resource based on collection type
+                                                if task.collect_type == CollectType::Incremental {
+                                                    if !task.queue_resource_name.is_empty() {
+                                                        rsx! { "{task.queue_resource_name}" }
+                                                    } else {
+                                                        rsx! { span { class: "text-gray-400", "-" } }
+                                                    }
+                                                } else if !task.database_resource_name.is_empty() {
+                                                    rsx! { "{task.database_resource_name}" }
+                                                } else {
+                                                    rsx! { span { class: "text-gray-400", "-" } }
+                                                }
+                                            }
+                                        }
                                     }
                                     td {
                                         "{task.created_at.format(\"%Y-%m-%d\")}"
