@@ -3,8 +3,13 @@ use crate::routes::Route;
 use crate::models::collection::*;
 use crate::models::datasource::{DataSource, DataSourceType};
 use crate::models::resource::{Resource, ResourceType};
-use crate::components::business::collection::{DatasourceSelector, ResourceSelectorForDatabaseFull, ResourceSelectorForDatabaseIncremental};
+use crate::components::business::collection::{
+    DatasourceSelector, ResourceSelectorForDatabaseFull, ResourceSelectorForDatabaseIncremental,
+    TestRunTimeline, TestRunLogViewer, DataPreviewTable, TestStep, TestStepStatus, LogEntry, LogLevel
+};
 use crate::api::collections;
+use crate::api::test_run_mock::{TestRunMockApi, PreviewDataResponse};
+use chrono::Utc;
 
 
 
@@ -110,6 +115,15 @@ pub fn CollectionCreatePage() -> Element {
     // Step 4: Collection rule definition
     let mut select_sql = use_signal(String::new);     // For Database category
     let mut python_script = use_signal(String::new);  // For API category
+
+    // Step 5: Test run state
+    let mut test_running = use_signal(|| false);
+    let mut test_steps = use_signal(|| Vec::<TestStep>::new());
+    let mut test_logs = use_signal(|| Vec::<LogEntry>::new());
+    let mut preview_data = use_signal(|| None::<PreviewDataResponse>);
+    let mut current_test_step = use_signal(|| 0);
+    let mut temp_table_name = use_signal(|| String::new());
+    let mut test_completed = use_signal(|| false);
 
     // Data
     let mut datasources = use_signal(|| Vec::<DataSource>::new());
@@ -221,6 +235,227 @@ pub fn CollectionCreatePage() -> Element {
                     loading.set(false);
                 }
             }
+        });
+    };
+
+    // Test run handler
+    let test_run_handler = move |_| {
+        spawn(async move {
+            test_running.set(true);
+            test_completed.set(false);
+            test_logs.set(Vec::new());
+            preview_data.set(None);
+
+            // Initialize test steps
+            let steps = vec![
+                TestStep {
+                    id: 1,
+                    title: "数据库连接检查".to_string(),
+                    description: "验证数据源连接是否正常".to_string(),
+                    status: TestStepStatus::Pending,
+                    error_message: None,
+                    start_time: None,
+                    end_time: None,
+                },
+                TestStep {
+                    id: 2,
+                    title: "创建临时目标表".to_string(),
+                    description: "根据DDL创建临时测试表".to_string(),
+                    status: TestStepStatus::Pending,
+                    error_message: None,
+                    start_time: None,
+                    end_time: None,
+                },
+                TestStep {
+                    id: 3,
+                    title: "字段一致性检查".to_string(),
+                    description: "检查取数字段与目标表字段是否匹配".to_string(),
+                    status: TestStepStatus::Pending,
+                    error_message: None,
+                    start_time: None,
+                    end_time: None,
+                },
+                TestStep {
+                    id: 4,
+                    title: "执行单次采集".to_string(),
+                    description: "执行一次采集任务(最大20行)".to_string(),
+                    status: TestStepStatus::Pending,
+                    error_message: None,
+                    start_time: None,
+                    end_time: None,
+                },
+                TestStep {
+                    id: 5,
+                    title: "预览临时目标表".to_string(),
+                    description: "查看采集到的数据".to_string(),
+                    status: TestStepStatus::Pending,
+                    error_message: None,
+                    start_time: None,
+                    end_time: None,
+                },
+                TestStep {
+                    id: 6,
+                    title: "删除临时目标表".to_string(),
+                    description: "清理测试数据".to_string(),
+                    status: TestStepStatus::Pending,
+                    error_message: None,
+                    start_time: None,
+                    end_time: None,
+                },
+            ];
+            test_steps.set(steps.clone());
+
+            // Add initial log
+            let mut logs = test_logs();
+            logs.push(LogEntry {
+                timestamp: Utc::now(),
+                level: LogLevel::Info,
+                message: "开始执行测试运行...".to_string(),
+                details: None,
+            });
+            test_logs.set(logs);
+
+            // Execute test steps
+            for (idx, step) in steps.iter().enumerate() {
+                current_test_step.set(idx);
+
+                // Update step status to running
+                let mut updated_steps = test_steps();
+                updated_steps[idx].status = TestStepStatus::Running;
+                updated_steps[idx].start_time = Some(Utc::now());
+                test_steps.set(updated_steps.clone());
+
+                // Add log for step start
+                let mut logs = test_logs();
+                logs.push(LogEntry {
+                    timestamp: Utc::now(),
+                    level: LogLevel::Info,
+                    message: format!("执行步骤 {}: {}", step.id, step.title),
+                    details: None,
+                });
+                test_logs.set(logs);
+
+                // Execute step based on ID
+                let result = match step.id {
+                    1 => {
+                        // Check database connection
+                        TestRunMockApi::check_database_connection(
+                            &selected_datasource_id().unwrap_or_default()
+                        ).await
+                    }
+                    2 => {
+                        // Create temporary table
+                        let result = TestRunMockApi::create_temp_table(&ddl_sql()).await;
+                        if let Ok(ref step_result) = result {
+                            if let Some(data) = &step_result.data {
+                                if let Some(table_name) = data.get("table_name") {
+                                    if let Some(name) = table_name.as_str() {
+                                        temp_table_name.set(name.to_string());
+                                    }
+                                }
+                            }
+                        }
+                        result
+                    }
+                    3 => {
+                        // Check field consistency
+                        TestRunMockApi::check_field_consistency(&select_sql(), &ddl_sql()).await
+                    }
+                    4 => {
+                        // Execute single collection
+                        TestRunMockApi::execute_single_collection(&select_sql()).await
+                    }
+                    5 => {
+                        // Preview temp table
+                        match TestRunMockApi::preview_temp_table(&temp_table_name()).await {
+                            Ok(data) => {
+                                preview_data.set(Some(data.clone()));
+                                Ok(crate::api::test_run_mock::TestStepResult {
+                                    step_id: 5,
+                                    success: true,
+                                    message: format!("成功预览 {} 行数据", data.total_rows),
+                                    error_message: None,
+                                    data: None,
+                                })
+                            }
+                            Err(e) => Err(e),
+                        }
+                    }
+                    6 => {
+                        // Delete temp table
+                        TestRunMockApi::delete_temp_table(&temp_table_name()).await
+                    }
+                    _ => Ok(crate::api::test_run_mock::TestStepResult {
+                        step_id: step.id,
+                        success: false,
+                        message: "Unknown step".to_string(),
+                        error_message: Some("Step not implemented".to_string()),
+                        data: None,
+                    }),
+                };
+
+                // Update step based on result
+                let mut updated_steps = test_steps();
+                match result {
+                    Ok(step_result) => {
+                        updated_steps[idx].status = if step_result.success {
+                            TestStepStatus::Success
+                        } else {
+                            TestStepStatus::Failed
+                        };
+                        updated_steps[idx].error_message = step_result.error_message;
+                        updated_steps[idx].end_time = Some(Utc::now());
+
+                        // Add log for step result
+                        let mut logs = test_logs();
+                        logs.push(LogEntry {
+                            timestamp: Utc::now(),
+                            level: if step_result.success { LogLevel::Success } else { LogLevel::Error },
+                            message: step_result.message.clone(),
+                            details: step_result.data.map(|d| d.to_string()),
+                        });
+                        test_logs.set(logs);
+
+                        // Stop if step failed
+                        if !step_result.success {
+                            test_steps.set(updated_steps);
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        updated_steps[idx].status = TestStepStatus::Failed;
+                        updated_steps[idx].error_message = Some(e.clone());
+                        updated_steps[idx].end_time = Some(Utc::now());
+
+                        // Add error log
+                        let mut logs = test_logs();
+                        logs.push(LogEntry {
+                            timestamp: Utc::now(),
+                            level: LogLevel::Error,
+                            message: format!("步骤执行失败: {}", e),
+                            details: None,
+                        });
+                        test_logs.set(logs);
+
+                        test_steps.set(updated_steps);
+                        break;
+                    }
+                }
+                test_steps.set(updated_steps);
+            }
+
+            // Add completion log
+            let mut logs = test_logs();
+            logs.push(LogEntry {
+                timestamp: Utc::now(),
+                level: LogLevel::Info,
+                message: "测试运行完成".to_string(),
+                details: None,
+            });
+            test_logs.set(logs);
+
+            test_running.set(false);
+            test_completed.set(true);
         });
     };
 
@@ -534,69 +769,155 @@ pub fn CollectionCreatePage() -> Element {
                     div { class: "card-body",
                         h2 { class: "card-title mb-4", "Step 5: 测试运行 & 提交" }
 
-                        div { class: "space-y-4",
-                            div {
-                                h3 { class: "font-semibold", "Task Name" }
-                                p { "{task_name()}" }
-                            }
-                            div {
-                                h3 { class: "font-semibold", "Description" }
-                                p { "{task_description()}" }
-                            }
-                            div {
-                                h3 { class: "font-semibold", "Category" }
-                                p {
-                                    {match selected_category() {
-                                        Some(CollectionCategory::Database) => "Database",
-                                        Some(CollectionCategory::Api) => "API",
-                                        Some(CollectionCategory::Crawler) => "Crawler",
-                                        None => "Not selected",
-                                    }}
+                        // Only show summary and test button when database category is selected
+                        if selected_category() == Some(CollectionCategory::Database) && selected_mode() == Some(CollectType::Full) {
+                            // Test run section
+                            if !test_running() && !test_completed() {
+                                div { class: "space-y-4 mb-6",
+                                    h3 { class: "font-semibold text-lg", "配置概览" }
+                                    div { class: "grid grid-cols-2 gap-4",
+                                        div {
+                                            p { class: "text-sm text-gray-500", "任务名称" }
+                                            p { class: "font-medium", "{task_name()}" }
+                                        }
+                                        div {
+                                            p { class: "text-sm text-gray-500", "采集模式" }
+                                            p { class: "font-medium", "数据库全量采集" }
+                                        }
+                                        div {
+                                            p { class: "text-sm text-gray-500", "数据源" }
+                                            p { class: "font-medium", "{selected_datasource_id().unwrap_or_default()}" }
+                                        }
+                                        div {
+                                            p { class: "text-sm text-gray-500", "目标资源" }
+                                            p { class: "font-medium", "{selected_database_resource_id().unwrap_or_default()}" }
+                                        }
+                                    }
+
+                                    div { class: "divider" }
+
+                                    div { class: "alert alert-info",
+                                        svg { class: "stroke-current shrink-0 w-6 h-6",
+                                            xmlns: "http://www.w3.org/2000/svg",
+                                            fill: "none",
+                                            view_box: "0 0 24 24",
+                                            path {
+                                                stroke_linecap: "round",
+                                                stroke_linejoin: "round",
+                                                stroke_width: "2",
+                                                d: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                            }
+                                        }
+                                        span { "点击下方按钮开始测试运行，验证采集配置是否正确" }
+                                    }
+
+                                    div { class: "flex justify-center",
+                                        button {
+                                            class: "btn btn-primary btn-lg",
+                                            onclick: test_run_handler,
+                                            "开始测试运行"
+                                        }
+                                    }
                                 }
-                            }
-                            div {
-                                h3 { class: "font-semibold", "Collection Mode" }
-                                p {
-                                    {match selected_mode() {
-                                        Some(CollectType::Full) => "Full Collection",
-                                        Some(CollectType::Incremental) => "Incremental Collection",
-                                        None => "Not selected",
-                                    }}
-                                }
-                            }
-                            div {
-                                h3 { class: "font-semibold", "Datasource ID" }
-                                p { "{selected_datasource_id().unwrap_or_default()}" }
                             }
 
-                            // Show Database-specific fields
-                            if selected_category() == Some(CollectionCategory::Database) {
-                                div {
-                                    h3 { class: "font-semibold", "DDL SQL" }
-                                    pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
-                                        code { "{ddl_sql()}" }
+                            // Show test running/completed UI
+                            if test_running() || test_completed() {
+                                div { class: "space-y-6",
+                                    // 并排显示 执行步骤与日志，Timeline宽度固定320px，日志宽度更大
+                                    div { class: "flex flex-row gap-6",
+                                        // Timeline (左侧，宽度320px)
+                                        div { style: "width: 320px; min-width: 0; flex-shrink: 0;",
+                                            TestRunTimeline {
+                                                steps: test_steps(),
+                                                current_step: current_test_step()
+                                            }
+                                        }
+                                        // Log viewer (右侧，占据剩余空间)
+                                        div { style: "flex: 1 1 0; min-width: 0;",
+                                            TestRunLogViewer {
+                                                logs: test_logs(),
+                                                max_height: Some("300px".to_string())
+                                            }
+                                        }
                                     }
-                                }
-                                div {
-                                    h3 { class: "font-semibold", "SELECT SQL" }
-                                    pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
-                                        code { "{select_sql()}" }
+
+                                    // Data preview (show when available)
+                                    if let Some(preview) = preview_data() {
+                                        DataPreviewTable {
+                                            columns: preview.columns,
+                                            rows: preview.rows,
+                                            table_name: temp_table_name()
+                                        }
                                     }
                                 }
                             }
-
-                            // Show API-specific fields
-                            if selected_category() == Some(CollectionCategory::Api) {
+                        } else {
+                            // Show summary for non-database or incremental mode
+                            div { class: "space-y-4",
                                 div {
-                                    h3 { class: "font-semibold", "JSON Schema" }
-                                    pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
-                                        code { "{json_schema()}" }
+                                    h3 { class: "font-semibold", "Task Name" }
+                                    p { "{task_name()}" }
+                                }
+                                div {
+                                    h3 { class: "font-semibold", "Description" }
+                                    p { "{task_description()}" }
+                                }
+                                div {
+                                    h3 { class: "font-semibold", "Category" }
+                                    p {
+                                        {match selected_category() {
+                                            Some(CollectionCategory::Database) => "Database",
+                                            Some(CollectionCategory::Api) => "API",
+                                            Some(CollectionCategory::Crawler) => "Crawler",
+                                            None => "Not selected",
+                                        }}
                                     }
                                 }
                                 div {
-                                    h3 { class: "font-semibold", "Python Script" }
-                                    pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
-                                        code { "{python_script()}" }
+                                    h3 { class: "font-semibold", "Collection Mode" }
+                                    p {
+                                        {match selected_mode() {
+                                            Some(CollectType::Full) => "Full Collection",
+                                            Some(CollectType::Incremental) => "Incremental Collection",
+                                            None => "Not selected",
+                                        }}
+                                    }
+                                }
+                                div {
+                                    h3 { class: "font-semibold", "Datasource ID" }
+                                    p { "{selected_datasource_id().unwrap_or_default()}" }
+                                }
+
+                                // Show Database-specific fields
+                                if selected_category() == Some(CollectionCategory::Database) {
+                                    div {
+                                        h3 { class: "font-semibold", "DDL SQL" }
+                                        pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
+                                            code { "{ddl_sql()}" }
+                                        }
+                                    }
+                                    div {
+                                        h3 { class: "font-semibold", "SELECT SQL" }
+                                        pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
+                                            code { "{select_sql()}" }
+                                        }
+                                    }
+                                }
+
+                                // Show API-specific fields
+                                if selected_category() == Some(CollectionCategory::Api) {
+                                    div {
+                                        h3 { class: "font-semibold", "JSON Schema" }
+                                        pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
+                                            code { "{json_schema()}" }
+                                        }
+                                    }
+                                    div {
+                                        h3 { class: "font-semibold", "Python Script" }
+                                        pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
+                                            code { "{python_script()}" }
+                                        }
                                     }
                                 }
                             }
@@ -610,7 +931,7 @@ pub fn CollectionCreatePage() -> Element {
                             }
                             button {
                                 class: "btn btn-primary",
-                                disabled: loading(),
+                                disabled: loading() || test_running() || (!test_completed() && selected_category() == Some(CollectionCategory::Database) && selected_mode() == Some(CollectType::Full)),
                                 onclick: submit_handler,
                                 if loading() {
                                     span { class: "loading loading-spinner" }

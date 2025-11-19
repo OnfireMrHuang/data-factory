@@ -2559,6 +2559,7 @@ dependencies = [
  "serde_json",
  "strum",
  "thiserror 2.0.14",
+ "tokio",
  "tracing",
  "uuid",
  "wasm-bindgen",

@@ -1409,6 +1409,12 @@ pub fn DatasourceSubscribeApiTokenManagement(id: String) -> Element {
                 .collect();
 
             // Generate UUID-like token
+            #[cfg(target_arch = "wasm32")]
+            let token_id = {
+                let timestamp = (js_sys::Date::new_0().get_time() * 1_000_000.0) as u64;
+                format!("{:x}", timestamp)
+            };
+            #[cfg(not(target_arch = "wasm32"))]
             let token_id = format!("{:x}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
             let token_value = format!("sk-{}", &token_id[..32]);
 
@@ -1425,7 +1431,7 @@ pub fn DatasourceSubscribeApiTokenManagement(id: String) -> Element {
                     }
                     #[cfg(not(target_arch = "wasm32"))]
                     {
-                        chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
+                        chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
                     }
                 },
             };
