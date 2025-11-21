@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 use crate::routes::Route;
-use crate::components::business::datasource_card::DatasourceCard;
-use crate::components::business::datasource_type_dialog::DataSourceTypeDialog;
-use crate::components::business::datasource_delete_dialog::DatasourceDeleteDialog;
+use crate::components::business::datasource::datasource_card::DatasourceCard;
+use crate::components::business::datasource::datasource_type_dialog::DataSourceTypeDialog;
+use crate::components::business::datasource::datasource_delete_dialog::DatasourceDeleteDialog;
 use crate::models::{datasource::*, protocol::*};
 use crate::api::datasources;
 // FIXME: dioxus-free-icons does not support Dioxus 0.7 yet

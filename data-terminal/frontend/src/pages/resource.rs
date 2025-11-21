@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use crate::models::resource::{Resource, Category, ResourceType, Status};
-use crate::components::business::{
+use crate::components::business::resource::{
     resource_dialog::{ResourceDialog, ResourceModalMode, ResourceSaveData},
     resource_delete_dialog::ResourceDeleteDialog,
 };

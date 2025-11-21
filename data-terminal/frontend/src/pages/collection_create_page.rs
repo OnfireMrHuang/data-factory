@@ -767,7 +767,6 @@ pub fn CollectionCreatePage() -> Element {
             if current_step() == 5 {
                 div { class: "card bg-base-200",
                     div { class: "card-body",
-                        h2 { class: "card-title mb-4", "Step 5: 测试运行 & 提交" }
 
                         // Only show summary and test button when database category is selected
                         if selected_category() == Some(CollectionCategory::Database) && selected_mode() == Some(CollectType::Full) {
