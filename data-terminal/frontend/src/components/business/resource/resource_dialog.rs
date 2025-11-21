@@ -66,16 +66,6 @@ pub fn ResourceDialog(
         }
     });
 
-    // Helper function to parse config from resource
-    let get_config_value = |key: &str| -> serde_json::Value {
-        match &mode {
-            ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => {
-                resource.config.get(key).cloned().unwrap_or(serde_json::Value::Null)
-            }
-            _ => serde_json::Value::Null,
-        }
-    };
-
     // 配置表单状态 - initialize from existing resource if in Edit/Detail mode
     let mut database_config = use_signal(|| {
         match &mode {
@@ -112,45 +102,13 @@ pub fn ResourceDialog(
         match &mode {
             ResourceModalMode::Edit(resource) | ResourceModalMode::Detail(resource) => {
                 if matches!(resource.category, Category::Queue) {
-                    serde_json::from_value(resource.config.clone()).unwrap_or(QueueConfigForm {
-                        host: String::new(),
-                        port: 9092,
-                        admin_port: 8080,
-                        username: None,
-                        password: None,
-                        virtual_host: None,
-                        cluster_name: None,
-                        ssl_enabled: false,
-                        sasl_enabled: false,
-                        sasl_mechanism: None,
-                    })
+                    serde_json::from_value(resource.config.clone())
+                        .unwrap_or_else(|_| default_queue_config_for(&resource.resource_type))
                 } else {
-                    QueueConfigForm {
-                        host: String::new(),
-                        port: 9092,
-                        admin_port: 8080,
-                        username: None,
-                        password: None,
-                        virtual_host: None,
-                        cluster_name: None,
-                        ssl_enabled: false,
-                        sasl_enabled: false,
-                        sasl_mechanism: None,
-                    }
+                    default_queue_config_for(&ResourceType::Kafka)
                 }
             }
-            _ => QueueConfigForm {
-                host: String::new(),
-                port: 9092,
-                admin_port: 8080,
-                username: None,
-                password: None,
-                virtual_host: None,
-                cluster_name: None,
-                ssl_enabled: false,
-                sasl_enabled: false,
-                sasl_mechanism: None,
-            }
+            _ => default_queue_config_for(&ResourceType::Kafka),
         }
     });
 
@@ -345,6 +303,8 @@ pub fn ResourceDialog(
     let stream_compute_config_clone2 = stream_compute_config.clone();
     let resource_id_clone2 = resource_id.clone();
 
+    let mut queue_config_for_type_select = queue_config.clone();
+
 
     // 获取资源类型
     let get_resource_types = |category: Category| {
@@ -352,7 +312,7 @@ pub fn ResourceDialog(
             Category::RelationalDatabase => vec![ResourceType::Mysql, ResourceType::Postgres, ResourceType::Doris],
             Category::VectorDatabase => vec![ResourceType::Mailvus],
             Category::Filesystem => vec![ResourceType::Hdfs],
-            Category::Queue => vec![ResourceType::Kafka],
+            Category::Queue => vec![ResourceType::Kafka, ResourceType::RedisStream],
             Category::BatchCompute => vec![ResourceType::Spark],
             Category::StreamCompute => vec![ResourceType::Flink],
             _ => vec![],
@@ -385,6 +345,7 @@ pub fn ResourceDialog(
             ResourceType::Spark => "Spark",
             ResourceType::Flink => "Flink",
             ResourceType::Kafka => "Kafka",
+            ResourceType::RedisStream => "Redis Stream",
             ResourceType::Hdfs => "HDFS",
         }
     };
@@ -510,6 +471,271 @@ pub fn ResourceDialog(
                 }
             }
             Category::Queue => {
+                let is_redis_stream = dialog_resource_type() == ResourceType::RedisStream;
+                let queue_advanced_fields = if is_redis_stream {
+                    rsx! {
+                        Fragment {
+                            div { class: "grid grid-cols-2 gap-4",
+                                div { class: "form-control",
+                                    label { class: "label",
+                                        span { class: "label-text font-medium", "用户名 (可选)" }
+                                    }
+                                    input {
+                                        class: "input input-bordered w-full",
+                                        disabled: is_detail_mode,
+                                        value: "{queue_config().username.as_deref().unwrap_or(\"\")}",
+                                        oninput: move |event| {
+                                            if !is_detail_mode {
+                                                let value = event.value();
+                                                queue_config.set(QueueConfigForm {
+                                                    username: if value.trim().is_empty() { None } else { Some(value) },
+                                                    ..queue_config()
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                                div { class: "form-control",
+                                    label { class: "label",
+                                        span { class: "label-text font-medium", "密码 (可选)" }
+                                    }
+                                    input {
+                                        class: "input input-bordered w-full",
+                                        r#type: "password",
+                                        disabled: is_detail_mode,
+                                        value: "{queue_config().password.as_deref().unwrap_or(\"\")}",
+                                        oninput: move |event| {
+                                            if !is_detail_mode {
+                                                let value = event.value();
+                                                queue_config.set(QueueConfigForm {
+                                                    password: if value.trim().is_empty() { None } else { Some(value) },
+                                                    ..queue_config()
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            div { class: "grid grid-cols-2 gap-4",
+                                div { class: "form-control",
+                                    label { class: "label",
+                                        span { class: "label-text font-medium", "Stream 名称" }
+                                    }
+                                    input {
+                                        class: "input input-bordered w-full",
+                                        disabled: is_detail_mode,
+                                        placeholder: "例如 mystream",
+                                        value: "{queue_config().stream_key.as_deref().unwrap_or(\"\")}",
+                                        oninput: move |event| {
+                                            if !is_detail_mode {
+                                                let value = event.value();
+                                                queue_config.set(QueueConfigForm {
+                                                    stream_key: if value.trim().is_empty() { None } else { Some(value) },
+                                                    ..queue_config()
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                                div { class: "form-control",
+                                    label { class: "label",
+                                        span { class: "label-text font-medium", "消费组 (XGROUP)" }
+                                    }
+                                    input {
+                                        class: "input input-bordered w-full",
+                                        disabled: is_detail_mode,
+                                        placeholder: "例如 analytics-group",
+                                        value: "{queue_config().consumer_group.as_deref().unwrap_or(\"\")}",
+                                        oninput: move |event| {
+                                            if !is_detail_mode {
+                                                let value = event.value();
+                                                queue_config.set(QueueConfigForm {
+                                                    consumer_group: if value.trim().is_empty() { None } else { Some(value) },
+                                                    ..queue_config()
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            div { class: "grid grid-cols-2 gap-4",
+                                div { class: "form-control",
+                                    label { class: "label",
+                                        span { class: "label-text font-medium", "消费者名称" }
+                                    }
+                                    input {
+                                        class: "input input-bordered w-full",
+                                        disabled: is_detail_mode,
+                                        placeholder: "例如 worker-01",
+                                        value: "{queue_config().consumer_name.as_deref().unwrap_or(\"\")}",
+                                        oninput: move |event| {
+                                            if !is_detail_mode {
+                                                let value = event.value();
+                                                queue_config.set(QueueConfigForm {
+                                                    consumer_name: if value.trim().is_empty() { None } else { Some(value) },
+                                                    ..queue_config()
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                                div { class: "form-control",
+                                    label { class: "label",
+                                        span { class: "label-text font-medium", "数据库 (DB)" }
+                                    }
+                                    input {
+                                        class: "input input-bordered w-full",
+                                        r#type: "number",
+                                        min: "0",
+                                        max: "15",
+                                        disabled: is_detail_mode,
+                                        value: "{queue_config().database.map(|db| db.to_string()).unwrap_or_else(|| String::new())}",
+                                        oninput: move |event| {
+                                            if !is_detail_mode {
+                                                let value = event.value();
+                                                if value.trim().is_empty() {
+                                                    queue_config.set(QueueConfigForm {
+                                                        database: None,
+                                                        ..queue_config()
+                                                    });
+                                                } else if let Ok(db) = value.parse::<u8>() {
+                                                    queue_config.set(QueueConfigForm {
+                                                        database: Some(db),
+                                                        ..queue_config()
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            div { class: "grid grid-cols-2 gap-4",
+                                div { class: "form-control",
+                                    label { class: "label",
+                                        span { class: "label-text font-medium", "批量读取条数" }
+                                    }
+                                    input {
+                                        class: "input input-bordered w-full",
+                                        r#type: "number",
+                                        min: "1",
+                                        disabled: is_detail_mode,
+                                        value: "{queue_config().read_batch_size.map(|size| size.to_string()).unwrap_or_else(|| String::new())}",
+                                        oninput: move |event| {
+                                            if !is_detail_mode {
+                                                let value = event.value();
+                                                if value.trim().is_empty() {
+                                                    queue_config.set(QueueConfigForm {
+                                                        read_batch_size: None,
+                                                        ..queue_config()
+                                                    });
+                                                } else if let Ok(size) = value.parse::<u32>() {
+                                                    queue_config.set(QueueConfigForm {
+                                                        read_batch_size: Some(size),
+                                                        ..queue_config()
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                div { class: "form-control",
+                                    label { class: "label",
+                                        span { class: "label-text font-medium", "阻塞等待 (毫秒)" }
+                                    }
+                                    input {
+                                        class: "input input-bordered w-full",
+                                        r#type: "number",
+                                        min: "0",
+                                        disabled: is_detail_mode,
+                                        value: "{queue_config().read_block_ms.map(|ms| ms.to_string()).unwrap_or_else(|| String::new())}",
+                                        oninput: move |event| {
+                                            if !is_detail_mode {
+                                                let value = event.value();
+                                                if value.trim().is_empty() {
+                                                    queue_config.set(QueueConfigForm {
+                                                        read_block_ms: None,
+                                                        ..queue_config()
+                                                    });
+                                                } else if let Ok(ms) = value.parse::<u64>() {
+                                                    queue_config.set(QueueConfigForm {
+                                                        read_block_ms: Some(ms),
+                                                        ..queue_config()
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            div { class: "form-control",
+                                label { class: "label cursor-pointer justify-start gap-3",
+                                    input {
+                                        class: "checkbox",
+                                        r#type: "checkbox",
+                                        disabled: is_detail_mode,
+                                        checked: queue_config().auto_ack,
+                                        onchange: move |event| {
+                                            if !is_detail_mode {
+                                                queue_config.set(QueueConfigForm {
+                                                    auto_ack: event.checked(),
+                                                    ..queue_config()
+                                                });
+                                            }
+                                        }
+                                    }
+                                    span { class: "label-text font-medium", "自动确认消息 (XACK)" }
+                                }
+                                span { class: "label-text-alt text-sm text-base-content/70", "关闭后需要业务侧显式调用 XACK / XGROUP ACK" }
+                            }
+                        }
+                    }
+                } else {
+                    rsx! {
+                        div { class: "grid grid-cols-2 gap-4",
+                            div { class: "form-control",
+                                label { class: "label",
+                                    span { class: "label-text font-medium", "管理端口" }
+                                }
+                                input {
+                                    class: "input input-bordered w-full",
+                                    r#type: "number",
+                                    disabled: is_detail_mode,
+                                    value: "{queue_config().admin_port}",
+                                    oninput: move |event| {
+                                        if !is_detail_mode {
+                                            if let Ok(port) = event.value().parse::<u16>() {
+                                                queue_config.set(QueueConfigForm {
+                                                    admin_port: port,
+                                                    ..queue_config()
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            div { class: "form-control",
+                                label { class: "label",
+                                    span { class: "label-text font-medium", "集群名称" }
+                                }
+                                input {
+                                    class: "input input-bordered w-full",
+                                    disabled: is_detail_mode,
+                                    value: "{queue_config().cluster_name.as_deref().unwrap_or(\"\")}",
+                                    oninput: move |event| {
+                                        if !is_detail_mode {
+                                            let value = event.value();
+                                            queue_config.set(QueueConfigForm {
+                                                cluster_name: if value.trim().is_empty() { None } else { Some(value) },
+                                                ..queue_config()
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
                 rsx! {
                     div { class: "space-y-4",
                         div { class: "grid grid-cols-2 gap-4",
@@ -553,48 +779,8 @@ pub fn ResourceDialog(
                                 }
                             }
                         }
-                        div { class: "grid grid-cols-2 gap-4",
-                            div { class: "form-control",
-                                label { class: "label",
-                                    span { class: "label-text font-medium", "管理端口" }
-                                }
-                                input {
-                                    class: "input input-bordered w-full",
-                                    r#type: "number",
-                                    disabled: is_detail_mode,
-                                    value: "{queue_config().admin_port}",
-                                    oninput: move |event| {
-                                        if !is_detail_mode {
-                                            if let Ok(port) = event.value().parse::<u16>() {
-                                                queue_config.set(QueueConfigForm {
-                                                    admin_port: port,
-                                                    ..queue_config()
-                                                });
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            div { class: "form-control",
-                                label { class: "label",
-                                    span { class: "label-text font-medium", "集群名称" }
-                                }
-                                input {
-                                    class: "input input-bordered w-full",
-                                    disabled: is_detail_mode,
-                                    value: "{queue_config().cluster_name.as_deref().unwrap_or(\"\")}",
-                                    oninput: move |event| {
-                                        if !is_detail_mode {
-                                            queue_config.set(QueueConfigForm {
-                                                cluster_name: Some(event.value()),
-                                                ..queue_config()
-                                            });
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        div { class: "flex items-center space-x-4",
+                        {queue_advanced_fields}
+                        div { class: "flex flex-wrap gap-6",
                             label { class: "label cursor-pointer",
                                 input {
                                     class: "checkbox",
@@ -610,7 +796,7 @@ pub fn ResourceDialog(
                                         }
                                     }
                                 }
-                                span { class: "label-text ml-2", "启用SSL" }
+                                span { class: "label-text ml-2", "启用SSL/TLS" }
                             }
                             label { class: "label cursor-pointer",
                                 input {
@@ -627,7 +813,7 @@ pub fn ResourceDialog(
                                         }
                                     }
                                 }
-                                span { class: "label-text ml-2", "启用SASL" }
+                                span { class: "label-text ml-2", "启用SASL/ACL" }
                             }
                         }
                     }
@@ -1029,6 +1215,9 @@ pub fn ResourceDialog(
         ResourceModalMode::Detail(_) => "资源详情",
     };
 
+    let selected_category_value = serialize_category_value(&dialog_category());
+    let selected_resource_type_value = serialize_resource_type_value(&dialog_resource_type());
+
     rsx! {
         dialog {
             class: "modal modal-open",
@@ -1048,10 +1237,10 @@ pub fn ResourceDialog(
                         select {
                             class: "select select-bordered w-full",
                             disabled: is_detail_mode || is_edit_mode,
-                            value: "{dialog_category:?}",
+                            value: selected_category_value.clone(),
                             onchange: move |event| {
                                 if !is_detail_mode && !is_edit_mode {
-                                    if let Ok(category) = serde_json::from_str::<Category>(&event.value()) {
+                                    if let Some(category) = parse_category_value(&event.value()) {
                                         dialog_category.set(category.clone());
                                         if let Some(first_type) = get_resource_types(category).first() {
                                             dialog_resource_type.set(first_type.clone());
@@ -1060,10 +1249,11 @@ pub fn ResourceDialog(
                                 }
                             },
                             {get_all_categories().into_iter().map(|category| {
+                                let option_value = serialize_category_value(&category);
                                 rsx! {
                                     option {
                                         key: "{category:?}",
-                                        value: "{category:?}",
+                                        value: "{option_value}",
                                         "{get_category_name(&category)}"
                                     }
                                 }
@@ -1079,19 +1269,23 @@ pub fn ResourceDialog(
                         select {
                             class: "select select-bordered w-full",
                             disabled: is_detail_mode || is_edit_mode,
-                            value: "{dialog_resource_type:?}",
+                            value: selected_resource_type_value.clone(),
                             onchange: move |event| {
                                 if !is_detail_mode && !is_edit_mode {
-                                    if let Ok(resource_type) = serde_json::from_str::<ResourceType>(&event.value()) {
+                                    if let Some(resource_type) = parse_resource_type_value(&event.value()) {
+                                        if dialog_category() == Category::Queue {
+                                            queue_config_for_type_select.set(default_queue_config_for(&resource_type));
+                                        }
                                         dialog_resource_type.set(resource_type);
                                     }
                                 }
                             },
                             {get_resource_types(dialog_category()).into_iter().map(|resource_type| {
+                                let option_value = serialize_resource_type_value(&resource_type);
                                 rsx! {
                                     option {
                                         key: "{resource_type:?}",
-                                        value: "{resource_type:?}",
+                                        value: "{option_value}",
                                         "{get_resource_type_name(&resource_type)}"
                                     }
                                 }
@@ -1268,3 +1462,47 @@ pub fn ResourceDialog(
         }
     }
 } 
+
+fn default_queue_config_for(resource_type: &ResourceType) -> QueueConfigForm {
+    match resource_type {
+        ResourceType::RedisStream => QueueConfigForm {
+            port: 6379,
+            admin_port: 0,
+            auto_ack: false,
+            read_batch_size: Some(100),
+            read_block_ms: Some(5000),
+            ..QueueConfigForm::default()
+        },
+        _ => QueueConfigForm::default(),
+    }
+}
+
+fn serialize_category_value(category: &Category) -> String {
+    serde_json::to_value(category)
+        .ok()
+        .and_then(|value| value.as_str().map(|s| s.to_string()))
+        .unwrap_or_default()
+}
+
+fn serialize_resource_type_value(resource_type: &ResourceType) -> String {
+    serde_json::to_value(resource_type)
+        .ok()
+        .and_then(|value| value.as_str().map(|s| s.to_string()))
+        .unwrap_or_default()
+}
+
+fn parse_category_value(value: &str) -> Option<Category> {
+    let normalized = value.trim_matches('"');
+    if normalized.is_empty() {
+        return None;
+    }
+    serde_json::from_str::<Category>(&format!("\"{}\"", normalized)).ok()
+}
+
+fn parse_resource_type_value(value: &str) -> Option<ResourceType> {
+    let normalized = value.trim_matches('"');
+    if normalized.is_empty() {
+        return None;
+    }
+    serde_json::from_str::<ResourceType>(&format!("\"{}\"", normalized)).ok()
+}

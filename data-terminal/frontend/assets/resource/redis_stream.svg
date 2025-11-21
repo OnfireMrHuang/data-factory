@@ -1,0 +1,21 @@
+<svg width="800" height="800" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Redis Streams Icon">
+  <defs>
+    <linearGradient id="redisGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff6b6b" />
+      <stop offset="100%" stop-color="#c52828" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="32" fill="#111" />
+  <g transform="translate(30 30)">
+    <path d="M10 40 L70 15 L130 40 L70 65 Z" fill="url(#redisGradient)" stroke="#f9fafb" stroke-width="3" stroke-linejoin="round" />
+    <path d="M10 70 L70 45 L130 70 L70 95 Z" fill="url(#redisGradient)" opacity="0.85" stroke="#f9fafb" stroke-width="2" stroke-linejoin="round" />
+    <path d="M10 100 L70 75 L130 100 L70 125 Z" fill="url(#redisGradient)" opacity="0.7" stroke="#f9fafb" stroke-width="2" stroke-linejoin="round" />
+    <circle cx="70" cy="40" r="10" fill="#fff" />
+    <path d="M52 90 Q70 65 88 90" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" />
+    <circle cx="52" cy="90" r="5" fill="#0ea5e9" />
+    <circle cx="88" cy="90" r="5" fill="#34d399" />
+  </g>
+  <text x="100" y="182" text-anchor="middle" font-family="'Inter', 'Segoe UI', sans-serif" font-size="18" fill="#f9fafb" letter-spacing="1">
+    REDIS STREAM
+  </text>
+</svg>

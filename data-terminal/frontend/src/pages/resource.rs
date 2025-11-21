@@ -59,7 +59,7 @@ pub fn ResourcePage() -> Element {
             Category::RelationalDatabase => vec![ResourceType::Mysql, ResourceType::Postgres, ResourceType::Doris],
             Category::VectorDatabase => vec![ResourceType::Mailvus],
             Category::Filesystem => vec![ResourceType::Hdfs],
-            Category::Queue => vec![ResourceType::Kafka],
+            Category::Queue => vec![ResourceType::Kafka, ResourceType::RedisStream],
             Category::BatchCompute => vec![ResourceType::Spark],
             Category::StreamCompute => vec![ResourceType::Flink],
             _ => vec![],
@@ -76,6 +76,7 @@ pub fn ResourcePage() -> Element {
             ResourceType::Spark => include_str!("../../assets/resource/spark.svg"),
             ResourceType::Flink => include_str!("../../assets/resource/flink.svg"),
             ResourceType::Kafka => include_str!("../../assets/resource/kafka.svg"),
+            ResourceType::RedisStream => include_str!("../../assets/resource/redis_stream.svg"),
             ResourceType::Hdfs => include_str!("../../assets/resource/hdfs.svg"),
         }
     };
@@ -114,6 +115,7 @@ pub fn ResourcePage() -> Element {
             ResourceType::Spark => "Spark",
             ResourceType::Flink => "Flink",
             ResourceType::Kafka => "Kafka",
+            ResourceType::RedisStream => "Redis Stream",
             ResourceType::Hdfs => "HDFS",
         }
     };

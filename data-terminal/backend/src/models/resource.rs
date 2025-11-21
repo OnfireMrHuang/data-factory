@@ -39,6 +39,7 @@ pub enum ResourceType {
     Doris,
     Hdfs,
     Kafka,
+    RedisStream,
     Spark,
     Flink,
     Mailvus

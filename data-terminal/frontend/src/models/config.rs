@@ -13,6 +13,7 @@ pub struct DatabaseConfigForm {
 
 // 队列配置表单
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct QueueConfigForm {
     pub host: String,
     pub port: u16,
@@ -24,6 +25,37 @@ pub struct QueueConfigForm {
     pub ssl_enabled: bool,
     pub sasl_enabled: bool,
     pub sasl_mechanism: Option<String>,
+    pub stream_key: Option<String>,
+    pub consumer_group: Option<String>,
+    pub consumer_name: Option<String>,
+    pub auto_ack: bool,
+    pub read_batch_size: Option<u32>,
+    pub read_block_ms: Option<u64>,
+    pub database: Option<u8>,
+}
+
+impl Default for QueueConfigForm {
+    fn default() -> Self {
+        Self {
+            host: String::new(),
+            port: 9092,
+            admin_port: 8080,
+            username: None,
+            password: None,
+            virtual_host: None,
+            cluster_name: None,
+            ssl_enabled: false,
+            sasl_enabled: false,
+            sasl_mechanism: None,
+            stream_key: None,
+            consumer_group: None,
+            consumer_name: None,
+            auto_ack: true,
+            read_batch_size: Some(100),
+            read_block_ms: Some(1000),
+            database: Some(0),
+        }
+    }
 }
 
 // 文件系统配置表单
