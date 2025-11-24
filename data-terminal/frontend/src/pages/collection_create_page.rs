@@ -9,10 +9,33 @@ use crate::components::business::collection::{
 };
 use crate::api::collections;
 use crate::api::test_run_mock::{TestRunMockApi, PreviewDataResponse};
-use chrono::Utc;
+use chrono::{Utc, Local};
 
+const MONITOR_TABLE_OPTIONS: [&str; 4] = [
+    "public.cdc_table_tracker",
+    "public.order_monitor",
+    "public.inventory_guard",
+    "__custom__",
+];
 
+#[derive(Clone, PartialEq)]
+pub struct IncrementalRuleForm {
+    pub select_sql: String,
+    pub monitor_table: String,
+    pub monitor_sql: String,
+    pub use_custom_monitor_table: bool,
+}
 
+impl Default for IncrementalRuleForm {
+    fn default() -> Self {
+        Self {
+            select_sql: String::new(),
+            monitor_table: String::new(),
+            monitor_sql: String::new(),
+            use_custom_monitor_table: false,
+        }
+    }
+}
 
 #[component]
 fn TargetSchemaDefinition(
@@ -89,6 +112,244 @@ fn QueryDataRuleDefinition(
 }
 
 
+#[component]
+fn IncrementalRuleDefinition(
+    row_update_rule: Signal<IncrementalRuleForm>,
+    field_update_rules: Signal<Vec<IncrementalRuleForm>>,
+) -> Element {
+    rsx! {
+        div { class: "card-body space-y-6",
+            // Row Update Rule Section
+            div { class: "border border-base-300 rounded-lg p-4",
+                h3 { class: "font-semibold text-lg mb-4", "行新增规则 (Row Update Rule)" }
+                p { class: "text-sm text-gray-500 mb-4", "配置行新增的数据查询SQL和监控规则" }
+
+                div { class: "form-control mb-4",
+                    label { class: "label",
+                        span { class: "label-text font-semibold", "SELECT SQL" }
+                        span { class: "label-text-alt text-gray-500", "所有字段别名必须匹配目标表的所有字段名" }
+                    }
+                    textarea {
+                        class: "textarea textarea-bordered font-mono w-full h-48",
+                        placeholder: "SELECT \n  id, \n  name, \n  created_at, \n  updated_at\nFROM source_table\nWHERE status = 'active';",
+                        value: "{row_update_rule().select_sql}",
+                        oninput: move |evt| {
+                            let mut rule = row_update_rule();
+                            rule.select_sql = evt.value();
+                            row_update_rule.set(rule);
+                        }
+                    }
+                }
+
+                div { class: "form-control mb-4",
+                    label { class: "label",
+                        span { class: "label-text font-semibold", "监控表 (Monitor Table)" }
+                    }
+                    select {
+                        class: "select select-bordered w-full",
+                        value: "{row_update_rule().monitor_table}",
+                        onchange: move |evt| {
+                            let mut rule = row_update_rule();
+                            let value = evt.value();
+                            if value == "__custom__" {
+                                rule.use_custom_monitor_table = true;
+                                rule.monitor_table = String::new();
+                            } else {
+                                rule.use_custom_monitor_table = false;
+                                rule.monitor_table = value;
+                            }
+                            row_update_rule.set(rule);
+                        },
+                        option { value: "", disabled: true, selected: row_update_rule().monitor_table.is_empty(), "选择监控表..." }
+                        for table_name in MONITOR_TABLE_OPTIONS.iter() {
+                            option {
+                                value: "{table_name}",
+                                selected: row_update_rule().monitor_table == *table_name,
+                                "{table_name}"
+                            }
+                        }
+                    }
+                }
+
+                if row_update_rule().use_custom_monitor_table {
+                    div { class: "form-control mb-4",
+                        label { class: "label",
+                            span { class: "label-text font-semibold", "自定义监控表名" }
+                        }
+                        input {
+                            r#type: "text",
+                            class: "input input-bordered w-full",
+                            placeholder: "custom.monitor_table",
+                            value: "{row_update_rule().monitor_table}",
+                            oninput: move |evt| {
+                                let mut rule = row_update_rule();
+                                rule.monitor_table = evt.value();
+                                row_update_rule.set(rule);
+                            }
+                        }
+                    }
+                }
+
+                div { class: "form-control mb-4",
+                    label { class: "label",
+                        span { class: "label-text font-semibold", "监控SQL (Monitor SQL)" }
+                        span { class: "label-text-alt text-gray-500", "用于检测数据变化的SQL查询" }
+                    }
+                    textarea {
+                        class: "textarea textarea-bordered font-mono w-full h-32",
+                        placeholder: "SELECT MAX(updated_at) FROM source_table;",
+                        value: "{row_update_rule().monitor_sql}",
+                        oninput: move |evt| {
+                            let mut rule = row_update_rule();
+                            rule.monitor_sql = evt.value();
+                            row_update_rule.set(rule);
+                        }
+                    }
+                }
+            }
+
+            // Field Update Rules Section
+            div { class: "border border-base-300 rounded-lg p-4",
+                div { class: "flex items-center justify-between mb-4",
+                    div {
+                        h3 { class: "font-semibold text-lg", "字段更新规则 (Field Update Rules)" }
+                        p { class: "text-sm text-gray-500", "配置字段级别的增量更新规则" }
+                    }
+                    button {
+                        class: "btn btn-sm btn-primary",
+                        onclick: move |_| {
+                            let mut rules = field_update_rules();
+                            rules.push(IncrementalRuleForm::default());
+                            field_update_rules.set(rules);
+                        },
+                        "+ 添加字段更新规则"
+                    }
+                }
+
+                if field_update_rules().is_empty() {
+                    div { class: "alert alert-info",
+                        svg { class: "stroke-current shrink-0 w-6 h-6",
+                            xmlns: "http://www.w3.org/2000/svg",
+                            fill: "none",
+                            view_box: "0 0 24 24",
+                            path {
+                                stroke_linecap: "round",
+                                stroke_linejoin: "round",
+                                stroke_width: "2",
+                                d: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            }
+                        }
+                        span { "暂无字段更新规则，点击右上角按钮添加" }
+                    }
+                }
+
+                for (idx , rule) in field_update_rules().iter().enumerate() {
+                    div {
+                        key: "{idx}",
+                        class: "border border-base-200 rounded-lg p-4 mb-4 bg-base-100",
+
+                        div { class: "flex items-center justify-between mb-3",
+                            h4 { class: "font-medium", "字段更新规则 #{idx + 1}" }
+                            button {
+                                class: "btn btn-sm btn-ghost btn-circle",
+                                onclick: move |_| {
+                                    let mut rules = field_update_rules();
+                                    rules.remove(idx);
+                                    field_update_rules.set(rules);
+                                },
+                                "×"
+                            }
+                        }
+
+                        div { class: "form-control mb-3",
+                            label { class: "label",
+                                span { class: "label-text", "SELECT SQL" }
+                                span { class: "label-text-alt text-gray-500", "只需包含部分字段" }
+                            }
+                            textarea {
+                                class: "textarea textarea-bordered textarea-sm font-mono w-full h-32",
+                                placeholder: "SELECT id, status FROM source_table WHERE ...;",
+                                value: "{rule.select_sql}",
+                                oninput: move |evt| {
+                                    let mut rules = field_update_rules();
+                                    rules[idx].select_sql = evt.value();
+                                    field_update_rules.set(rules);
+                                }
+                            }
+                        }
+
+                        div { class: "form-control mb-3",
+                            label { class: "label",
+                                span { class: "label-text", "监控表" }
+                            }
+                            select {
+                                class: "select select-bordered select-sm w-full",
+                                value: "{rule.monitor_table}",
+                                onchange: move |evt| {
+                                    let mut rules = field_update_rules();
+                                    let value = evt.value();
+                                    if value == "__custom__" {
+                                        rules[idx].use_custom_monitor_table = true;
+                                        rules[idx].monitor_table = String::new();
+                                    } else {
+                                        rules[idx].use_custom_monitor_table = false;
+                                        rules[idx].monitor_table = value;
+                                    }
+                                    field_update_rules.set(rules);
+                                },
+                                option { value: "", disabled: true, selected: rule.monitor_table.is_empty(), "选择监控表..." }
+                                for table_name in MONITOR_TABLE_OPTIONS.iter() {
+                                    option {
+                                        value: "{table_name}",
+                                        selected: rule.monitor_table == *table_name,
+                                        "{table_name}"
+                                    }
+                                }
+                            }
+                        }
+
+                        if rule.use_custom_monitor_table {
+                            div { class: "form-control mb-3",
+                                label { class: "label",
+                                    span { class: "label-text", "自定义监控表名" }
+                                }
+                                input {
+                                    r#type: "text",
+                                    class: "input input-bordered input-sm w-full",
+                                    placeholder: "custom.monitor_table",
+                                    value: "{rule.monitor_table}",
+                                    oninput: move |evt| {
+                                        let mut rules = field_update_rules();
+                                        rules[idx].monitor_table = evt.value();
+                                        field_update_rules.set(rules);
+                                    }
+                                }
+                            }
+                        }
+
+                        div { class: "form-control mb-3",
+                            label { class: "label",
+                                span { class: "label-text", "监控SQL" }
+                            }
+                            textarea {
+                                class: "textarea textarea-bordered textarea-sm font-mono w-full h-24",
+                                placeholder: "SELECT COUNT(*) FROM source_table WHERE status = 'changed';",
+                                value: "{rule.monitor_sql}",
+                                oninput: move |evt| {
+                                    let mut rules = field_update_rules();
+                                    rules[idx].monitor_sql = evt.value();
+                                    field_update_rules.set(rules);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 /// T053: CollectionCreatePage - Multi-step wizard for creating collection tasks
 #[component]
 pub fn CollectionCreatePage() -> Element {
@@ -115,6 +376,10 @@ pub fn CollectionCreatePage() -> Element {
     // Step 4: Collection rule definition
     let mut select_sql = use_signal(String::new);     // For Database category
     let mut python_script = use_signal(String::new);  // For API category
+
+    // Step 4: Incremental rule definition
+    let mut row_update_rule = use_signal(|| IncrementalRuleForm::default());
+    let mut field_update_rules = use_signal(|| Vec::<IncrementalRuleForm>::new());
 
     // Step 5: Test run state
     let mut test_running = use_signal(|| false);
@@ -180,16 +445,38 @@ pub fn CollectionCreatePage() -> Element {
             // Build the collection rule based on category and mode
             let rule = match selected_category() {
                 Some(CollectionCategory::Database) => {
-                    serde_json::json!({
-                        "type": "database",
-                        "mode": match selected_mode() {
-                            Some(CollectType::Full) => "full",
-                            Some(CollectType::Incremental) => "incremental",
-                            None => "full"
-                        },
-                        "ddl_sql": ddl_sql(),
-                        "select_sql": select_sql()
-                    })
+                    if selected_mode() == Some(CollectType::Incremental) {
+                        // Build incremental rule with row_update_rule and field_update_rules
+                        let field_rules: Vec<serde_json::Value> = field_update_rules()
+                            .iter()
+                            .map(|rule| {
+                                serde_json::json!({
+                                    "select_sql": rule.select_sql,
+                                    "monitor_table": rule.monitor_table,
+                                    "monitor_sql": rule.monitor_sql
+                                })
+                            })
+                            .collect();
+
+                        serde_json::json!({
+                            "type": "database",
+                            "mode": "incremental",
+                            "ddl_sql": ddl_sql(),
+                            "row_update_rule": {
+                                "select_sql": row_update_rule().select_sql,
+                                "monitor_table": row_update_rule().monitor_table,
+                                "monitor_sql": row_update_rule().monitor_sql
+                            },
+                            "field_update_rules": field_rules
+                        })
+                    } else {
+                        serde_json::json!({
+                            "type": "database",
+                            "mode": "full",
+                            "ddl_sql": ddl_sql(),
+                            "select_sql": select_sql()
+                        })
+                    }
                 }
                 Some(CollectionCategory::Api) => {
                     serde_json::json!({
@@ -246,69 +533,119 @@ pub fn CollectionCreatePage() -> Element {
             test_logs.set(Vec::new());
             preview_data.set(None);
 
-            // Initialize test steps
-            let steps = vec![
-                TestStep {
-                    id: 1,
-                    title: "数据库连接检查".to_string(),
-                    description: "验证数据源连接是否正常".to_string(),
-                    status: TestStepStatus::Pending,
-                    error_message: None,
-                    start_time: None,
-                    end_time: None,
-                },
-                TestStep {
-                    id: 2,
-                    title: "创建临时目标表".to_string(),
-                    description: "根据DDL创建临时测试表".to_string(),
-                    status: TestStepStatus::Pending,
-                    error_message: None,
-                    start_time: None,
-                    end_time: None,
-                },
-                TestStep {
-                    id: 3,
-                    title: "字段一致性检查".to_string(),
-                    description: "检查取数字段与目标表字段是否匹配".to_string(),
-                    status: TestStepStatus::Pending,
-                    error_message: None,
-                    start_time: None,
-                    end_time: None,
-                },
-                TestStep {
-                    id: 4,
-                    title: "执行单次采集".to_string(),
-                    description: "执行一次采集任务(最大20行)".to_string(),
-                    status: TestStepStatus::Pending,
-                    error_message: None,
-                    start_time: None,
-                    end_time: None,
-                },
-                TestStep {
-                    id: 5,
-                    title: "预览临时目标表".to_string(),
-                    description: "查看采集到的数据".to_string(),
-                    status: TestStepStatus::Pending,
-                    error_message: None,
-                    start_time: None,
-                    end_time: None,
-                },
-                TestStep {
-                    id: 6,
-                    title: "删除临时目标表".to_string(),
-                    description: "清理测试数据".to_string(),
-                    status: TestStepStatus::Pending,
-                    error_message: None,
-                    start_time: None,
-                    end_time: None,
-                },
-            ];
+            // Initialize test steps based on collection mode
+            let steps = if selected_mode() == Some(CollectType::Incremental) {
+                vec![
+                    TestStep {
+                        id: 1,
+                        title: "数据库连接检查".to_string(),
+                        description: "验证数据源连接是否正常".to_string(),
+                        status: TestStepStatus::Pending,
+                        error_message: None,
+                        start_time: None,
+                        end_time: None,
+                    },
+                    TestStep {
+                        id: 2,
+                        title: "行新增规则检查".to_string(),
+                        description: "验证行新增规则配置是否正确".to_string(),
+                        status: TestStepStatus::Pending,
+                        error_message: None,
+                        start_time: None,
+                        end_time: None,
+                    },
+                    TestStep {
+                        id: 3,
+                        title: "字段更新规则检查".to_string(),
+                        description: "验证字段更新规则配置是否正确".to_string(),
+                        status: TestStepStatus::Pending,
+                        error_message: None,
+                        start_time: None,
+                        end_time: None,
+                    },
+                    TestStep {
+                        id: 4,
+                        title: "全量初始检查".to_string(),
+                        description: "检查全量初始化配置".to_string(),
+                        status: TestStepStatus::Pending,
+                        error_message: None,
+                        start_time: None,
+                        end_time: None,
+                    },
+                    TestStep {
+                        id: 5,
+                        title: "全量初始化预览".to_string(),
+                        description: "预览初始化数据".to_string(),
+                        status: TestStepStatus::Pending,
+                        error_message: None,
+                        start_time: None,
+                        end_time: None,
+                    },
+                ]
+            } else {
+                vec![
+                    TestStep {
+                        id: 1,
+                        title: "数据库连接检查".to_string(),
+                        description: "验证数据源连接是否正常".to_string(),
+                        status: TestStepStatus::Pending,
+                        error_message: None,
+                        start_time: None,
+                        end_time: None,
+                    },
+                    TestStep {
+                        id: 2,
+                        title: "创建临时目标表".to_string(),
+                        description: "根据DDL创建临时测试表".to_string(),
+                        status: TestStepStatus::Pending,
+                        error_message: None,
+                        start_time: None,
+                        end_time: None,
+                    },
+                    TestStep {
+                        id: 3,
+                        title: "字段一致性检查".to_string(),
+                        description: "检查取数字段与目标表字段是否匹配".to_string(),
+                        status: TestStepStatus::Pending,
+                        error_message: None,
+                        start_time: None,
+                        end_time: None,
+                    },
+                    TestStep {
+                        id: 4,
+                        title: "执行单次采集".to_string(),
+                        description: "执行一次采集任务(最大20行)".to_string(),
+                        status: TestStepStatus::Pending,
+                        error_message: None,
+                        start_time: None,
+                        end_time: None,
+                    },
+                    TestStep {
+                        id: 5,
+                        title: "预览临时目标表".to_string(),
+                        description: "查看采集到的数据".to_string(),
+                        status: TestStepStatus::Pending,
+                        error_message: None,
+                        start_time: None,
+                        end_time: None,
+                    },
+                    TestStep {
+                        id: 6,
+                        title: "删除临时目标表".to_string(),
+                        description: "清理测试数据".to_string(),
+                        status: TestStepStatus::Pending,
+                        error_message: None,
+                        start_time: None,
+                        end_time: None,
+                    },
+                ]
+            };
             test_steps.set(steps.clone());
 
             // Add initial log
             let mut logs = test_logs();
             logs.push(LogEntry {
-                timestamp: Utc::now(),
+                timestamp: Local::now(),
                 level: LogLevel::Info,
                 message: "开始执行测试运行...".to_string(),
                 details: None,
@@ -322,76 +659,126 @@ pub fn CollectionCreatePage() -> Element {
                 // Update step status to running
                 let mut updated_steps = test_steps();
                 updated_steps[idx].status = TestStepStatus::Running;
-                updated_steps[idx].start_time = Some(Utc::now());
+                updated_steps[idx].start_time = Some(Local::now());
                 test_steps.set(updated_steps.clone());
 
                 // Add log for step start
                 let mut logs = test_logs();
                 logs.push(LogEntry {
-                    timestamp: Utc::now(),
+                    timestamp: Local::now(),
                     level: LogLevel::Info,
                     message: format!("执行步骤 {}: {}", step.id, step.title),
                     details: None,
                 });
                 test_logs.set(logs);
 
-                // Execute step based on ID
-                let result = match step.id {
-                    1 => {
-                        // Check database connection
-                        TestRunMockApi::check_database_connection(
-                            &selected_datasource_id().unwrap_or_default()
-                        ).await
+                // Execute step based on ID and mode
+                let result = if selected_mode() == Some(CollectType::Incremental) {
+                    match step.id {
+                        1 => {
+                            // Check database connection
+                            TestRunMockApi::check_database_connection(
+                                &selected_datasource_id().unwrap_or_default()
+                            ).await
+                        }
+                        2 => {
+                            // Check row update rule
+                            TestRunMockApi::check_row_update_rule(
+                                &row_update_rule().select_sql,
+                                &row_update_rule().monitor_table,
+                                &row_update_rule().monitor_sql
+                            ).await
+                        }
+                        3 => {
+                            // Check field update rules
+                            TestRunMockApi::check_field_update_rules(&field_update_rules()).await
+                        }
+                        4 => {
+                            // Full initial check
+                            TestRunMockApi::check_full_initial(&ddl_sql()).await
+                        }
+                        5 => {
+                            // Full initialization preview
+                            match TestRunMockApi::preview_full_initialization(&row_update_rule().select_sql).await {
+                                Ok(data) => {
+                                    preview_data.set(Some(data.clone()));
+                                    Ok(crate::api::test_run_mock::TestStepResult {
+                                        step_id: 5,
+                                        success: true,
+                                        message: format!("成功预览 {} 行数据", data.total_rows),
+                                        error_message: None,
+                                        data: None,
+                                    })
+                                }
+                                Err(e) => Err(e),
+                            }
+                        }
+                        _ => Ok(crate::api::test_run_mock::TestStepResult {
+                            step_id: step.id,
+                            success: false,
+                            message: "Unknown step".to_string(),
+                            error_message: Some("Step not implemented".to_string()),
+                            data: None,
+                        }),
                     }
-                    2 => {
-                        // Create temporary table
-                        let result = TestRunMockApi::create_temp_table(&ddl_sql()).await;
-                        if let Ok(ref step_result) = result {
-                            if let Some(data) = &step_result.data {
-                                if let Some(table_name) = data.get("table_name") {
-                                    if let Some(name) = table_name.as_str() {
-                                        temp_table_name.set(name.to_string());
+                } else {
+                    match step.id {
+                        1 => {
+                            // Check database connection
+                            TestRunMockApi::check_database_connection(
+                                &selected_datasource_id().unwrap_or_default()
+                            ).await
+                        }
+                        2 => {
+                            // Create temporary table
+                            let result = TestRunMockApi::create_temp_table(&ddl_sql()).await;
+                            if let Ok(ref step_result) = result {
+                                if let Some(data) = &step_result.data {
+                                    if let Some(table_name) = data.get("table_name") {
+                                        if let Some(name) = table_name.as_str() {
+                                            temp_table_name.set(name.to_string());
+                                        }
                                     }
                                 }
                             }
+                            result
                         }
-                        result
-                    }
-                    3 => {
-                        // Check field consistency
-                        TestRunMockApi::check_field_consistency(&select_sql(), &ddl_sql()).await
-                    }
-                    4 => {
-                        // Execute single collection
-                        TestRunMockApi::execute_single_collection(&select_sql()).await
-                    }
-                    5 => {
-                        // Preview temp table
-                        match TestRunMockApi::preview_temp_table(&temp_table_name()).await {
-                            Ok(data) => {
-                                preview_data.set(Some(data.clone()));
-                                Ok(crate::api::test_run_mock::TestStepResult {
-                                    step_id: 5,
-                                    success: true,
-                                    message: format!("成功预览 {} 行数据", data.total_rows),
-                                    error_message: None,
-                                    data: None,
-                                })
+                        3 => {
+                            // Check field consistency
+                            TestRunMockApi::check_field_consistency(&select_sql(), &ddl_sql()).await
+                        }
+                        4 => {
+                            // Execute single collection
+                            TestRunMockApi::execute_single_collection(&select_sql()).await
+                        }
+                        5 => {
+                            // Preview temp table
+                            match TestRunMockApi::preview_temp_table(&temp_table_name()).await {
+                                Ok(data) => {
+                                    preview_data.set(Some(data.clone()));
+                                    Ok(crate::api::test_run_mock::TestStepResult {
+                                        step_id: 5,
+                                        success: true,
+                                        message: format!("成功预览 {} 行数据", data.total_rows),
+                                        error_message: None,
+                                        data: None,
+                                    })
+                                }
+                                Err(e) => Err(e),
                             }
-                            Err(e) => Err(e),
                         }
+                        6 => {
+                            // Delete temp table
+                            TestRunMockApi::delete_temp_table(&temp_table_name()).await
+                        }
+                        _ => Ok(crate::api::test_run_mock::TestStepResult {
+                            step_id: step.id,
+                            success: false,
+                            message: "Unknown step".to_string(),
+                            error_message: Some("Step not implemented".to_string()),
+                            data: None,
+                        }),
                     }
-                    6 => {
-                        // Delete temp table
-                        TestRunMockApi::delete_temp_table(&temp_table_name()).await
-                    }
-                    _ => Ok(crate::api::test_run_mock::TestStepResult {
-                        step_id: step.id,
-                        success: false,
-                        message: "Unknown step".to_string(),
-                        error_message: Some("Step not implemented".to_string()),
-                        data: None,
-                    }),
                 };
 
                 // Update step based on result
@@ -404,12 +791,12 @@ pub fn CollectionCreatePage() -> Element {
                             TestStepStatus::Failed
                         };
                         updated_steps[idx].error_message = step_result.error_message;
-                        updated_steps[idx].end_time = Some(Utc::now());
+                        updated_steps[idx].end_time = Some(Local::now());
 
                         // Add log for step result
                         let mut logs = test_logs();
                         logs.push(LogEntry {
-                            timestamp: Utc::now(),
+                            timestamp: Local::now(),
                             level: if step_result.success { LogLevel::Success } else { LogLevel::Error },
                             message: step_result.message.clone(),
                             details: step_result.data.map(|d| d.to_string()),
@@ -425,12 +812,12 @@ pub fn CollectionCreatePage() -> Element {
                     Err(e) => {
                         updated_steps[idx].status = TestStepStatus::Failed;
                         updated_steps[idx].error_message = Some(e.clone());
-                        updated_steps[idx].end_time = Some(Utc::now());
+                        updated_steps[idx].end_time = Some(Local::now());
 
                         // Add error log
                         let mut logs = test_logs();
                         logs.push(LogEntry {
-                            timestamp: Utc::now(),
+                            timestamp: Local::now(),
                             level: LogLevel::Error,
                             message: format!("步骤执行失败: {}", e),
                             details: None,
@@ -447,7 +834,7 @@ pub fn CollectionCreatePage() -> Element {
             // Add completion log
             let mut logs = test_logs();
             logs.push(LogEntry {
-                timestamp: Utc::now(),
+                timestamp: Local::now(),
                 level: LogLevel::Info,
                 message: "测试运行完成".to_string(),
                 details: None,
@@ -458,6 +845,36 @@ pub fn CollectionCreatePage() -> Element {
             test_completed.set(true);
         });
     };
+
+    /// Returns the name of the datasource with the given id, or an empty string if not found.
+    fn get_datasource_name_by_id(datasource_id: &str, datasources: &Vec<DataSource>) -> String {
+        datasources
+            .iter()
+            .find(|ds| ds.id == datasource_id)
+            .map(|ds| ds.name.clone())
+            .unwrap_or_else(|| "".to_string())
+    }
+
+
+    /// Returns the name of the databse with the given id, or an empty string if not found.
+    fn get_database_name_by_id(database_id: &str, databases: &Vec<Resource>) -> String {
+        databases
+            .iter()
+            .find(|db| db.id == database_id)
+            .map(|db| db.name.clone())
+            .unwrap_or_else(|| "".to_string())
+    }
+
+
+    /// Returns the name of the queue with the given id, or an empty string if not found.
+    fn get_queue_name_by_id(queue_id: &str, queues: &Vec<Resource>) -> String {
+        queues
+            .iter()
+            .find(|q| q.id == queue_id)
+            .map(|q| q.name.clone())
+            .unwrap_or_else(|| "".to_string())
+    }
+
 
     rsx! {
         div { class: "container mx-auto p-6 max-w-7xl h-full",
@@ -732,10 +1149,18 @@ pub fn CollectionCreatePage() -> Element {
                 div { class: "card bg-base-200",
                     div { class: "card-body",
 
-                        QueryDataRuleDefinition {
-                            collection_category: selected_category().unwrap(),
-                            datasource_type: selected_datasource_type().unwrap(),
-                            query_sql: select_sql,
+                        // Show different components based on category and mode
+                        if selected_category() == Some(CollectionCategory::Database) && selected_mode() == Some(CollectType::Incremental) {
+                            IncrementalRuleDefinition {
+                                row_update_rule: row_update_rule,
+                                field_update_rules: field_update_rules,
+                            }
+                        } else {
+                            QueryDataRuleDefinition {
+                                collection_category: selected_category().unwrap(),
+                                datasource_type: selected_datasource_type().unwrap(),
+                                query_sql: select_sql,
+                            }
                         }
 
                         div { class: "card-actions justify-between mt-6",
@@ -748,7 +1173,11 @@ pub fn CollectionCreatePage() -> Element {
                                 class: "btn btn-primary",
                                 disabled: {
                                     if selected_category() == Some(CollectionCategory::Database) {
-                                        select_sql().is_empty()
+                                        if selected_mode() == Some(CollectType::Incremental) {
+                                            row_update_rule().select_sql.is_empty()
+                                        } else {
+                                            select_sql().is_empty()
+                                        }
                                     } else if selected_category() == Some(CollectionCategory::Api) {
                                         python_script().is_empty()
                                     } else {
@@ -769,7 +1198,7 @@ pub fn CollectionCreatePage() -> Element {
                     div { class: "card-body",
 
                         // Only show summary and test button when database category is selected
-                        if selected_category() == Some(CollectionCategory::Database) && selected_mode() == Some(CollectType::Full) {
+                        if selected_category() == Some(CollectionCategory::Database) {
                             // Test run section
                             if !test_running() && !test_completed() {
                                 div { class: "space-y-4 mb-6",
@@ -781,15 +1210,31 @@ pub fn CollectionCreatePage() -> Element {
                                         }
                                         div {
                                             p { class: "text-sm text-gray-500", "采集模式" }
-                                            p { class: "font-medium", "数据库全量采集" }
+                                            p { class: "font-medium",
+                                                {match selected_mode() {
+                                                    Some(CollectType::Full) => "数据库全量采集",
+                                                    Some(CollectType::Incremental) => "数据库增量采集",
+                                                    None => "未选择",
+                                                }}
+                                            }
                                         }
                                         div {
                                             p { class: "text-sm text-gray-500", "数据源" }
-                                            p { class: "font-medium", "{selected_datasource_id().unwrap_or_default()}" }
+                                            p { class: "font-medium", "{get_datasource_name_by_id(&selected_datasource_id().unwrap_or_default(), &datasources())}" }
                                         }
+                                        {if selected_mode() == Some(CollectType::Incremental) {
+                                            rsx! {
+                                                div {
+                                                    p { class: "text-sm text-gray-500", "队列资源" }
+                                                    p { class: "font-medium", "{get_queue_name_by_id(&selected_queue_resource_id().unwrap_or_default(), &resources())}" }
+                                                }
+                                            }
+                                        } else {
+                                            rsx! {}
+                                        }}
                                         div {
                                             p { class: "text-sm text-gray-500", "目标资源" }
-                                            p { class: "font-medium", "{selected_database_resource_id().unwrap_or_default()}" }
+                                            p { class: "font-medium", "{get_database_name_by_id(&selected_database_resource_id().unwrap_or_default(), &resources())}" }  
                                         }
                                     }
 
@@ -851,77 +1296,7 @@ pub fn CollectionCreatePage() -> Element {
                                     }
                                 }
                             }
-                        } else {
-                            // Show summary for non-database or incremental mode
-                            div { class: "space-y-4",
-                                div {
-                                    h3 { class: "font-semibold", "Task Name" }
-                                    p { "{task_name()}" }
-                                }
-                                div {
-                                    h3 { class: "font-semibold", "Description" }
-                                    p { "{task_description()}" }
-                                }
-                                div {
-                                    h3 { class: "font-semibold", "Category" }
-                                    p {
-                                        {match selected_category() {
-                                            Some(CollectionCategory::Database) => "Database",
-                                            Some(CollectionCategory::Api) => "API",
-                                            Some(CollectionCategory::Crawler) => "Crawler",
-                                            None => "Not selected",
-                                        }}
-                                    }
-                                }
-                                div {
-                                    h3 { class: "font-semibold", "Collection Mode" }
-                                    p {
-                                        {match selected_mode() {
-                                            Some(CollectType::Full) => "Full Collection",
-                                            Some(CollectType::Incremental) => "Incremental Collection",
-                                            None => "Not selected",
-                                        }}
-                                    }
-                                }
-                                div {
-                                    h3 { class: "font-semibold", "Datasource ID" }
-                                    p { "{selected_datasource_id().unwrap_or_default()}" }
-                                }
-
-                                // Show Database-specific fields
-                                if selected_category() == Some(CollectionCategory::Database) {
-                                    div {
-                                        h3 { class: "font-semibold", "DDL SQL" }
-                                        pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
-                                            code { "{ddl_sql()}" }
-                                        }
-                                    }
-                                    div {
-                                        h3 { class: "font-semibold", "SELECT SQL" }
-                                        pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
-                                            code { "{select_sql()}" }
-                                        }
-                                    }
-                                }
-
-                                // Show API-specific fields
-                                if selected_category() == Some(CollectionCategory::Api) {
-                                    div {
-                                        h3 { class: "font-semibold", "JSON Schema" }
-                                        pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
-                                            code { "{json_schema()}" }
-                                        }
-                                    }
-                                    div {
-                                        h3 { class: "font-semibold", "Python Script" }
-                                        pre { class: "bg-base-300 p-4 rounded overflow-auto max-h-48",
-                                            code { "{python_script()}" }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
+                        }  
                         div { class: "card-actions justify-between mt-6",
                             button {
                                 class: "btn",
@@ -930,7 +1305,7 @@ pub fn CollectionCreatePage() -> Element {
                             }
                             button {
                                 class: "btn btn-primary",
-                                disabled: loading() || test_running() || (!test_completed() && selected_category() == Some(CollectionCategory::Database) && selected_mode() == Some(CollectType::Full)),
+                                disabled: loading() || test_running() || (!test_completed() && selected_category() == Some(CollectionCategory::Database)),
                                 onclick: submit_handler,
                                 if loading() {
                                     span { class: "loading loading-spinner" }

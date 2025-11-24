@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
 /// Test run step status
@@ -13,26 +13,15 @@ pub enum TestStepStatus {
 }
 
 /// Test run step data
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TestStep {
     pub id: usize,
     pub title: String,
     pub description: String,
     pub status: TestStepStatus,
     pub error_message: Option<String>,
-    pub start_time: Option<DateTime<Utc>>,
-    pub end_time: Option<DateTime<Utc>>,
-}
-
-impl PartialEq for TestStep {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id &&
-        self.title == other.title &&
-        self.description == other.description &&
-        self.status == other.status &&
-        self.error_message == other.error_message
-        // 注意：我们排除了start_time和end_time的比较，因为时间戳即使逻辑上相等也可能不同
-    }
+    pub start_time: Option<DateTime<Local>>,
+    pub end_time: Option<DateTime<Local>>,
 }
 
 /// Log level for test run
@@ -45,21 +34,12 @@ pub enum LogLevel {
 }
 
 /// Log entry for test run
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LogEntry {
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: DateTime<Local>,
     pub level: LogLevel,
     pub message: String,
     pub details: Option<String>,
-}
-
-impl PartialEq for LogEntry {
-    fn eq(&self, other: &Self) -> bool {
-        // Note: We exclude timestamp from comparison as it may differ even for logically equal entries
-        self.level == other.level && 
-        self.message == other.message && 
-        self.details == other.details
-    }
 }
 
 /// Test run timeline component
@@ -69,10 +49,8 @@ pub fn TestRunTimeline(
     current_step: usize,
 ) -> Element {
     rsx! {
-        div { class: "w-full h-full overflow-y-auto",
-            // 添加标题
-            h3 { class: "font-semibold text-base mb-4", "执行步骤" }
-            ul { class: "timeline timeline-vertical timeline-compact",
+        div { class: "w-full",
+            ul { class: "timeline timeline-vertical",
                 for (index, step) in steps.iter().enumerate() {
                     li { key: "{step.id}",
                         if index > 0 {
@@ -148,15 +126,14 @@ pub fn TestRunTimeline(
                                     }
                                     if let Some(start_time) = step.start_time {
                                         div { class: "text-xs text-gray-400 mt-1",
-                                            {format!(
-                                                "{}{}", 
-                                                start_time.format("%H:%M:%S"), 
+                                            {
+                                                let time_str = start_time.format("%H:%M:%S").to_string();
                                                 if let Some(end_time) = step.end_time {
-                                                    format!(" - {}", end_time.format("%H:%M:%S"))
+                                                    format!("{} - {}", time_str, end_time.format("%H:%M:%S"))
                                                 } else {
-                                                    "".to_string()
+                                                    time_str
                                                 }
-                                            )}
+                                            }
                                         }
                                     }
                                 }
@@ -229,12 +206,12 @@ pub fn TestRunLogViewer(
                                                 LogLevel::Warning => "text-warning",
                                                 LogLevel::Error => "text-error",
                                             },
-                                            {match log.level {
+                                            match log.level {
                                                 LogLevel::Info => "[INFO]",
                                                 LogLevel::Success => "[SUCCESS]",
                                                 LogLevel::Warning => "[WARN]",
                                                 LogLevel::Error => "[ERROR]",
-                                            }}
+                                            }
                                         }
                                         span { class: "flex-1", "{log.message}" }
                                     }

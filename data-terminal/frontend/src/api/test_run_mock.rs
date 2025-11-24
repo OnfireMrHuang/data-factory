@@ -193,4 +193,101 @@ impl TestRunMockApi {
             })),
         })
     }
+
+    /// Check row update rule (for incremental collection)
+    pub async fn check_row_update_rule(
+        select_sql: &str,
+        monitor_table: &str,
+        monitor_sql: &str,
+    ) -> Result<TestStepResult, String> {
+        // Simulate API delay
+        sleep(Duration::from_millis(800)).await;
+
+        Ok(TestStepResult {
+            step_id: 2,
+            success: true,
+            message: "Row update rule validation passed".to_string(),
+            error_message: None,
+            data: Some(json!({
+                "select_sql_valid": true,
+                "monitor_table": monitor_table,
+                "monitor_sql_valid": true,
+                "field_count": 4,
+                "matched_target_fields": true
+            })),
+        })
+    }
+
+    /// Check field update rules (for incremental collection)
+    pub async fn check_field_update_rules(
+        field_rules: &[crate::pages::collection_create_page::IncrementalRuleForm],
+    ) -> Result<TestStepResult, String> {
+        // Simulate API delay
+        sleep(Duration::from_millis(700)).await;
+
+        let rule_count = field_rules.len();
+        let valid_rules = field_rules.iter().filter(|r| !r.select_sql.is_empty()).count();
+
+        Ok(TestStepResult {
+            step_id: 3,
+            success: true,
+            message: format!("Validated {} field update rules", rule_count),
+            error_message: None,
+            data: Some(json!({
+                "total_rules": rule_count,
+                "valid_rules": valid_rules,
+                "invalid_rules": rule_count - valid_rules
+            })),
+        })
+    }
+
+    /// Check full initial configuration (for incremental collection)
+    pub async fn check_full_initial(ddl_sql: &str) -> Result<TestStepResult, String> {
+        // Simulate API delay
+        sleep(Duration::from_millis(900)).await;
+
+        Ok(TestStepResult {
+            step_id: 4,
+            success: true,
+            message: "Full initialization check passed".to_string(),
+            error_message: None,
+            data: Some(json!({
+                "ddl_valid": true,
+                "target_table_structure_ok": true,
+                "can_create_temp_table": true
+            })),
+        })
+    }
+
+    /// Preview full initialization data (for incremental collection)
+    pub async fn preview_full_initialization(select_sql: &str) -> Result<PreviewDataResponse, String> {
+        // Simulate API delay
+        sleep(Duration::from_millis(1000)).await;
+
+        // Generate mock data for initialization preview
+        let columns = vec![
+            "id".to_string(),
+            "name".to_string(),
+            "created_at".to_string(),
+            "updated_at".to_string(),
+            "status".to_string(),
+        ];
+
+        let mut rows = Vec::new();
+        for i in 1..=15 {
+            rows.push(vec![
+                i.to_string(),
+                format!("Initial Data {}", i),
+                format!("2024-01-{:02} 08:00:00", i),
+                format!("2024-01-{:02} 08:00:00", i),
+                if i % 3 == 0 { "active" } else { "pending" }.to_string(),
+            ]);
+        }
+
+        Ok(PreviewDataResponse {
+            columns,
+            rows,
+            total_rows: 15,
+        })
+    }
 }
