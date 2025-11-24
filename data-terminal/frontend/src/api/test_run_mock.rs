@@ -220,7 +220,7 @@ impl TestRunMockApi {
 
     /// Check field update rules (for incremental collection)
     pub async fn check_field_update_rules(
-        field_rules: &[crate::pages::collection_create_page::IncrementalRuleForm],
+        field_rules: &[crate::models::collection::IncrementalRuleForm],
     ) -> Result<TestStepResult, String> {
         // Simulate API delay
         sleep(Duration::from_millis(700)).await;

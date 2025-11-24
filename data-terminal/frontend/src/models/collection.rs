@@ -374,3 +374,23 @@ pub struct FieldMetadata {
     pub default_value: Option<String>,
     pub primary_key: bool,
 }
+
+
+#[derive(Clone, PartialEq)]
+pub struct IncrementalRuleForm {
+    pub select_sql: String,
+    pub monitor_table: String,
+    pub monitor_sql: String,
+    pub use_custom_monitor_table: bool,
+}
+
+impl Default for IncrementalRuleForm {
+    fn default() -> Self {
+        Self {
+            select_sql: String::new(),
+            monitor_table: String::new(),
+            monitor_sql: String::new(),
+            use_custom_monitor_table: false,
+        }
+    }
+}
