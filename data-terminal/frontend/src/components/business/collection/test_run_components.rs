@@ -1,46 +1,5 @@
 use dioxus::prelude::*;
-use chrono::{DateTime, Local};
-use serde::{Deserialize, Serialize};
-
-/// Test run step status
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum TestStepStatus {
-    Pending,
-    Running,
-    Success,
-    Failed,
-    Skipped,
-}
-
-/// Test run step data
-#[derive(Debug, Clone, PartialEq)]
-pub struct TestStep {
-    pub id: usize,
-    pub title: String,
-    pub description: String,
-    pub status: TestStepStatus,
-    pub error_message: Option<String>,
-    pub start_time: Option<DateTime<Local>>,
-    pub end_time: Option<DateTime<Local>>,
-}
-
-/// Log level for test run
-#[derive(Debug, Clone, PartialEq)]
-pub enum LogLevel {
-    Info,
-    Success,
-    Warning,
-    Error,
-}
-
-/// Log entry for test run
-#[derive(Debug, Clone, PartialEq)]
-pub struct LogEntry {
-    pub timestamp: DateTime<Local>,
-    pub level: LogLevel,
-    pub message: String,
-    pub details: Option<String>,
-}
+use crate::models::collection::{TestStep, TestStepStatus, LogLevel, LogEntry};
 
 /// Test run timeline component
 #[component]

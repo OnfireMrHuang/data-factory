@@ -4,7 +4,7 @@ use crate::models::collection::*;
 use crate::models::datasource::{DataSource, DataSourceType};
 use crate::models::resource::{Resource, ResourceType};
 use crate::components::business::collection::{
-    TestRunTimeline, TestRunLogViewer, DataPreviewTable, TestStep, TestStepStatus, LogEntry, LogLevel
+    TestRunTimeline, TestRunLogViewer, DataPreviewTable
 };
 use crate::api::collections;
 use crate::api::test_run_mock::{TestRunMockApi, PreviewDataResponse};

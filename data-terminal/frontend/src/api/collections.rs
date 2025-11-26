@@ -154,68 +154,17 @@ pub async fn apply_collection_task(code: &str) -> Result<String, RequestError> {
     Ok(api_response.data)
 }
 
-/// Fetch tables from a datasource
-pub async fn fetch_datasource_tables(datasource_id: &str) -> Result<Vec<TableMetadata>, RequestError> {
+/// test run collection task
+pub async fn test_run_collection_test(code: &str) -> Result<String, RequestError> {
     let client = create_api_client();
 
-    let api_response: ApiResponse<Vec<TableMetadata>> = client
-        .get_json(&format!("/api/v1/datasources/{}/tables", datasource_id), None)
+    let api_response: ApiResponse<String> = client
+        .post_json(&format!("/api/v1/collection/{}/test", code), None, serde_json::json!({}))
         .await?;
 
     if !api_response.result {
         return Err(RequestError::api_error(api_response.msg));
     }
-
     Ok(api_response.data)
 }
 
-/// Fetch fields from a specific table
-pub async fn fetch_table_fields(
-    datasource_id: &str,
-    table_name: &str,
-) -> Result<Vec<FieldMetadata>, RequestError> {
-    let client = create_api_client();
-
-    let api_response: ApiResponse<Vec<FieldMetadata>> = client
-        .get_json(
-            &format!("/api/v1/datasources/{}/tables/{}/fields", datasource_id, table_name),
-            None,
-        )
-        .await?;
-
-    if !api_response.result {
-        return Err(RequestError::api_error(api_response.msg));
-    }
-
-    Ok(api_response.data)
-}
-
-/// Generate target schema from selected tables
-pub async fn generate_target_schema(
-    datasource_id: &str,
-    resource_id: &str,
-    selected_tables: Vec<TableSelection>,
-) -> Result<TableSchema, RequestError> {
-    let client = create_api_client();
-
-    let request_body = serde_json::json!({
-        "datasource_id": datasource_id,
-        "resource_id": resource_id,
-        "selected_tables": selected_tables,
-    });
-
-    #[derive(serde::Deserialize)]
-    struct GenerateSchemaResponse {
-        target_schema: TableSchema,
-    }
-
-    let api_response: ApiResponse<GenerateSchemaResponse> = client
-        .post_json("/api/v1/collections/generate-schema", None, request_body)
-        .await?;
-
-    if !api_response.result {
-        return Err(RequestError::api_error(api_response.msg));
-    }
-
-    Ok(api_response.data.target_schema)
-}
