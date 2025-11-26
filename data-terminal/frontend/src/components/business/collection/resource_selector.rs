@@ -11,6 +11,9 @@ pub fn ResourceSelectorForDatabaseIncremental(
     on_queue_resource_change: EventHandler<String>,
     on_database_resource_change: EventHandler<String>,
 ) -> Element {
+    let queue_selected = selected_queue_resource.read().clone().unwrap_or_default();
+    let database_selected = selected_database_resource.read().clone().unwrap_or_default();
+    
     rsx! {
         div { class: "form-control w-full",
             label { class: "label mb-4",
@@ -18,15 +21,17 @@ pub fn ResourceSelectorForDatabaseIncremental(
             }
             select {
                 class: "select select-bordered w-full",
+                value: "{queue_selected}",
                 onchange: move |evt| {
                     let value = evt.value();
                     selected_queue_resource.set(Some(value.clone()));
                     on_queue_resource_change.call(value);
                 },
-                option { value: "", "Select a queue resource..." }
+                option { value: "", selected: queue_selected.is_empty(), "Select a queue resource..." }
                 for resource in resources.iter().filter(|r| r.category == Category::Queue) {
                     option {
                         value: "{resource.id}",
+                        selected: queue_selected == resource.id,
                         "{resource.name} ({resource.resource_type:?})"
                     }
                 }
@@ -39,15 +44,17 @@ pub fn ResourceSelectorForDatabaseIncremental(
             }
             select {
                 class: "select select-bordered w-full",
+                value: "{database_selected}",
                 onchange: move |evt| {
                     let value = evt.value();
                     selected_database_resource.set(Some(value.clone()));
                     on_database_resource_change.call(value);
                 },
-                option { value: "", "Select a target database resource..." }
+                option { value: "", selected: database_selected.is_empty(),"Select a target database resource..." }
                 for resource in resources.iter().filter(|r| r.category == Category::RelationalDatabase) {
                     option {
                         value: "{resource.id}",
+                        selected: database_selected == resource.id,
                         "{resource.name} ({resource.resource_type:?})"
                     }
                 }
@@ -64,6 +71,8 @@ pub fn ResourceSelectorForDatabaseFull(
     selected_database_resource: Signal<Option<String>>,
     on_database_resource_change: EventHandler<String>,
 ) -> Element {
+    let database_selected = selected_database_resource.read().clone().unwrap_or_default();
+    
     rsx! {
         div { class: "form-control w-full",
             label { class: "label mb-4",
@@ -71,15 +80,17 @@ pub fn ResourceSelectorForDatabaseFull(
             }
             select {
                 class: "select select-bordered w-full",
+                value: "{database_selected}",
                 onchange: move |evt| {
                     let value = evt.value();
                     selected_database_resource.set(Some(value.clone()));
                     on_database_resource_change.call(value);
                 },
-                option { value: "", "Select a target database resource..." }
+                option { value: "", selected: database_selected.is_empty(),"Select a target database resource..." }
                 for resource in resources.iter().filter(|r| r.category == Category::RelationalDatabase) {
                     option {
                         value: "{resource.id}",
+                        selected: database_selected == resource.id,
                         "{resource.name} ({resource.resource_type:?})"
                     }
                 }

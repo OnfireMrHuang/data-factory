@@ -9,10 +9,7 @@ use crate::models::error::Error;
 use crate::models::web::PageQuery;
 use crate::models::resource::{Resource, ResourceReadOnly, ResourceCreateUpdate};
 use crate::models::datasource::{DataSource, DataSourceReadOnly, DataSourceCreateUpdate};
-use crate::models::collection::{
-    TableMetadata, FieldMetadata, CollectTaskReadOnly, CreateCollectTaskRequest,
-    UpdateCollectTaskRequest, TaskStage, CollectionCategory, CollectType, TableSchema, TableSelection, CollectTask
-};
+use crate::models::collection::*;
 use shaku::Interface;
 
 #[async_trait]
@@ -52,15 +49,15 @@ pub trait CollectionService: Interface + Send {
     async fn create_task(
         &self,
         project_code: String,
-        request: CreateCollectTaskRequest,
+        request: CreateOrUpdateCollectTaskRequest,
     ) -> Result<CollectTaskReadOnly, Error>;
 
-    async fn get_task(&self, project_code: String, id: &str) -> Result<Option<CollectTaskReadOnly>, Error>;
+    async fn get_task(&self, project_code: String, params: DetailRequest) -> Result<Option<CollectTaskReadOnly>, Error>;
 
     async fn update_task(
         &self,
         project_code: String,
-        request: UpdateCollectTaskRequest,
+        request: CreateOrUpdateCollectTaskRequest,
     ) -> Result<CollectTaskReadOnly, Error>;
 
     async fn delete_task(&self, project_code: String, id: &str) -> Result<(), Error>;
@@ -76,13 +73,4 @@ pub trait CollectionService: Interface + Send {
     ) -> Result<(Vec<CollectTaskReadOnly>, i64), Error>;
 
     async fn apply_task(&self, project_code: String, id: &str) -> Result<CollectTaskReadOnly, Error>;
-
-    async fn generate_schema(
-        &self,
-        datasource_id: &str,
-        resource_id: &str,
-        selected_tables: Vec<TableSelection>,
-    ) -> Result<TableSchema, Error>;
-
-    async fn validate_task_config(&self, task: &CollectTask) -> Result<(), Error>;
 }

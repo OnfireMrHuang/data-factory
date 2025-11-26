@@ -12,48 +12,7 @@ use crate::models::resource::ResourceReadOnly;
 use crate::repositories::collection_task::CollectionRepository;
 use crate::models::Error;
 use crate::services::{DataSourceService, ResourceService};
-
-/// Collection service trait for business logic
-#[async_trait]
-pub trait CollectionService: Interface {
-    async fn create_task(
-        &self,
-        project_code: String,
-        request: CreateCollectTaskRequest,
-    ) -> Result<CollectTaskReadOnly, Error>;
-
-    async fn get_task(&self, project_code: String, params: DetailRequest) -> Result<Option<CollectTaskReadOnly>, Error>;
-
-    async fn update_task(
-        &self,
-        project_code: String,
-        request: UpdateCollectTaskRequest,
-    ) -> Result<CollectTaskReadOnly, Error>;
-
-    async fn delete_task(&self, project_code: String, code: &str) -> Result<(), Error>;
-
-    async fn list_tasks(
-        &self,
-        project_code: String,
-        page: i64,
-        limit: i64,
-        stage: Option<TaskStage>,
-        category: Option<CollectionCategory>,
-        collect_type: Option<CollectType>,
-    ) -> Result<(Vec<CollectTaskReadOnly>, i64), Error>;
-
-    async fn apply_task(&self, project_code: String, code: &str) -> Result<CollectTaskReadOnly, Error>;
-
-    async fn generate_schema(
-        &self,
-        project_code: String,
-        datasource_id: &str,
-        resource_id: &str,
-        selected_tables: Vec<TableSelection>,
-    ) -> Result<TableSchema, Error>;
-
-    async fn validate_task_config(&self, project_code: String, task: &CollectTask) -> Result<(), Error>;
-}
+use super::CollectionService;
 
 /// Collection service implementation
 #[derive(Provider)]
@@ -133,7 +92,7 @@ impl CollectionService for CollectionServiceImpl {
     async fn create_task(
         &self,
         project_code: String,
-        request: CreateCollectTaskRequest,
+        request: CreateOrUpdateCollectTaskRequest,
     ) -> Result<CollectTaskReadOnly, Error> {
         // Generate UUID for new task
         let id = Uuid::new_v4().to_string();
@@ -141,19 +100,21 @@ impl CollectionService for CollectionServiceImpl {
         let now = Utc::now();
 
         // Validate compatibility with comprehensive rule checking
-        self.validate_compatibility(&request.category, &request.collect_type, &request.rule)?;
+        if request.rule.is_some() {
+            self.validate_compatibility(&request.category, &request.collect_type, &request.rule.as_ref().unwrap())?;
+        }
 
         let task = CollectTask {
             id,
             code,
             name: request.name,
-            description: request.description.unwrap_or_default(),
+            description: request.description,
             category: request.category,
             collect_type: request.collect_type,
             datasource_id: request.datasource_id,
             queue_resource_id: request.queue_resource_id,
             database_resource_id: request.database_resource_id,
-            rule: request.rule,
+            rule: request.rule.unwrap_or_default(),
             stage: TaskStage::Draft,
             created_at: now,
             updated_at: now,
@@ -183,7 +144,7 @@ impl CollectionService for CollectionServiceImpl {
     async fn update_task(
         &self,
         project_code: String,
-        request: UpdateCollectTaskRequest,
+        request: CreateOrUpdateCollectTaskRequest,
     ) -> Result<CollectTaskReadOnly, Error> {
         // Fetch existing task
         let mut task = self.repository.find_by_code(project_code.clone(), &request.code, TaskStage::Draft).await
@@ -200,13 +161,13 @@ impl CollectionService for CollectionServiceImpl {
             ));
         }
 
-        // Apply updates
-        if let Some(name) = request.name {
-            task.name = name;
-        }
-        if let Some(description) = request.description {
-            task.description = description;
-        }
+        task.name = request.name;
+        task.description = request.description;
+        task.category = request.category;
+        task.collect_type = request.collect_type;
+        task.datasource_id = request.datasource_id;
+        task.queue_resource_id = request.queue_resource_id;
+        task.database_resource_id = request.database_resource_id;
         if let Some(rule) = request.rule {
             task.rule = rule;
         }
@@ -374,82 +335,6 @@ impl CollectionService for CollectionServiceImpl {
             })?;
 
         Ok(CollectTaskReadOnly::from(task))
-    }
-
-    async fn generate_schema(
-        &self,
-        _project_code: String,
-        _datasource_id: &str,
-        _resource_id: &str,
-        selected_tables: Vec<TableSelection>,
-    ) -> Result<TableSchema, Error> {
-        // Validate input
-        if selected_tables.is_empty() {
-            return Err(Error::InvalidValue("No tables selected".to_string()));
-        }
-
-        let first_table = &selected_tables[0];
-
-        // Type mapping logic: MySQL → Target database types
-        // For now, use the first selected table as basis
-        // TODO: In production, fetch actual source schema and apply type mapping rules
-
-        // Generate target table name (prefix convention)
-        let target_table_name = if first_table.table_name.starts_with("df_") {
-            first_table.table_name.clone()
-        } else {
-            format!("target_{}", first_table.table_name)
-        };
-
-        // Mock field generation - in production, this would:
-        // 1. Fetch source table schema
-        // 2. Map MySQL types to target types (INT→INT, VARCHAR→VARCHAR, etc.)
-        // 3. Preserve nullable, default values, primary keys
-        // 4. Handle selected_fields filtering
-
-        let fields = if first_table.selected_fields.is_empty() {
-            // All fields - generate basic schema
-            vec![
-                FieldSchema {
-                    field_name: "id".to_string(),
-                    field_type: "BIGINT".to_string(),
-                    nullable: false,
-                    default_value: None,
-                    primary_key: true,
-                    auto_increment: true,
-                },
-                FieldSchema {
-                    field_name: "created_at".to_string(),
-                    field_type: "TIMESTAMP".to_string(),
-                    nullable: false,
-                    default_value: Some("CURRENT_TIMESTAMP".to_string()),
-                    primary_key: false,
-                    auto_increment: false,
-                },
-            ]
-        } else {
-            // Selected fields only - map each field
-            first_table.selected_fields.iter().map(|field_name| {
-                FieldSchema {
-                    field_name: field_name.clone(),
-                    field_type: Self::map_field_type(field_name),
-                    nullable: true,
-                    default_value: None,
-                    primary_key: field_name == "id",
-                    auto_increment: field_name == "id",
-                }
-            }).collect()
-        };
-
-        Ok(TableSchema {
-            table_name: target_table_name,
-            fields,
-        })
-    }
-
-    async fn validate_task_config(&self, _project_code: String, _task: &CollectTask) -> Result<(), Error> {
-        // TODO: Implement comprehensive validation (US2-US4)
-        Ok(())
     }
 }
 

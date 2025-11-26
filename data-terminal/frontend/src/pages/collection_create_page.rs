@@ -339,6 +339,8 @@ pub fn CollectionCreatePage() -> Element {
 
     // Wizard state
     let mut current_step = use_signal(|| 1);
+    let mut task_code = use_signal(|| None::<String>);
+    let mut saving = use_signal(|| false);
 
     // Form state
     let mut task_name = use_signal(String::new);
@@ -419,73 +421,44 @@ pub fn CollectionCreatePage() -> Element {
         });
     });
 
-    // Submit handler
+    // Submit handler - applies the task (transitions from draft to applied)
     let submit_handler = move |_| {
         spawn(async move {
             loading.set(true);
+            error_msg.set(String::new());
 
-            // Build the collection rule based on category and mode
-            let rule = match selected_category() {
-                Some(CollectionCategory::Database) => {
-                    if selected_mode() == Some(CollectType::Incremental) {
-                        // Build incremental rule with row_update_rule and field_update_rules
-                        let field_rules: Vec<serde_json::Value> = field_update_rules()
-                            .iter()
-                            .map(|rule| {
-                                serde_json::json!({
-                                    "select_sql": rule.select_sql,
-                                    "monitor_table": rule.monitor_table,
-                                    "monitor_sql": rule.monitor_sql
-                                })
-                            })
-                            .collect();
-
-                        serde_json::json!({
-                            "type": "database",
-                            "mode": "incremental",
-                            "ddl_sql": ddl_sql(),
-                            "row_update_rule": {
-                                "select_sql": row_update_rule().select_sql,
-                                "monitor_table": row_update_rule().monitor_table,
-                                "monitor_sql": row_update_rule().monitor_sql
-                            },
-                            "field_update_rules": field_rules
-                        })
-                    } else {
-                        serde_json::json!({
-                            "type": "database",
-                            "mode": "full",
-                            "ddl_sql": ddl_sql(),
-                            "select_sql": select_sql()
-                        })
+            // If we have a task code, apply it. Otherwise show error.
+            if let Some(code) = task_code() {
+                match collections::apply_collection_task(&code).await {
+                    Ok(_) => {
+                        loading.set(false);
+                        navigator.push(Route::CollectionPage {});
+                    }
+                    Err(e) => {
+                        error_msg.set(format!("Failed to apply task: {:?}", e));
+                        loading.set(false);
                     }
                 }
-                Some(CollectionCategory::Api) => {
-                    serde_json::json!({
-                        "type": "api",
-                        "mode": match selected_mode() {
-                            Some(CollectType::Full) => "full",
-                            Some(CollectType::Incremental) => "incremental",
-                            None => "full"
-                        },
-                        "json_schema": json_schema(),
-                        "python_script": python_script()
-                    })
-                }
-                _ => {
-                    error_msg.set("Invalid category selected".to_string());
-                    loading.set(false);
-                    return;
-                }
-            };
+            } else {
+                error_msg.set("No task created yet. Please go back and complete the wizard.".to_string());
+                loading.set(false);
+            }
+        });
+    };
 
-            let request = CreateCollectTaskRequest {
+    // Save progress handler - creates or updates task based on current step
+    let save_and_continue = move |next_step: i32| {
+        spawn(async move {
+            saving.set(true);
+            error_msg.set(String::new());
+
+            // Build rule based on current progress
+            let rule = serde_json::Value::Null;
+
+            let request = CreateOrUpdateCollectTaskRequest {
+                code: task_code().unwrap_or_default(),
                 name: task_name(),
-                description: if task_description().is_empty() {
-                    None
-                } else {
-                    Some(task_description())
-                },
+                description: task_description(),
                 category: selected_category().unwrap_or(CollectionCategory::Database),
                 collect_type: selected_mode().unwrap_or(CollectType::Full),
                 datasource_id: selected_datasource_id().unwrap_or_default(),
@@ -493,15 +466,28 @@ pub fn CollectionCreatePage() -> Element {
                 database_resource_id: selected_database_resource_id().unwrap_or_default(),
                 rule,
             };
+            // Create or update task
+            let result = if let Some(code) = task_code() {
+                collections::update_collection_task(request).await
+            } else {
+                collections::create_collection_task(request).await
+            };
 
-            match collections::create_collection_task(request).await {
-                Ok(_task) => {
-                    loading.set(false);
-                    navigator.push(Route::CollectionPage {});
+            match result {
+                Ok(task) => {
+                    // Store task code for future updates
+                    task_code.set(Some(task.code.clone()));
+
+                    // Update form state from saved task
+                    task_name.set(task.name);
+                    task_description.set(task.description);
+
+                    saving.set(false);
+                    current_step.set(next_step);
                 }
                 Err(e) => {
-                    error_msg.set(format!("Failed to create task: {:?}", e));
-                    loading.set(false);
+                    error_msg.set(format!("保存失败: {:?}", e));
+                    saving.set(false);
                 }
             }
         });
@@ -892,8 +878,11 @@ pub fn CollectionCreatePage() -> Element {
                         div { class: "card-actions justify-end mt-6",
                             button {
                                 class: "btn btn-primary",
-                                disabled: task_name().is_empty() || selected_mode().is_none(),
+                                disabled: task_name().is_empty() || selected_mode().is_none() || saving(),
                                 onclick: move |_| current_step.set(2),
+                                if saving() {
+                                    span { class: "loading loading-spinner loading-sm mr-2" }
+                                }
                                 "Next →"
                             }
                         }
@@ -973,14 +962,19 @@ pub fn CollectionCreatePage() -> Element {
                             button {
                                 class: "btn",
                                 onclick: move |_| current_step.set(1),
+                                disabled: saving(),
                                 "← Back"
                             }
                             button {
                                 class: "btn btn-primary",
                                 disabled: selected_datasource_id().is_none() ||
                                     (selected_mode() == Some(CollectType::Incremental) && selected_queue_resource_id().is_none()) ||
-                                    (selected_mode() == Some(CollectType::Full) && selected_category() == Some(CollectionCategory::Database) && selected_database_resource_id().is_none()),
-                                onclick: move |_| current_step.set(3),
+                                    (selected_mode() == Some(CollectType::Full) && selected_category() == Some(CollectionCategory::Database) && selected_database_resource_id().is_none()) ||
+                                    saving(),
+                                onclick: move |_| save_and_continue(3),
+                                if saving() {
+                                    span { class: "loading loading-spinner loading-sm mr-2" }
+                                }
                                 "Next →"
                             }
                         }
@@ -1003,6 +997,7 @@ pub fn CollectionCreatePage() -> Element {
                             button {
                                 class: "btn",
                                 onclick: move |_| current_step.set(2),
+                                disabled: saving(),
                                 "← Back"
                             }
                             button {
@@ -1015,8 +1010,11 @@ pub fn CollectionCreatePage() -> Element {
                                     } else {
                                         true
                                     }
-                                },
-                                onclick: move |_| current_step.set(4),
+                                } || saving(),
+                                onclick: move |_| save_and_continue(4),
+                                if saving() {
+                                    span { class: "loading loading-spinner loading-sm mr-2" }
+                                }
                                 "Next →"
                             }
                         }
@@ -1047,6 +1045,7 @@ pub fn CollectionCreatePage() -> Element {
                             button {
                                 class: "btn",
                                 onclick: move |_| current_step.set(3),
+                                disabled: saving(),
                                 "← Back"
                             }
                             button {
@@ -1063,8 +1062,11 @@ pub fn CollectionCreatePage() -> Element {
                                     } else {
                                         true
                                     }
-                                },
-                                onclick: move |_| current_step.set(5),
+                                } || saving(),
+                                onclick: move |_| save_and_continue(5),
+                                if saving() {
+                                    span { class: "loading loading-spinner loading-sm mr-2" }
+                                }
                                 "Next →"
                             }
                         }
@@ -1181,17 +1183,20 @@ pub fn CollectionCreatePage() -> Element {
                             button {
                                 class: "btn",
                                 onclick: move |_| current_step.set(4),
+                                disabled: saving(),
                                 "← Back"
                             }
                             button {
                                 class: "btn btn-primary",
-                                disabled: loading() || test_running() || (!test_completed() && selected_category() == Some(CollectionCategory::Database)),
+                                disabled: loading() || test_running() || saving() || (!test_completed() && selected_category() == Some(CollectionCategory::Database)),
                                 onclick: submit_handler,
+                                if loading() || saving() {
+                                    span { class: "loading loading-spinner loading-sm mr-2" }
+                                }
                                 if loading() {
-                                    span { class: "loading loading-spinner" }
-                                    "Creating..."
+                                    "Applying..."
                                 } else {
-                                    "Create Task"
+                                    "Apply Task"
                                 }
                             }
                         }

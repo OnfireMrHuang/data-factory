@@ -1,5 +1,6 @@
 use chrono::{DateTime, NaiveDateTime, Utc, Local};
 use serde::{Deserialize, Deserializer, Serialize};
+use strum::Display;
 
 /// Custom deserializer for DateTime fields from backend
 /// Backend sends dates in format "2025-11-03 10:13:27"
@@ -65,12 +66,18 @@ pub struct CollectTask {
     pub applied_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]
+#[derive(Clone, PartialEq, Deserialize, Serialize, Debug, Display)]
 #[serde(rename_all = "lowercase")]
 pub enum CollectionCategory {
     Database,
     Api,
     Crawler,
+}
+
+impl Default for CollectionCategory {
+    fn default() -> Self {
+        CollectionCategory::Database
+    }
 }
 
 impl CollectionCategory {
@@ -84,11 +91,17 @@ impl CollectionCategory {
     }
 }
 
-#[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]
+#[derive(Clone, PartialEq, Deserialize, Serialize, Debug, Display)]
 #[serde(rename_all = "lowercase")]
 pub enum CollectType {
     Full,
     Incremental,
+}
+
+impl Default for CollectType {
+    fn default() -> Self {
+        CollectType::Full
+    }
 }
 
 impl CollectType {
@@ -340,22 +353,15 @@ pub struct ResourceInfo {
 }
 
 #[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]
-pub struct CreateCollectTaskRequest {
+pub struct CreateOrUpdateCollectTaskRequest {
+    pub code: String,
     pub name: String,
-    pub description: Option<String>,
+    pub description: String,
     pub category: CollectionCategory,
     pub collect_type: CollectType,
     pub datasource_id: String,
     pub queue_resource_id: String,
     pub database_resource_id: String,
-    pub rule: serde_json::Value,
-}
-
-#[derive(Clone, PartialEq, Deserialize, Serialize, Debug)]
-pub struct UpdateCollectTaskRequest {
-    pub code: String,
-    pub name: String,
-    pub description: Option<String>,
     pub rule: serde_json::Value,
 }
 

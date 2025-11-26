@@ -9,8 +9,7 @@ use crate::services::project::ProjectServiceImpl;
 use crate::services::resource::ResourceServiceImpl;
 use crate::services::datasource::DataSourceServiceImpl;
 use crate::services::collection_service::CollectionServiceImpl;
-use crate::services::{ProjectService, ResourceService, DataSourceService};
-use crate::services::collection_service::CollectionService;
+use crate::services::{ProjectService, ResourceService, DataSourceService, CollectionService};
 
 module! {
     pub AutoFacModule {

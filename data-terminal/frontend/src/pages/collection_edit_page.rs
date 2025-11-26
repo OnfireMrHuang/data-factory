@@ -534,18 +534,19 @@ pub fn CollectionEditPage(id: String) -> Element {
                 }
             };
 
-            let request = UpdateCollectTaskRequest {
+            let request = CreateOrUpdateCollectTaskRequest {
                 code: task_id.clone(),
                 name: task_name(),
-                description: if task_description().is_empty() {
-                    None
-                } else {
-                    Some(task_description())
-                },
+                description: task_description(),
+                category: collection_category().unwrap(),
+                collect_type: collection_type().unwrap(),
+                datasource_id: datasource_id().unwrap(),
+                queue_resource_id: queue_resource_id().unwrap(),
+                database_resource_id: database_resource_id().unwrap(),
                 rule,
             };
 
-            match collections::update_collection_task(&task_id, request).await {
+            match collections::update_collection_task(request).await {
                 Ok(_task) => {
                     saving.set(false);
                     navigator.push(Route::CollectionPage {});

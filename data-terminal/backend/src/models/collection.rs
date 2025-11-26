@@ -350,25 +350,17 @@ pub enum FieldTransformation {
 // DTOs (Data Transfer Objects)
 // ============================================================================
 
-/// Request DTO for creating a collection task
+
 #[derive(Debug, Deserialize, Serialize)]
-pub struct CreateCollectTaskRequest {
+pub struct CreateOrUpdateCollectTaskRequest {
+    pub code: String,
     pub name: String,
-    pub description: Option<String>,
+    pub description: String,
     pub category: CollectionCategory,
     pub collect_type: CollectType,
     pub datasource_id: String,
     pub queue_resource_id: String,
     pub database_resource_id: String,
-    pub rule: CollectionRule,
-}
-
-/// Request DTO for updating a collection task
-#[derive(Debug, Deserialize, Serialize)]
-pub struct UpdateCollectTaskRequest {
-    pub code: String,
-    pub name: Option<String>,
-    pub description: Option<String>,
     pub rule: Option<CollectionRule>,
 }
 
@@ -418,19 +410,19 @@ impl From<CollectTask> for CollectTaskReadOnly {
     }
 }
 
-impl From<CreateCollectTaskRequest> for CollectTask {
-    fn from(request: CreateCollectTaskRequest) -> Self {
+impl From<CreateOrUpdateCollectTaskRequest> for CollectTask {
+    fn from(request: CreateOrUpdateCollectTaskRequest) -> Self {
         Self {
             id: String::new(), // Will be set by service
             code: String::new(), // Will be set by service
             name: request.name,
-            description: request.description.unwrap_or_default(),
+            description: request.description,
             category: request.category,
             collect_type: request.collect_type,
             datasource_id: request.datasource_id,
             queue_resource_id: request.queue_resource_id,
             database_resource_id: request.database_resource_id,
-            rule: request.rule,
+            rule: request.rule.unwrap_or_default(),
             stage: TaskStage::Draft,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),

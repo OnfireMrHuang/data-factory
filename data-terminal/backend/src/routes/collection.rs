@@ -48,7 +48,7 @@ pub struct Pagination {
 #[debug_handler]
 async fn create_collection_task(
     claims: Claims,
-    Json(request): Json<CreateCollectTaskRequest>,
+    Json(request): Json<CreateOrUpdateCollectTaskRequest>,
 ) -> (StatusCode, Json<Response<CollectTaskReadOnly>>) {
     let result = autofac::get_global_app_state_ref()
         .get_collection_service()
@@ -83,7 +83,7 @@ async fn get_collection_task(
 #[debug_handler]
 async fn update_collection_task(
     claims: Claims,
-    Json(request): Json<UpdateCollectTaskRequest>,
+    Json(request): Json<CreateOrUpdateCollectTaskRequest>,
 ) -> (StatusCode, Json<Response<CollectTaskReadOnly>>) {
     let result = autofac::get_global_app_state_ref()
         .get_collection_service()

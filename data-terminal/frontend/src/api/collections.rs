@@ -32,6 +32,7 @@ pub async fn fetch_collection_tasks(
     let client = create_api_client();
     let mut builder = RequestBuilder::new();
 
+    builder = builder.header("Content-Type", "application/json");
     if let Some(p) = page {
         builder = builder.query_param("page", p);
     }
@@ -66,7 +67,7 @@ pub async fn fetch_collection_task_by_code(
     stage: Option<&str>,
 ) -> Result<CollectTask, RequestError> {
     let client = create_api_client();
-    let mut builder = RequestBuilder::new().query_param("code", code);
+    let mut builder = RequestBuilder::new().header("Content-Type", "application/json").query_param("code", code);
 
     if let Some(s) = stage {
         builder = builder.query_param("stage", s);
@@ -85,14 +86,18 @@ pub async fn fetch_collection_task_by_code(
 }
 
 /// Create a new collection task
-/// Returns the task code on success
+/// Returns the created task on success
 pub async fn create_collection_task(
-    request: CreateCollectTaskRequest,
-) -> Result<String, RequestError> {
+    request: CreateOrUpdateCollectTaskRequest,
+) -> Result<CollectTask, RequestError> {
     let client = create_api_client();
 
-    let api_response: ApiResponse<String> = client
-        .post_json("/api/v1/collection/add", None, request)
+    let req_config = RequestBuilder::new()
+    .header("Content-Type", "application/json")
+    .build();
+
+    let api_response: ApiResponse<CollectTask> = client
+        .post_json("/api/v1/collection/add", Some(req_config), request)
         .await?;
 
     if !api_response.result {
@@ -103,15 +108,18 @@ pub async fn create_collection_task(
 }
 
 /// Update an existing collection task
-/// Returns the task code on success
+/// Returns the updated task on success
 pub async fn update_collection_task(
-    code: &str,
-    request: UpdateCollectTaskRequest,
-) -> Result<String, RequestError> {
+    request: CreateOrUpdateCollectTaskRequest,
+) -> Result<CollectTask, RequestError> {
     let client = create_api_client();
 
-    let api_response: ApiResponse<String> = client
-        .post_json("/api/v1/collection/update", None, request)
+    let req_config = RequestBuilder::new()
+    .header("Content-Type", "application/json")
+    .build();
+
+    let api_response: ApiResponse<CollectTask> = client
+        .post_json("/api/v1/collection/update", Some(req_config), request)
         .await?;
 
     if !api_response.result {
@@ -140,10 +148,10 @@ pub async fn delete_collection_task(code: &str) -> Result<(), RequestError> {
 }
 
 /// Apply a collection task to the data engine
-pub async fn apply_collection_task(code: &str) -> Result<String, RequestError> {
+pub async fn apply_collection_task(code: &str) -> Result<CollectTask, RequestError> {
     let client = create_api_client();
 
-    let api_response: ApiResponse<String> = client
+    let api_response: ApiResponse<CollectTask> = client
         .post_json(&format!("/api/v1/collection/{}/apply", code), None, serde_json::json!({}))
         .await?;
 
