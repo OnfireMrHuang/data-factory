@@ -26,6 +26,11 @@ pub fn CollectionPage() -> Element {
     // Page input for direct navigation
     let mut page_input = use_signal(String::new);
 
+    // Delete confirmation dialog state
+    let mut show_delete_dialog = use_signal(|| false);
+    let mut task_to_delete = use_signal(|| None::<String>);
+    let mut delete_loading = use_signal(|| false);
+
     // Load tasks on mount and when filters/page change
     use_effect(move || {
         spawn(async move {
@@ -228,14 +233,27 @@ pub fn CollectionPage() -> Element {
                                     td {
                                         div { class: "flex gap-2",
                                             {
-                                                let edit_id = task.id.clone();
+                                                let edit_code = task.code.clone();
+                                                let delete_code = task.code.clone();
                                                 rsx! {
+                                                    // Edit button
                                                     button {
-                                                        class: "btn btn-sm btn-ghost",
+                                                        class: "btn btn-sm btn-ghost text-blue-500",
                                                         onclick: move |_| {
-                                                            navigator.push(Route::CollectionEditPage { id: edit_id.clone() });
+                                                            navigator.push(Route::CollectionEditPage { code: edit_code.clone() });
                                                         },
-                                                        span { "..."}
+                                                        span { "✏️" }
+                                                        span { "编辑" }
+                                                    }
+                                                    // Delete button
+                                                    button {
+                                                        class: "btn btn-sm btn-ghost text-red-500",
+                                                        onclick: move |_| {
+                                                            task_to_delete.set(Some(delete_code.clone()));
+                                                            show_delete_dialog.set(true);
+                                                        },
+                                                        span { "🗑️" }
+                                                        span { "删除" }
                                                     }
                                                 }
                                             }
@@ -385,6 +403,81 @@ pub fn CollectionPage() -> Element {
                     }
                 }
             }
+            }
+
+            // Delete Confirmation Dialog
+            if show_delete_dialog() {
+                div {
+                    class: "modal modal-open",
+                    div { class: "modal-box",
+                        h3 { class: "font-bold text-lg mb-4", "确认删除" }
+                        p { class: "py-4",
+                            "确定要删除这个采集任务吗？此操作不可撤销。"
+                        }
+                        div { class: "modal-action",
+                            button {
+                                class: "btn btn-ghost",
+                                disabled: delete_loading(),
+                                onclick: move |_| {
+                                    show_delete_dialog.set(false);
+                                    task_to_delete.set(None);
+                                },
+                                "取消"
+                            }
+                            button {
+                                class: "btn btn-error",
+                                disabled: delete_loading(),
+                                onclick: move |_| {
+                                    let task_id = task_to_delete().clone();
+                                    spawn(async move {
+                                        delete_loading.set(true);
+                                        if let Some(id) = task_id {
+                                            match collections::delete_collection_task(&id).await {
+                                                Ok(_) => {
+                                                    show_delete_dialog.set(false);
+                                                    task_to_delete.set(None);
+                                                    // Reload tasks after successful deletion
+                                                    loading.set(true);
+                                                    match collections::fetch_collection_tasks(
+                                                        Some(current_page()),
+                                                        Some(page_size()),
+                                                        None,
+                                                        None,
+                                                        None
+                                                    ).await {
+                                                        Ok(response) => {
+                                                            tasks.set(response.data);
+                                                            total_items.set(response.pagination.total);
+                                                            error_msg.set(String::new());
+                                                        }
+                                                        Err(e) => {
+                                                            error_msg.set(format!("Failed to reload tasks: {:?}", e));
+                                                        }
+                                                    }
+                                                    loading.set(false);
+                                                }
+                                                Err(e) => {
+                                                    error_msg.set(format!("Failed to delete task: {:?}", e));
+                                                }
+                                            }
+                                        }
+                                        delete_loading.set(false);
+                                    });
+                                },
+                                {
+                                    if delete_loading() {
+                                        rsx! {
+                                            span { class: "loading loading-spinner loading-sm" }
+                                            "删除中..."
+                                        }
+                                    } else {
+                                        rsx! { "确认删除" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

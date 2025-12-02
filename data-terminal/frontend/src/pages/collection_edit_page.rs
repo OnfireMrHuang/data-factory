@@ -327,7 +327,7 @@ fn IncrementalRuleDefinition(
 
 /// T054: CollectionEditPage - Edit existing collection tasks
 #[component]
-pub fn CollectionEditPage(id: String) -> Element {
+pub fn CollectionEditPage(code: String) -> Element {
     let navigator = use_navigator();
 
     // Tab state
@@ -370,16 +370,16 @@ pub fn CollectionEditPage(id: String) -> Element {
     let mut loading = use_signal(|| true);
     let mut saving = use_signal(|| false);
     let mut error_msg = use_signal(|| String::new());
-    let id_for_submit = id.clone();
+    let code_for_submit = code.clone();
 
     // Load task data on mount
     use_effect(move || {
-        let id_clone = id.clone();
+        let code_clone = code.clone();
         spawn(async move {
             loading.set(true);
 
             // Fetch task details
-            match collections::fetch_collection_task_by_code(&id_clone.clone(), None).await {
+            match collections::fetch_collection_task_by_code(&code_clone.clone(), None).await {
                 Ok(task) => {
                     // Populate basic info
                     task_name.set(task.name.clone());
@@ -476,7 +476,7 @@ pub fn CollectionEditPage(id: String) -> Element {
 
     // Submit handler
     let submit_handler = move |_| {
-        let task_id = id_for_submit.clone();
+        let task_code = code_for_submit.clone();
         spawn(async move {
             saving.set(true);
 
@@ -535,7 +535,7 @@ pub fn CollectionEditPage(id: String) -> Element {
             };
 
             let request = CreateOrUpdateCollectTaskRequest {
-                code: task_id.clone(),
+                code: task_code.clone(),
                 name: task_name(),
                 description: task_description(),
                 category: collection_category().unwrap(),

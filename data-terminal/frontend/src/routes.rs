@@ -63,8 +63,8 @@ pub enum Route {
             CollectionPage {},
             #[route("/create")]
             CollectionCreatePage {},
-            #[route("/edit/:id")]
-            CollectionEditPage { id: String },
+            #[route("/edit/:code")]
+            CollectionEditPage { code: String },
         #[end_nest]
     #[end_layout]
 
