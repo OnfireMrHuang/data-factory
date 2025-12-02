@@ -138,8 +138,10 @@ pub fn CollectionPage() -> Element {
                     span { class: "loading loading-spinner loading-lg" }
                 }
             } else if filtered_tasks().is_empty() {
-                div { class: "alert alert-info flex-1",
-                    "No collection tasks found. Click 'Create Collection Task' to get started."
+                div { class: "flex flex-1 items-center justify-center min-h-64 bg-base-100",
+                    div { class: "text-base-content text-lg opacity-60",
+                        "点击右上角创建你的第一个采集任务"
+                    }
                 }
             } else {
                 // Tasks table with flex-1 to push pagination to bottom
