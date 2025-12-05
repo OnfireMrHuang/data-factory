@@ -573,7 +573,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         id: 1,
                         title: "数据库连接检查".to_string(),
                         description: "验证数据源连接是否正常".to_string(),
-                        status: TestStepStatus::Pending,
+                        status: TestRunStatus::Pending,
                         error_message: None,
                         start_time: None,
                         end_time: None,
@@ -582,7 +582,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         id: 2,
                         title: "行新增规则检查".to_string(),
                         description: "验证行新增规则配置是否正确".to_string(),
-                        status: TestStepStatus::Pending,
+                        status: TestRunStatus::Pending,
                         error_message: None,
                         start_time: None,
                         end_time: None,
@@ -591,7 +591,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         id: 3,
                         title: "字段更新规则检查".to_string(),
                         description: "验证字段更新规则配置是否正确".to_string(),
-                        status: TestStepStatus::Pending,
+                        status: TestRunStatus::Pending,
                         error_message: None,
                         start_time: None,
                         end_time: None,
@@ -600,7 +600,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         id: 4,
                         title: "全量初始检查".to_string(),
                         description: "检查全量初始化配置".to_string(),
-                        status: TestStepStatus::Pending,
+                        status: TestRunStatus::Pending,
                         error_message: None,
                         start_time: None,
                         end_time: None,
@@ -609,7 +609,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         id: 5,
                         title: "全量初始化预览".to_string(),
                         description: "预览初始化数据".to_string(),
-                        status: TestStepStatus::Pending,
+                        status: TestRunStatus::Pending,
                         error_message: None,
                         start_time: None,
                         end_time: None,
@@ -621,7 +621,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         id: 1,
                         title: "数据库连接检查".to_string(),
                         description: "验证数据源连接是否正常".to_string(),
-                        status: TestStepStatus::Pending,
+                        status: TestRunStatus::Pending,
                         error_message: None,
                         start_time: None,
                         end_time: None,
@@ -630,7 +630,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         id: 2,
                         title: "创建临时目标表".to_string(),
                         description: "根据DDL创建临时测试表".to_string(),
-                        status: TestStepStatus::Pending,
+                        status: TestRunStatus::Pending,
                         error_message: None,
                         start_time: None,
                         end_time: None,
@@ -639,7 +639,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         id: 3,
                         title: "字段一致性检查".to_string(),
                         description: "检查取数字段与目标表字段是否匹配".to_string(),
-                        status: TestStepStatus::Pending,
+                        status: TestRunStatus::Pending,
                         error_message: None,
                         start_time: None,
                         end_time: None,
@@ -648,7 +648,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         id: 4,
                         title: "执行单次采集".to_string(),
                         description: "执行一次采集任务(最大20行)".to_string(),
-                        status: TestStepStatus::Pending,
+                        status: TestRunStatus::Pending,
                         error_message: None,
                         start_time: None,
                         end_time: None,
@@ -657,7 +657,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         id: 5,
                         title: "预览临时目标表".to_string(),
                         description: "查看采集到的数据".to_string(),
-                        status: TestStepStatus::Pending,
+                        status: TestRunStatus::Pending,
                         error_message: None,
                         start_time: None,
                         end_time: None,
@@ -666,7 +666,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         id: 6,
                         title: "删除临时目标表".to_string(),
                         description: "清理测试数据".to_string(),
-                        status: TestStepStatus::Pending,
+                        status: TestRunStatus::Pending,
                         error_message: None,
                         start_time: None,
                         end_time: None,
@@ -688,7 +688,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                 current_test_step.set(idx);
 
                 let mut updated_steps = test_steps();
-                updated_steps[idx].status = TestStepStatus::Running;
+                updated_steps[idx].status = TestRunStatus::Running;
                 updated_steps[idx].start_time = Some(Local::now());
                 test_steps.set(updated_steps.clone());
 
@@ -778,9 +778,9 @@ pub fn CollectionEditPage(code: String) -> Element {
                 match result {
                     Ok(step_result) => {
                         updated_steps[idx].status = if step_result.success {
-                            TestStepStatus::Success
+                            TestRunStatus::Success
                         } else {
-                            TestStepStatus::Failed
+                            TestRunStatus::Failed
                         };
                         updated_steps[idx].error_message = step_result.error_message;
                         updated_steps[idx].end_time = Some(Local::now());
@@ -800,7 +800,7 @@ pub fn CollectionEditPage(code: String) -> Element {
                         }
                     }
                     Err(e) => {
-                        updated_steps[idx].status = TestStepStatus::Failed;
+                        updated_steps[idx].status = TestRunStatus::Failed;
                         updated_steps[idx].error_message = Some(e.clone());
                         updated_steps[idx].end_time = Some(Local::now());
 

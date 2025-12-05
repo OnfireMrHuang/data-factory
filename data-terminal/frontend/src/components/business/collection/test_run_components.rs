@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use crate::models::collection::{
-    TestStep, TestStepStatus, LogLevel, LogEntry, CollectionCategory, CollectType,
+    TestStep, TestRunStatus, LogLevel, LogEntry, CollectionCategory, CollectType,
     IncrementalRuleForm, collect_test_run_step
 };
 use crate::models::datasource::DataSource;
@@ -22,9 +22,9 @@ pub fn TestRunTimeline(
                         if index > 0 {
                             hr {
                                 class: match step.status {
-                                    TestStepStatus::Success => "bg-success",
-                                    TestStepStatus::Failed => "bg-error",
-                                    TestStepStatus::Running => "bg-primary",
+                                    TestRunStatus::Success => "bg-success",
+                                    TestRunStatus::Failed => "bg-error",
+                                    TestRunStatus::Running => "bg-primary",
                                     _ => ""
                                 }
                             }
@@ -34,13 +34,13 @@ pub fn TestRunTimeline(
                             div { class: "flex items-center gap-2",
                                 // Status icon
                                 match step.status {
-                                    TestStepStatus::Pending => rsx! {
+                                    TestRunStatus::Pending => rsx! {
                                         span { class: "loading loading-ring loading-sm text-gray-400" }
                                     },
-                                    TestStepStatus::Running => rsx! {
+                                    TestRunStatus::Running => rsx! {
                                         span { class: "loading loading-spinner loading-sm text-primary" }
                                     },
-                                    TestStepStatus::Success => rsx! {
+                                    TestRunStatus::Success => rsx! {
                                         svg { class: "w-5 h-5 text-success",
                                             xmlns: "http://www.w3.org/2000/svg",
                                             fill: "none",
@@ -54,7 +54,7 @@ pub fn TestRunTimeline(
                                             }
                                         }
                                     },
-                                    TestStepStatus::Failed => rsx! {
+                                    TestRunStatus::Failed => rsx! {
                                         svg { class: "w-5 h-5 text-error",
                                             xmlns: "http://www.w3.org/2000/svg",
                                             fill: "none",
@@ -68,7 +68,7 @@ pub fn TestRunTimeline(
                                             }
                                         }
                                     },
-                                    TestStepStatus::Skipped => rsx! {
+                                    TestRunStatus::Skipped => rsx! {
                                         svg { class: "w-5 h-5 text-gray-400",
                                             xmlns: "http://www.w3.org/2000/svg",
                                             fill: "none",
@@ -126,9 +126,9 @@ pub fn TestRunTimeline(
                         if index < steps.len() - 1 {
                             hr {
                                 class: match steps.get(index + 1).map(|s| &s.status) {
-                                    Some(TestStepStatus::Success) => "bg-success",
-                                    Some(TestStepStatus::Failed) => "bg-error",
-                                    Some(TestStepStatus::Running) => "bg-primary",
+                                    Some(TestRunStatus::Success) => "bg-success",
+                                    Some(TestRunStatus::Failed) => "bg-error",
+                                    Some(TestRunStatus::Running) => "bg-primary",
                                     _ => ""
                                 }
                             }
@@ -326,7 +326,7 @@ pub fn DatabaseTestRun(
 
                 // Update step status to running
                 let mut updated_steps = test_steps();
-                updated_steps[idx].status = TestStepStatus::Running;
+                updated_steps[idx].status = TestRunStatus::Running;
                 updated_steps[idx].start_time = Some(Local::now());
                 test_steps.set(updated_steps.clone());
 
@@ -454,9 +454,9 @@ pub fn DatabaseTestRun(
                 match result {
                     Ok(step_result) => {
                         updated_steps[idx].status = if step_result.success {
-                            TestStepStatus::Success
+                            TestRunStatus::Success
                         } else {
-                            TestStepStatus::Failed
+                            TestRunStatus::Failed
                         };
                         updated_steps[idx].error_message = step_result.error_message;
                         updated_steps[idx].end_time = Some(Local::now());
@@ -478,7 +478,7 @@ pub fn DatabaseTestRun(
                         }
                     }
                     Err(e) => {
-                        updated_steps[idx].status = TestStepStatus::Failed;
+                        updated_steps[idx].status = TestRunStatus::Failed;
                         updated_steps[idx].error_message = Some(e.clone());
                         updated_steps[idx].end_time = Some(Local::now());
 
