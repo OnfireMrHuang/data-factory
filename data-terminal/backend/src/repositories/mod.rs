@@ -2,6 +2,7 @@ pub mod project;
 pub mod resource;
 pub mod datasource;
 pub mod collection_task;
+pub mod test_run;
 
 use async_trait::async_trait;
 use shaku::Interface;

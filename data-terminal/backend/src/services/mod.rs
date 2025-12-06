@@ -2,6 +2,7 @@ pub mod project;
 pub mod resource;
 pub mod datasource;
 pub mod collection_service;
+pub mod test_run_service;
 
 use async_trait::async_trait;
 use crate::models::project::Project;
@@ -10,6 +11,7 @@ use crate::models::web::PageQuery;
 use crate::models::resource::{Resource, ResourceReadOnly, ResourceCreateUpdate};
 use crate::models::datasource::{DataSource, DataSourceReadOnly, DataSourceCreateUpdate};
 use crate::models::collection::*;
+use crate::models::test_run::*;
 use shaku::Interface;
 
 #[async_trait]
@@ -73,4 +75,12 @@ pub trait CollectionService: Interface + Send {
     ) -> Result<(Vec<CollectTaskReadOnly>, i64), Error>;
 
     async fn apply_task(&self, project_code: String, id: &str) -> Result<CollectTaskReadOnly, Error>;
+}
+
+#[async_trait]
+pub trait TestRunService: Interface + Send {
+    async fn execute_test_run(&self, project_code: String, collection_code: &str) -> Result<String, Error>;
+    async fn get_test_run_status(&self, project_code: String, task_id: &str) -> Result<TestRunStatusResponse, Error>;
+    async fn get_test_run_logs(&self, project_code: String, task_id: &str, start_timestamp: Option<i64>) -> Result<TestLogResponse, Error>;
+    async fn get_test_run_preview(&self, project_code: String, task_id: &str) -> Result<TablePreviewResponse, Error>;
 }

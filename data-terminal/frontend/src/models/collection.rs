@@ -404,12 +404,12 @@ impl Default for IncrementalRuleForm {
 
 /// Test run step status
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum TestRunStatus {
     Pending,
     Running,
     Success,
     Failed,
-    Skipped,
 }
 
 /// Test run step data
@@ -440,122 +440,4 @@ pub struct LogEntry {
     pub level: LogLevel,
     pub message: String,
     pub details: Option<String>,
-}
-
-
-pub async fn collect_test_run_step(collect_category: Option<CollectionCategory>, collect_type: Option<CollectType>) -> Vec<TestStep> {
-    let steps = match collect_category {
-        Some(CollectionCategory::Database) => {
-            if collect_type == Some(CollectType::Full) {
-                vec![
-                    TestStep {
-                        id: 1,
-                        title: "数据库连接检查".to_string(),
-                        description: "验证数据源连接是否正常".to_string(),
-                        status: TestRunStatus::Pending,
-                        error_message: None,
-                        start_time: None,
-                        end_time: None,
-                    },
-                    TestStep {
-                        id: 2,
-                        title: "行新增规则检查".to_string(),
-                        description: "验证行新增规则配置是否正确".to_string(),
-                        status: TestRunStatus::Pending,
-                        error_message: None,
-                        start_time: None,
-                        end_time: None,
-                    },
-                    TestStep {
-                        id: 3,
-                        title: "字段更新规则检查".to_string(),
-                        description: "验证字段更新规则配置是否正确".to_string(),
-                        status: TestRunStatus::Pending,
-                        error_message: None,
-                        start_time: None,
-                        end_time: None,
-                    },
-                    TestStep {
-                        id: 4,
-                        title: "全量初始检查".to_string(),
-                        description: "检查全量初始化配置".to_string(),
-                        status: TestRunStatus::Pending,
-                        error_message: None,
-                        start_time: None,
-                        end_time: None,
-                    },
-                    TestStep {
-                        id: 5,
-                        title: "全量初始化预览".to_string(),
-                        description: "预览初始化数据".to_string(),
-                        status: TestRunStatus::Pending,
-                        error_message: None,
-                        start_time: None,
-                        end_time: None,
-                    },
-                ]    
-            } else {
-                vec![
-                    TestStep {
-                        id: 1,
-                        title: "数据库连接检查".to_string(),
-                        description: "验证数据源连接是否正常".to_string(),
-                        status: TestRunStatus::Pending,
-                        error_message: None,
-                        start_time: None,
-                        end_time: None,
-                    },
-                    TestStep {
-                        id: 2,
-                        title: "创建临时目标表".to_string(),
-                        description: "根据DDL创建临时测试表".to_string(),
-                        status: TestRunStatus::Pending,
-                        error_message: None,
-                        start_time: None,
-                        end_time: None,
-                    },
-                    TestStep {
-                        id: 3,
-                        title: "字段一致性检查".to_string(),
-                        description: "检查取数字段与目标表字段是否匹配".to_string(),
-                        status: TestRunStatus::Pending,
-                        error_message: None,
-                        start_time: None,
-                        end_time: None,
-                    },
-                    TestStep {
-                        id: 4,
-                        title: "执行单次采集".to_string(),
-                        description: "执行一次采集任务(最大20行)".to_string(),
-                        status: TestRunStatus::Pending,
-                        error_message: None,
-                        start_time: None,
-                        end_time: None,
-                    },
-                    TestStep {
-                        id: 5,
-                        title: "预览临时目标表".to_string(),
-                        description: "查看采集到的数据".to_string(),
-                        status: TestRunStatus::Pending,
-                        error_message: None,
-                        start_time: None,
-                        end_time: None,
-                    },
-                    TestStep {
-                        id: 6,
-                        title: "删除临时目标表".to_string(),
-                        description: "清理测试数据".to_string(),
-                        status: TestRunStatus::Pending,
-                        error_message: None,
-                        start_time: None,
-                        end_time: None,
-                    },
-                ]        
-            }
-        }
-        // Some(CollectionCategory::Api) => {}
-        // Some(CollectionCategory::Crawler) => {}
-        _ => vec![]
-    };
-    steps
 }

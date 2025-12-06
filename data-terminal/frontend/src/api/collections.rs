@@ -2,6 +2,7 @@
 
 use crate::api::client::create_api_client;
 use crate::models::collection::*;
+use crate::models::test_run::*;
 use crate::utils::error::RequestError;
 use crate::utils::request::{HttpRequest, RequestBuilder};
 use serde::Deserialize;
@@ -162,17 +163,90 @@ pub async fn apply_collection_task(code: &str) -> Result<CollectTask, RequestErr
     Ok(api_response.data)
 }
 
-/// test run collection task
-pub async fn test_run_collection_test(code: &str) -> Result<String, RequestError> {
+// ============================================================================
+// Test Run API Operations
+// ============================================================================
+
+/// Execute a test run for a collection task
+pub async fn execute_test_run(code: &str) -> Result<TestRunTaskIdResponse, RequestError> {
     let client = create_api_client();
 
-    let api_response: ApiResponse<String> = client
-        .post_json(&format!("/api/v1/collection/{}/test", code), None, serde_json::json!({}))
+    let api_response: ApiResponse<TestRunTaskIdResponse> = client
+        .post_json(&format!("/api/v1/collection/{}/test_run", code), None, serde_json::json!({}))
         .await?;
 
     if !api_response.result {
         return Err(RequestError::api_error(api_response.msg));
     }
+
     Ok(api_response.data)
 }
 
+/// Get test run status with steps
+pub async fn get_test_run_status(code: &str, task_id: &str) -> Result<TestRunStatusResponse, RequestError> {
+    let client = create_api_client();
+
+    let config = RequestBuilder::new()
+        .header("Content-Type", "application/json")
+        .query_param("task_id", task_id)
+        .build();
+
+    let api_response: ApiResponse<TestRunStatusResponse> = client
+        .get_json(&format!("/api/v1/collection/{}/test_run_status", code), Some(config))
+        .await?;
+
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
+    }
+
+    Ok(api_response.data)
+}
+
+/// Get test run logs
+pub async fn get_test_run_logs(
+    code: &str,
+    task_id: &str,
+    start_timestamp: Option<i64>,
+) -> Result<TestLogResponse, RequestError> {
+    let client = create_api_client();
+
+    let mut builder = RequestBuilder::new()
+        .header("Content-Type", "application/json")
+        .query_param("task_id", task_id);
+
+    if let Some(ts) = start_timestamp {
+        builder = builder.query_param("start_timestamp", ts);
+    }
+
+    let config = builder.build();
+
+    let api_response: ApiResponse<TestLogResponse> = client
+        .get_json(&format!("/api/v1/collection/{}/test_run_logs", code), Some(config))
+        .await?;
+
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
+    }
+
+    Ok(api_response.data)
+}
+
+/// Get test run data preview
+pub async fn get_test_run_preview(code: &str, task_id: &str) -> Result<TablePreviewResponse, RequestError> {
+    let client = create_api_client();
+
+    let config = RequestBuilder::new()
+        .header("Content-Type", "application/json")
+        .query_param("task_id", task_id)
+        .build();
+
+    let api_response: ApiResponse<TablePreviewResponse> = client
+        .get_json(&format!("/api/v1/collection/{}/test_run_preview", code), Some(config))
+        .await?;
+
+    if !api_response.result {
+        return Err(RequestError::api_error(api_response.msg));
+    }
+
+    Ok(api_response.data)
+}

@@ -1,12 +1,77 @@
 use dioxus::prelude::*;
 use crate::models::collection::{
     TestStep, TestRunStatus, LogLevel, LogEntry, CollectionCategory, CollectType,
-    IncrementalRuleForm, collect_test_run_step
+    IncrementalRuleForm
 };
+use crate::models::test_run::{TestStepInfo, TestLogItem, LogLevel as ApiLogLevel};
 use crate::models::datasource::DataSource;
 use crate::models::resource::Resource;
-use crate::api::test_run_mock::{TestRunMockApi, PreviewDataResponse};
-use chrono::Local;
+use crate::api::collections;
+use chrono::{Local, DateTime};
+use gloo::timers::future::TimeoutFuture;
+
+/// Preview data response (local type for UI)
+#[derive(Debug, Clone)]
+pub struct PreviewDataResponse {
+    pub columns: Vec<String>,
+    pub rows: Vec<Vec<String>>,
+    pub total_rows: usize,
+}
+
+impl From<crate::models::test_run::TablePreviewResponse> for PreviewDataResponse {
+    fn from(value: crate::models::test_run::TablePreviewResponse) -> Self {
+        let total_rows = value.rows.len();
+        Self {
+            columns: value.columns,
+            rows: value.rows,
+            total_rows,
+        }
+    }
+}
+
+/// Convert API TestStepInfo to UI TestStep
+fn convert_step_info(step_info: TestStepInfo) -> TestStep {
+    // Convert API TestRunStatus to UI TestRunStatus
+    let status = match step_info.status {
+        crate::models::test_run::TestRunStatus::Pending => TestRunStatus::Pending,
+        crate::models::test_run::TestRunStatus::Running => TestRunStatus::Running,
+        crate::models::test_run::TestRunStatus::Success => TestRunStatus::Success,
+        crate::models::test_run::TestRunStatus::Failed => TestRunStatus::Failed,
+    };
+
+    TestStep {
+        id: step_info.id as usize,
+        title: step_info.title,
+        description: step_info.description,
+        status,
+        error_message: step_info.error_message,
+        start_time: step_info.start_time.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Local))),
+        end_time: step_info.end_time.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Local))),
+    }
+}
+
+/// Convert API TestLogItem to UI LogEntry
+fn convert_log_item(log_item: TestLogItem) -> LogEntry {
+    let level = match log_item.level {
+        ApiLogLevel::Info => LogLevel::Info,
+        ApiLogLevel::Success => LogLevel::Success,
+        ApiLogLevel::Warning => LogLevel::Warning,
+        ApiLogLevel::Error => LogLevel::Error,
+    };
+
+    let timestamp = DateTime::parse_from_rfc3339(&log_item.timestamp)
+        .ok()
+        .map(|dt| dt.with_timezone(&Local))
+        .unwrap_or_else(|| Local::now());
+
+    LogEntry {
+        timestamp,
+        level,
+        message: log_item.message,
+        details: log_item.details,
+    }
+}
+
 
 /// Test run timeline component
 #[component]
@@ -68,20 +133,6 @@ pub fn TestRunTimeline(
                                             }
                                         }
                                     },
-                                    TestRunStatus::Skipped => rsx! {
-                                        svg { class: "w-5 h-5 text-gray-400",
-                                            xmlns: "http://www.w3.org/2000/svg",
-                                            fill: "none",
-                                            view_box: "0 0 24 24",
-                                            stroke_width: "2",
-                                            stroke: "currentColor",
-                                            path {
-                                                stroke_linecap: "round",
-                                                stroke_linejoin: "round",
-                                                d: "M8 7h8m0 0v8m0-8l-8 8"
-                                            }
-                                        }
-                                    }
                                 }
 
                                 div {
@@ -256,6 +307,7 @@ pub fn DataPreviewTable(
 #[component]
 pub fn DatabaseTestRun(
     // Form data
+    task_code: String,
     task_name: String,
     selected_mode: CollectType,
     selected_category: CollectionCategory,
@@ -277,11 +329,10 @@ pub fn DatabaseTestRun(
     let mut test_steps = use_signal(|| Vec::<TestStep>::new());
     let mut test_logs = use_signal(|| Vec::<LogEntry>::new());
     let mut preview_data = use_signal(|| None::<PreviewDataResponse>);
-    let mut current_test_step = use_signal(|| 0);
-    let mut temp_table_name = use_signal(|| String::new());
     let mut test_completed = use_signal(|| false);
 
     // Clone values for use in both closure and rsx
+    let task_code_clone = task_code.clone();
     let task_name_clone = task_name.clone();
     let selected_mode_for_rsx = selected_mode.clone();
     let selected_datasource_id_for_rsx = selected_datasource_id.clone();
@@ -292,226 +343,159 @@ pub fn DatabaseTestRun(
 
     // Test run handler
     let test_run_handler = move |_| {
-        let selected_mode_clone = selected_mode.clone();
-        let selected_category_clone = selected_category.clone();
-        let selected_datasource_id_clone = selected_datasource_id.clone();
-        let row_update_rule_clone = row_update_rule.clone();
-        let field_update_rules_clone = field_update_rules.clone();
-        let ddl_sql_clone = ddl_sql.clone();
-        let select_sql_clone = select_sql.clone();
+        let collection_code = task_code_clone.clone();
 
         spawn(async move {
             test_running.set(true);
             test_completed.set(false);
             test_logs.set(Vec::new());
             preview_data.set(None);
-
-            // Initialize test steps based on collection mode
-            let steps = collect_test_run_step(Some(selected_category_clone.clone()), Some(selected_mode_clone.clone())).await;
-            test_steps.set(steps.clone());
+            test_steps.set(Vec::new());
 
             // Add initial log
-            let mut logs = test_logs();
+            let mut logs = Vec::new();
             logs.push(LogEntry {
                 timestamp: Local::now(),
                 level: LogLevel::Info,
-                message: "开始执行测试运行...".to_string(),
+                message: "正在启动测试运行...".to_string(),
                 details: None,
             });
-            test_logs.set(logs);
+            test_logs.set(logs.clone());
 
-            // Execute test steps
-            for (idx, step) in steps.iter().enumerate() {
-                current_test_step.set(idx);
+            // Step 1: Execute test run to get task_id
+            let task_id = match collections::execute_test_run(&collection_code).await {
+                Ok(response) => {
+                    logs.push(LogEntry {
+                        timestamp: Local::now(),
+                        level: LogLevel::Success,
+                        message: format!("测试运行已启动，任务ID: {}", response.task_id),
+                        details: None,
+                    });
+                    test_logs.set(logs.clone());
+                    response.task_id
+                }
+                Err(e) => {
+                    logs.push(LogEntry {
+                        timestamp: Local::now(),
+                        level: LogLevel::Error,
+                        message: format!("启动测试运行失败: {}", e),
+                        details: None,
+                    });
+                    test_logs.set(logs.clone());
+                    test_running.set(false);
+                    test_completed.set(true);
+                    on_test_completed.call(false);
+                    return;
+                }
+            };
 
-                // Update step status to running
-                let mut updated_steps = test_steps();
-                updated_steps[idx].status = TestRunStatus::Running;
-                updated_steps[idx].start_time = Some(Local::now());
-                test_steps.set(updated_steps.clone());
+            // Step 2: Poll for status until completion
+            let mut last_log_timestamp: Option<i64> = None;
+            let mut test_success = true;
 
-                // Add log for step start
-                let mut logs = test_logs();
-                logs.push(LogEntry {
-                    timestamp: Local::now(),
-                    level: LogLevel::Info,
-                    message: format!("执行步骤 {}: {}", step.id, step.title),
-                    details: None,
-                });
-                test_logs.set(logs);
+            loop {
+                // Wait 500ms before polling
+                TimeoutFuture::new(500).await;
 
-                // Execute step based on ID and mode
-                let result = if selected_mode_clone == CollectType::Incremental {
-                    match step.id {
-                        1 => {
-                            // Check database connection
-                            TestRunMockApi::check_database_connection(
-                                &selected_datasource_id_clone
-                            ).await
+                // Get test run status
+                match collections::get_test_run_status(&collection_code, &task_id).await {
+                    Ok(status_response) => {
+                        // Update steps
+                        let steps: Vec<TestStep> = status_response.steps
+                            .into_iter()
+                            .map(convert_step_info)
+                            .collect();
+                        test_steps.set(steps.clone());
+
+                        // Check if test is complete
+                        let is_complete = matches!(
+                            status_response.status,
+                            crate::models::test_run::TestRunStatus::Success | crate::models::test_run::TestRunStatus::Failed
+                        );
+
+                        if matches!(status_response.status, crate::models::test_run::TestRunStatus::Failed) {
+                            test_success = false;
                         }
-                        2 => {
-                            // Check row update rule
-                            TestRunMockApi::check_row_update_rule(
-                                &row_update_rule_clone.select_sql,
-                                &row_update_rule_clone.monitor_table,
-                                &row_update_rule_clone.monitor_sql
-                            ).await
-                        }
-                        3 => {
-                            // Check field update rules
-                            TestRunMockApi::check_field_update_rules(&field_update_rules_clone).await
-                        }
-                        4 => {
-                            // Full initial check
-                            TestRunMockApi::check_full_initial(&ddl_sql_clone).await
-                        }
-                        5 => {
-                            // Full initialization preview
-                            match TestRunMockApi::preview_full_initialization(&row_update_rule_clone.select_sql).await {
-                                Ok(data) => {
-                                    preview_data.set(Some(data.clone()));
-                                    Ok(crate::api::test_run_mock::TestStepResult {
-                                        step_id: 5,
-                                        success: true,
-                                        message: format!("成功预览 {} 行数据", data.total_rows),
-                                        error_message: None,
-                                        data: None,
-                                    })
+
+                        // Get logs
+                        if let Ok(logs_response) = collections::get_test_run_logs(
+                            &collection_code,
+                            &task_id,
+                            last_log_timestamp,
+                        ).await {
+                            // Convert and append new logs
+                            let new_logs: Vec<LogEntry> = logs_response.items
+                                .into_iter()
+                                .map(convert_log_item)
+                                .collect();
+
+                            if !new_logs.is_empty() {
+                                let mut current_logs = test_logs();
+                                current_logs.extend(new_logs);
+                                test_logs.set(current_logs);
+
+                                // Update last timestamp
+                                if let Some(last_log) = test_logs().last() {
+                                    last_log_timestamp = Some(last_log.timestamp.timestamp_millis());
                                 }
-                                Err(e) => Err(e),
                             }
                         }
-                        _ => Ok(crate::api::test_run_mock::TestStepResult {
-                            step_id: step.id,
-                            success: false,
-                            message: "Unknown step".to_string(),
-                            error_message: Some("Step not implemented".to_string()),
-                            data: None,
-                        }),
-                    }
-                } else {
-                    match step.id {
-                        1 => {
-                            // Check database connection
-                            TestRunMockApi::check_database_connection(
-                                &selected_datasource_id_clone
-                            ).await
-                        }
-                        2 => {
-                            // Create temporary table
-                            let result = TestRunMockApi::create_temp_table(&ddl_sql_clone).await;
-                            if let Ok(ref step_result) = result {
-                                if let Some(data) = &step_result.data {
-                                    if let Some(table_name) = data.get("table_name") {
-                                        if let Some(name) = table_name.as_str() {
-                                            temp_table_name.set(name.to_string());
-                                        }
+
+                        // If complete, get preview data and exit loop
+                        if is_complete {
+                            if test_success {
+                                match collections::get_test_run_preview(&collection_code, &task_id).await {
+                                    Ok(preview_response) => {
+                                        preview_data.set(Some(PreviewDataResponse {
+                                            columns: preview_response.columns,
+                                            rows: preview_response.rows.clone(),
+                                            total_rows: preview_response.rows.len(),
+                                        }));
+                                        logs.push(LogEntry {
+                                            timestamp: Local::now(),
+                                            level: LogLevel::Success,
+                                            message: "测试运行成功完成".to_string(),
+                                            details: None,
+                                        });
+                                    }
+                                    Err(e) => {
+                                        logs.push(LogEntry {
+                                            timestamp: Local::now(),
+                                            level: LogLevel::Warning,
+                                            message: format!("无法获取预览数据: {}", e),
+                                            details: None,
+                                        });
                                     }
                                 }
+                            } else {
+                                logs.push(LogEntry {
+                                    timestamp: Local::now(),
+                                    level: LogLevel::Error,
+                                    message: "测试运行失败".to_string(),
+                                    details: None,
+                                });
                             }
-                            result
-                        }
-                        3 => {
-                            // Check field consistency
-                            TestRunMockApi::check_field_consistency(&select_sql_clone, &ddl_sql_clone).await
-                        }
-                        4 => {
-                            // Execute single collection
-                            TestRunMockApi::execute_single_collection(&select_sql_clone).await
-                        }
-                        5 => {
-                            // Preview temp table
-                            match TestRunMockApi::preview_temp_table(&temp_table_name()).await {
-                                Ok(data) => {
-                                    preview_data.set(Some(data.clone()));
-                                    Ok(crate::api::test_run_mock::TestStepResult {
-                                        step_id: 5,
-                                        success: true,
-                                        message: format!("成功预览 {} 行数据", data.total_rows),
-                                        error_message: None,
-                                        data: None,
-                                    })
-                                }
-                                Err(e) => Err(e),
-                            }
-                        }
-                        6 => {
-                            // Delete temp table
-                            TestRunMockApi::delete_temp_table(&temp_table_name()).await
-                        }
-                        _ => Ok(crate::api::test_run_mock::TestStepResult {
-                            step_id: step.id,
-                            success: false,
-                            message: "Unknown step".to_string(),
-                            error_message: Some("Step not implemented".to_string()),
-                            data: None,
-                        }),
-                    }
-                };
-
-                // Update step based on result
-                let mut updated_steps = test_steps();
-                match result {
-                    Ok(step_result) => {
-                        updated_steps[idx].status = if step_result.success {
-                            TestRunStatus::Success
-                        } else {
-                            TestRunStatus::Failed
-                        };
-                        updated_steps[idx].error_message = step_result.error_message;
-                        updated_steps[idx].end_time = Some(Local::now());
-
-                        // Add log for step result
-                        let mut logs = test_logs();
-                        logs.push(LogEntry {
-                            timestamp: Local::now(),
-                            level: if step_result.success { LogLevel::Success } else { LogLevel::Error },
-                            message: step_result.message.clone(),
-                            details: step_result.data.map(|d| d.to_string()),
-                        });
-                        test_logs.set(logs);
-
-                        // Stop if step failed
-                        if !step_result.success {
-                            test_steps.set(updated_steps);
+                            test_logs.set(logs.clone());
                             break;
                         }
                     }
                     Err(e) => {
-                        updated_steps[idx].status = TestRunStatus::Failed;
-                        updated_steps[idx].error_message = Some(e.clone());
-                        updated_steps[idx].end_time = Some(Local::now());
-
-                        // Add error log
-                        let mut logs = test_logs();
                         logs.push(LogEntry {
                             timestamp: Local::now(),
                             level: LogLevel::Error,
-                            message: format!("步骤执行失败: {}", e),
+                            message: format!("获取测试状态失败: {}", e),
                             details: None,
                         });
-                        test_logs.set(logs);
-
-                        test_steps.set(updated_steps);
+                        test_logs.set(logs.clone());
+                        test_success = false;
                         break;
                     }
                 }
-                test_steps.set(updated_steps);
             }
-
-            // Add completion log
-            let mut logs = test_logs();
-            logs.push(LogEntry {
-                timestamp: Local::now(),
-                level: LogLevel::Info,
-                message: "测试运行完成".to_string(),
-                details: None,
-            });
-            test_logs.set(logs);
 
             test_running.set(false);
             test_completed.set(true);
-            on_test_completed.call(true);
+            on_test_completed.call(test_success);
         });
     };
 
@@ -619,7 +603,7 @@ pub fn DatabaseTestRun(
                     div { style: "width: 320px; min-width: 0; flex-shrink: 0;",
                         TestRunTimeline {
                             steps: test_steps(),
-                            current_step: current_test_step()
+                            current_step: 0
                         }
                     }
                     // Log viewer (right side, takes remaining space)
@@ -636,7 +620,7 @@ pub fn DatabaseTestRun(
                     DataPreviewTable {
                         columns: preview.columns,
                         rows: preview.rows,
-                        table_name: temp_table_name()
+                        table_name: task_name_clone.clone()
                     }
                 }
             }

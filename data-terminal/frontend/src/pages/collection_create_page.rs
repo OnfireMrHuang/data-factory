@@ -825,6 +825,7 @@ pub fn CollectionCreatePage() -> Element {
                         // Only show summary and test button when database category is selected
                         if selected_category() == Some(CollectionCategory::Database) {
                             DatabaseTestRun {
+                                task_code: task_code().unwrap_or_default(),
                                 task_name: task_name(),
                                 selected_mode: selected_mode().unwrap_or(CollectType::Full),
                                 selected_category: selected_category().unwrap_or(CollectionCategory::Database),

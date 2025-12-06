@@ -64,7 +64,7 @@ create table if not exists df_c_collection_test_run
 
 
 -- 测试步骤表
-create table if not exists df_c_collection_test_step
+create table if not exists df_c_collection_test_run_step
 (
     id               char(36) not null comment '主键',
     test_run_id      char(36) not null comment '测试运行ID',
@@ -75,7 +75,6 @@ create table if not exists df_c_collection_test_step
     started_at       timestamp null comment '开始时间',
     completed_at     timestamp null comment '完成时间',
     error_message    text comment '错误消息',
-    result_data      json comment '结果数据',
     created_at       timestamp not null default current_timestamp comment '创建时间',
     updated_at       timestamp not null default current_timestamp on update current_timestamp comment '更新时间',
     primary key (id),
@@ -85,7 +84,7 @@ create table if not exists df_c_collection_test_step
 
 
 -- 测试日志表
-create table if not exists df_c_collection_test_log
+create table if not exists df_c_collection_test_run_log
 (
     id               bigint not null auto_increment comment '主键',
     created_at    bigint not null comment '创建时间的unix毫秒时间戳',

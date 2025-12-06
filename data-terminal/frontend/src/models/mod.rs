@@ -4,3 +4,4 @@ pub mod resource;
 pub mod datasource;
 pub mod config;
 pub mod collection;
+pub mod test_run;
