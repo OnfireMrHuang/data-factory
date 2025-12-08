@@ -2,7 +2,6 @@ pub mod project;
 pub mod resource;
 pub mod datasource;
 pub mod collection_task;
-pub mod test_run;
 
 use async_trait::async_trait;
 use shaku::Interface;
@@ -41,3 +40,4 @@ pub trait DataSourceRepo: Interface {
     async fn batch_query_datsource(&self, project_code: String, datasource_ids: Vec<String>) -> Result<Vec<DataSource>, Error>;
     async fn list_datasource_by_project(&self, project_code: String, params: PageQuery) -> Result<Vec<DataSource>, Error>;
 }
+

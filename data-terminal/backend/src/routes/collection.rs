@@ -177,7 +177,7 @@ async fn execute_test_run(
     Path(code): Path<String>,
 ) -> (StatusCode, Json<Response<TestRunTaskIdResponse>>) {
     let result = autofac::get_global_app_state_ref()
-        .get_test_run_service()
+        .get_collection_service()
         .execute_test_run(claims.project, &code)
         .await;
 
@@ -202,7 +202,7 @@ async fn get_test_run_status(
     Query(query): Query<TestRunQuery>,
 ) -> (StatusCode, Json<Response<TestRunStatusResponse>>) {
     let result = autofac::get_global_app_state_ref()
-        .get_test_run_service()
+        .get_collection_service()
         .get_test_run_status(claims.project, &query.task_id)
         .await;
 
@@ -220,7 +220,7 @@ async fn get_test_run_logs(
     Query(query): Query<TestRunQuery>,
 ) -> (StatusCode, Json<Response<TestLogResponse>>) {
     let result = autofac::get_global_app_state_ref()
-        .get_test_run_service()
+        .get_collection_service()
         .get_test_run_logs(claims.project, &query.task_id, query.start_timestamp)
         .await;
 
@@ -238,7 +238,7 @@ async fn get_test_run_preview(
     Query(query): Query<TestRunQuery>,
 ) -> (StatusCode, Json<Response<TablePreviewResponse>>) {
     let result = autofac::get_global_app_state_ref()
-        .get_test_run_service()
+        .get_collection_service()
         .get_test_run_preview(claims.project, &query.task_id)
         .await;
 

@@ -5,13 +5,11 @@ use crate::repositories::project::ProjectRepoImpl;
 use crate::repositories::resource::ResourceRepoImpl;
 use crate::repositories::datasource::DataSourceRepoImpl;
 use crate::repositories::collection_task::CollectionRepositoryImpl;
-use crate::repositories::test_run::TestRunRepositoryImpl;
 use crate::services::project::ProjectServiceImpl;
 use crate::services::resource::ResourceServiceImpl;
 use crate::services::datasource::DataSourceServiceImpl;
 use crate::services::collection_service::CollectionServiceImpl;
-use crate::services::test_run_service::TestRunServiceImpl;
-use crate::services::{ProjectService, ResourceService, DataSourceService, CollectionService, TestRunService};
+use crate::services::{ProjectService, ResourceService, DataSourceService, CollectionService};
 
 module! {
     pub AutoFacModule {
@@ -20,7 +18,7 @@ module! {
         ResourceRepoImpl, ResourceServiceImpl,
         DataSourceRepoImpl, DataSourceServiceImpl,
         CollectionRepositoryImpl, CollectionServiceImpl,
-        TestRunRepositoryImpl, TestRunServiceImpl]
+        ]
     }
 }
 
@@ -85,11 +83,6 @@ impl AppState {
 
     /// 获取 CollectionService 实例
     pub fn get_collection_service(&self) -> Box<dyn CollectionService> {
-        self.module.provide().unwrap()
-    }
-
-    /// 获取 TestRunService 实例
-    pub fn get_test_run_service(&self) -> Box<dyn TestRunService> {
         self.module.provide().unwrap()
     }
 }
