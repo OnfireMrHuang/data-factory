@@ -1,7 +1,7 @@
 pub mod project;
 pub mod resource;
 pub mod datasource;
-pub mod collection_service;
+pub mod collection;
 
 use async_trait::async_trait;
 use crate::models::project::Project;

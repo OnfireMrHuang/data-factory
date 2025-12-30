@@ -1,19 +1,21 @@
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use chrono::Utc;
-use shaku::Interface;
 use uuid::Uuid;
 use shaku::Provider;
+use once_cell::sync::Lazy;
 
-use crate::models::collection::*;
+use crate::models::collection::{self, *};
 use crate::models::datasource::DataSourceReadOnly;
 use crate::models::resource::ResourceReadOnly;
 use crate::models::test_run::*;
 use crate::repositories::collection_task::{CollectionRepository};
 use crate::models::Error;
 use crate::services::{DataSourceService, ResourceService};
-use super::CollectionService;
+use crate::services::CollectionService;
+use super::test_run::*;
 
 /// Collection service implementation
 #[derive(Provider)]
@@ -27,66 +29,6 @@ pub struct CollectionServiceImpl {
     resource_service: Box<dyn ResourceService>,
 }
 
-impl CollectionServiceImpl {
-
-    /// Validate datasource/resource compatibility based on collection mode
-    fn validate_compatibility(
-        &self,
-        category: &CollectionCategory,
-        collect_type: &CollectType,
-        rule: &CollectionRule,
-    ) -> Result<(), Error> {
-        // Validation rules from spec:
-        // - Full + Database → relational_database only, must have FullDatabaseRule
-        // - Full + API → relational_database or file_system, must have FullApiRule
-        // - Incremental + Database → queue only, must have IncrementalDatabaseRule
-        // - Incremental + API → queue only, must have IncrementalApiRule
-
-        match (category, collect_type) {
-            (CollectionCategory::Database, CollectType::Full) => {
-                if !matches!(rule, CollectionRule::FullDatabase(_)) {
-                    return Err(Error::InvalidValue(
-                        "Full Database collection requires FullDatabaseRule".to_string()
-                    ));
-                }
-                // Validate rule contents
-                if let CollectionRule::FullDatabase(db_rule) = rule {
-                    if db_rule.selected_tables.is_empty() {
-                        return Err(Error::InvalidValue(
-                            "Must select at least one table".to_string()
-                        ));
-                    }
-                }
-                Ok(())
-            }
-            (CollectionCategory::Api, CollectType::Full) => {
-                if !matches!(rule, CollectionRule::FullApi(_)) {
-                    return Err(Error::InvalidValue(
-                        "Full API collection requires FullApiRule".to_string()
-                    ));
-                }
-                Ok(())
-            }
-            (CollectionCategory::Database, CollectType::Incremental) => {
-                if !matches!(rule, CollectionRule::IncrementalDatabase(_)) {
-                    return Err(Error::InvalidValue(
-                        "Incremental Database collection requires IncrementalDatabaseRule".to_string()
-                    ));
-                }
-                Ok(())
-            }
-            (CollectionCategory::Api, CollectType::Incremental) => {
-                if !matches!(rule, CollectionRule::IncrementalApi(_)) {
-                    return Err(Error::InvalidValue(
-                        "Incremental API collection requires IncrementalApiRule".to_string()
-                    ));
-                }
-                Ok(())
-            }
-            _ => Ok(()),
-        }
-    }
-}
 
 #[async_trait]
 impl CollectionService for CollectionServiceImpl {
@@ -338,75 +280,70 @@ impl CollectionService for CollectionServiceImpl {
         Ok(CollectTaskReadOnly::from(task))
     }
 
-        /// Execute a test run for a collection task
-        async fn execute_test_run(&self, project_code: String, collection_code: &str) -> Result<String, Error> {
-            let now = Utc::now();
-            let test_run_id = Uuid::new_v4().to_string();
-    
-            // Create test run record
-            let test_run = TestRun {
-                id: test_run_id.clone(),
-                collection_code: collection_code.to_string(),
-                status: TestRunStatus::Running,
-                started_at: Some(now),
+    /// Execute a test run for a collection task
+    async fn execute_test_run(&self, project_code: String, collection_code: &str) -> Result<String, Error> {
+        // Firstly, we need to find the collection task
+        let collection = self.repository.find_by_code(project_code.clone(), &collection_code.to_string(), TaskStage::Draft)
+            .await?;
+        if collection.is_none() {
+            return Err(Error::NotFound)
+        }
+        let collection = collection.unwrap();
+
+        // Clone collection early to avoid partial move issues
+        let collection_for_task = collection.clone();
+        let steps_result = generate_test_run_steps(collection_for_task.category, collection_for_task.collect_type).await?;
+
+
+        // Create test run record
+        let now = Utc::now();
+        let test_run_id = Uuid::new_v4().to_string();
+        let test_run = TestRun {
+            id: test_run_id.clone(),
+            collection_code: collection_code.to_string(),
+            status: TestRunStatus::Pending,
+            started_at: Some(now),
+            completed_at: None,
+            error_message: None,
+            created_at: now,
+            updated_at: now,
+        };
+
+        self.repository.create_test_run(project_code.clone(), test_run).await?;
+
+
+        // Create test steps
+        for (idx, (title, description)) in steps_result.iter().enumerate() {
+            let step = TestRunStep {
+                id: Uuid::new_v4().to_string(),
+                test_run_id: test_run_id.clone(),
+                step_id: idx as i32 + 1,
+                title: title.to_string(),
+                description: Some(description.to_string()),
+                status: TestRunStatus::Pending,
+                started_at: None,
                 completed_at: None,
                 error_message: None,
                 created_at: now,
                 updated_at: now,
             };
-    
-            self.repository.create_test_run(project_code.clone(), test_run).await?;
-    
-            // Create test steps (these are placeholder steps - in production, these would be based on the collection type)
-            let steps = vec![
-                ("Validate collection configuration", "Checking configuration parameters"),
-                ("Connect to data source", "Establishing connection to the data source"),
-                ("Execute test query", "Running test query to fetch sample data"),
-                ("Validate data schema", "Verifying data structure matches expectations"),
-            ];
-    
-            for (idx, (title, description)) in steps.iter().enumerate() {
-                let step = TestRunStep {
-                    id: Uuid::new_v4().to_string(),
-                    test_run_id: test_run_id.clone(),
-                    step_id: idx as i32 + 1,
-                    title: title.to_string(),
-                    description: Some(description.to_string()),
-                    status: TestRunStatus::Pending,
-                    started_at: None,
-                    completed_at: None,
-                    error_message: None,
-                    created_at: now,
-                    updated_at: now,
-                };
-    
-                self.repository.create_test_step(project_code.clone(), step).await?;
-            }
-    
-            // Create initial log
-            let log = TestRunLog {
-                id: 0, // Auto-increment
-                created_at: now.timestamp_millis(),
-                test_run_id: test_run_id.clone(),
-                log_level: LogLevel::Info,
-                message: "Test run started".to_string(),
-                details: None,
-            };
-    
-            self.repository.create_test_log(project_code.clone(), log).await?;
-    
-            // TODO: In production, this would spawn an async task to actually execute the test
-            // For now, we'll simulate by marking as success
-            tokio::spawn(Self::simulate_test_execution(
-                project_code.clone(),
-                test_run_id.clone(),
-            ));
-    
-            Ok(test_run_id)
+            self.repository.create_test_step(project_code.clone(), step).await?;
         }
+
+        // Clone data needed for async execution
+        let project_code_clone = project_code.clone();
+        let collection_clone = collection.clone();
+        let test_run_id_clone = test_run_id.clone();
+        
+        tokio::spawn(async move {
+            
+        });
+
+        Ok(test_run_id)
+    }
     
-        /// Get test run status with steps
-        async fn get_test_run_status(&self, project_code: String, task_id: &str) -> Result<TestRunStatusResponse, Error> {
+    /// Get test run status with steps
+    async fn get_test_run_status(&self, project_code: String, task_id: &str) -> Result<TestRunStatusResponse, Error> {
             let test_run = self.repository
                 .find_test_run_by_id(project_code.clone(), task_id)
                 .await?
@@ -422,8 +359,8 @@ impl CollectionService for CollectionServiceImpl {
             })
         }
     
-        /// Get test run logs
-        async fn get_test_run_logs(&self, project_code: String, task_id: &str, start_timestamp: Option<i64>) -> Result<TestLogResponse, Error> {
+    /// Get test run logs
+    async fn get_test_run_logs(&self, project_code: String, task_id: &str, start_timestamp: Option<i64>) -> Result<TestLogResponse, Error> {
             let logs = self.repository
                 .find_test_logs(project_code.clone(), task_id, start_timestamp)
                 .await?;
@@ -438,8 +375,8 @@ impl CollectionService for CollectionServiceImpl {
             })
         }
     
-        /// Get test run data preview
-        async fn get_test_run_preview(&self, project_code: String, task_id: &str) -> Result<TablePreviewResponse, Error> {
+    /// Get test run data preview
+    async fn get_test_run_preview(&self, project_code: String, task_id: &str) -> Result<TablePreviewResponse, Error> {
             // TODO: In production, this would fetch actual data from the test run results
             // For now, return mock data
             Ok(TablePreviewResponse {
@@ -452,39 +389,72 @@ impl CollectionService for CollectionServiceImpl {
                 ],
             })
         }
-    }
-    
-    impl CollectionServiceImpl {
-        /// Map source field types to target types
-        /// This is a simplified mapping - production would have comprehensive rules
-        fn map_field_type(field_name: &str) -> String {
-            match field_name {
-                "id" => "BIGINT".to_string(),
-                name if name.contains("count") || name.contains("amount") => "DECIMAL(10,2)".to_string(),
-                name if name.ends_with("_at") => "TIMESTAMP".to_string(),
-                name if name.ends_with("_date") => "DATE".to_string(),
-                name if name.contains("email") => "VARCHAR(255)".to_string(),
-                name if name.contains("url") || name.contains("link") => "VARCHAR(512)".to_string(),
-                name if name.contains("description") || name.contains("content") => "TEXT".to_string(),
-                _ => "VARCHAR(255)".to_string(),
+}
+
+
+impl CollectionServiceImpl {
+    fn validate_compatibility(
+        &self,
+        category: &CollectionCategory,
+        collect_type: &CollectType,
+        rule: &CollectionRule,
+    ) -> Result<(), Error> {
+        
+        match (category, collect_type) {
+            (CollectionCategory::Database, CollectType::Full) => {
+                if !matches!(rule, CollectionRule::FullDatabase(_)) {
+                    return Err(Error::InvalidValue(
+                        "Full Database collection requires FullDatabaseRule".to_string()
+                    ));
+                }
+                // Validate rule contents
+                if let CollectionRule::FullDatabase(db_rule) = rule {
+                    if db_rule.selected_tables.is_empty() {
+                        return Err(Error::InvalidValue(
+                            "Must select at least one table".to_string()
+                        ));
+                    }
+                }
+                Ok(())
             }
+            (CollectionCategory::Api, CollectType::Full) => {
+                if !matches!(rule, CollectionRule::FullApi(_)) {
+                    return Err(Error::InvalidValue(
+                        "Full API collection requires FullApiRule".to_string()
+                    ));
+                }
+                Ok(())
+            }
+            (CollectionCategory::Database, CollectType::Incremental) => {
+                if !matches!(rule, CollectionRule::IncrementalDatabase(_)) {
+                    return Err(Error::InvalidValue(
+                        "Incremental Database collection requires IncrementalDatabaseRule".to_string()
+                    ));
+                }
+                Ok(())
+            }
+            (CollectionCategory::Api, CollectType::Incremental) => {
+                if !matches!(rule, CollectionRule::IncrementalApi(_)) {
+                    return Err(Error::InvalidValue(
+                        "Incremental API collection requires IncrementalApiRule".to_string()
+                    ));
+                }
+                Ok(())
+            }
+            _ => Ok(()),
         }
-    
-        /// Simulate test execution (placeholder for actual test logic)
-        async fn simulate_test_execution(project_code: String, test_run_id: String) {
-            // This is a mock implementation - in production, this would execute the actual test
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    
-            // In a real implementation, you would:
-            // 1. Get the collection task details
-            // 2. Connect to the data source
-            // 3. Execute test queries
-            // 4. Validate results
-            // 5. Update step statuses
-            // 6. Create logs
-            // 7. Update final test run status
-    
-            // For now, we'll just mark as success
-            // Note: This is just a placeholder and won't actually work without proper repository access
+    }
+
+    fn map_field_type(field_name: &str) -> String {
+        match field_name {
+            "id" => "BIGINT".to_string(),
+            name if name.contains("count") || name.contains("amount") => "DECIMAL(10,2)".to_string(),
+            name if name.ends_with("_at") => "TIMESTAMP".to_string(),
+            name if name.ends_with("_date") => "DATE".to_string(),
+            name if name.contains("email") => "VARCHAR(255)".to_string(),
+            name if name.contains("url") || name.contains("link") => "VARCHAR(512)".to_string(),
+            name if name.contains("description") || name.contains("content") => "TEXT".to_string(),
+            _ => "VARCHAR(255)".to_string(),
         }
+    }
 }

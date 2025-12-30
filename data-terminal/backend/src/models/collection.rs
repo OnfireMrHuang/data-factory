@@ -70,7 +70,7 @@ impl Validator for CollectTask {
 }
 
 /// Collection category enum
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum CollectionCategory {
@@ -88,7 +88,7 @@ impl Default for CollectionCategory {
 impl_sqlx_for_string_enum!(CollectionCategory);
 
 /// Collection type enum
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum CollectType {
